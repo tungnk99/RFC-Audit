@@ -207,6 +207,49 @@ def coverage(report: RunReport) -> dict[str, Any]:
     }
 
 
+# ---- tiến độ (lệnh status) ------------------------------------------------------------------------------------------
+
+
+def resolve_run(run: str, runs_dir: Path) -> Path:
+    """`run` là đường dẫn tới thư mục lần chạy, hoặc mã lần chạy nằm trong `runs_dir`."""
+    for candidate in (Path(run), runs_dir / run):
+        if (candidate / "trace.db").is_file():
+            return candidate
+    raise FileNotFoundError(f"không thấy lần chạy '{run}' (đã thử {run} và {runs_dir / run})")
+
+
+def progress(run_dir: Path) -> dict[str, Any]:
+    """Tiến độ và chi phí từ nhật ký: yêu cầu đã có kết luận so với đã bắt đầu, token và lời gọi công cụ theo vai trò, thời gian.
+
+    Chi phí chỉ tính bằng token: quy ra USD cần bảng giá theo thời điểm chạy (BL-76), mà nhật ký không tách token vào và ra."""
+    started: list[str] = []
+    decided: dict[str, str] = {}
+    tokens: Counter[str] = Counter()
+    calls: Counter[str] = Counter()
+    first = last = 0
+    for e in TraceLog(run_dir / "trace.db").events():
+        ts = int(e.get("ts_ns", 0))
+        first, last = (ts if not first else min(first, ts)), max(last, ts)
+        payload: dict[str, Any] = e["payload"]
+        rid = e.get("requirement_id")
+        if e["kind"] == "requirement_start" and rid and rid not in started:
+            started.append(rid)
+        elif e["kind"] == "verdict" and rid:
+            decided[rid] = str(payload["label"])
+        elif e["kind"] == "role_run":
+            role = str(payload.get("role", "?"))
+            tokens[role] += int(payload.get("tokens", 0))
+            calls[role] += int(payload.get("tool_calls", 0))
+    return {
+        "requirements": {"started": len(started), "decided": len(decided), "in_progress": len(started) - len(decided)},
+        "by_label": dict(Counter(decided.values())),
+        "tokens": {"total": sum(tokens.values()), "by_role": dict(tokens)},
+        "tool_calls": {"total": sum(calls.values()), "by_role": dict(calls)},
+        "seconds": round((last - first) / 1e9, 1) if first else 0.0,
+        "usd": None,
+    }
+
+
 # ---- JSON -----------------------------------------------------------------------------------------------------------
 
 

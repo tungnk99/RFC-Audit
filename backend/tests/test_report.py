@@ -148,3 +148,41 @@ def test_a_directory_without_a_trace_is_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(FileNotFoundError):
         load_run(tmp_path)
+
+
+# ---------------------------------------------------------------- lệnh `rfcv report` và `rfcv status`
+
+
+def test_report_command_writes_each_format_from_a_run_directory(tmp_path: Path) -> None:
+    from typer.testing import CliRunner
+
+    from rfcv.ui.cli import app
+
+    build_run(tmp_path)
+    runner = CliRunner()
+    as_json = runner.invoke(app, ["report", RUN, "--runs", str(tmp_path), "--format", "json"])
+    assert as_json.exit_code == 0 and json.loads(as_json.output)["coverage"]["total"] == len(REQS) + 1
+    sarif = runner.invoke(app, ["report", RUN, "--runs", str(tmp_path), "--format", "sarif"])
+    assert sarif.exit_code == 0 and len(json.loads(sarif.output)["runs"][0]["results"]) == 1
+    target = tmp_path / "report.html"
+    html = runner.invoke(app, ["report", RUN, "--runs", str(tmp_path), "--out", str(target)])
+    assert html.exit_code == 0 and "Báo cáo kiểm chứng" in target.read_text(encoding="utf-8")
+    assert runner.invoke(app, ["report", RUN, "--runs", str(tmp_path), "--format", "pdf"]).exit_code == 2
+    assert runner.invoke(app, ["report", "run-khong-co", "--runs", str(tmp_path)]).exit_code == 2
+
+
+def test_status_reports_progress_and_token_cost_without_inventing_usd(tmp_path: Path) -> None:
+    from typer.testing import CliRunner
+
+    from rfcv.ui.cli import app
+
+    run_dir = build_run(tmp_path)
+    trace = TraceLog(run_dir / "trace.db")
+    trace.append(RUN, "role_run", {"role": "planner", "tokens": 700, "tool_calls": 0}, requirement_id="R-1")
+    trace.append(RUN, "role_run", {"role": "code_reader", "tokens": 300, "tool_calls": 9}, requirement_id="R-1")
+    data = json.loads(CliRunner().invoke(app, ["status", RUN, "--runs", str(tmp_path), "--json"]).output)
+    assert data["requirements"] == {"started": len(REQS) + 1, "decided": len(REQS), "in_progress": 1}
+    assert data["tokens"] == {"total": 1000, "by_role": {"planner": 700, "code_reader": 300}}
+    assert data["tool_calls"]["total"] == 9 and data["usd"] is None  # USD cần bảng giá (BL-76), không đoán
+    text = CliRunner().invoke(app, ["status", RUN, "--runs", str(tmp_path)]).output
+    assert f"{len(REQS)}/{len(REQS) + 1} đã có kết luận" in text and "USD: chưa tính" in text

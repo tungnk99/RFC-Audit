@@ -15,9 +15,14 @@ trên mã thật.
 
 from __future__ import annotations
 
+import dataclasses
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
+from rfcv.domains.rfc_protocol.sandbox.backend import EventTrace
+from rfcv.domains.rfc_protocol.schemas import ScenarioProposal
+from rfcv.eval.coord_world import CoordBackend
 from rfcv.eval.faults import FAMILIES, SimImpl, correct_behaviour
 from rfcv.gates.code_gate import InMemoryCodeIndex, Reference, SymbolInfo
 
@@ -120,3 +125,27 @@ def hard_index(case: HardCase) -> InMemoryCodeIndex:
             Reference(FILE, 846, "HandleError", "read"),
         ],
     )
+
+
+def lcov(world: HardWorld) -> bytes:
+    """Dòng được thực thi khi kích hoạt đạt tới: đường kiểm tra, chuyển mã lỗi, nhánh `LENGTH_ERROR` của `HandleError`, và dòng đóng
+    kết nối nếu mã có (dòng chú thích không có bản ghi DA)."""
+    hit = [350, 351, 352, 811, 812, 814, 842, 846, 847, 848, 852, 854]
+    if world.closes:
+        hit.append(853)
+    rows = "".join(f"DA:{n},5\n" for n in sorted(hit))
+    return f"SF:/work/{FILE}\n{rows}DA:900,0\nend_of_record\n".encode()
+
+
+class HardBackend(CoordBackend):
+    """Backend giả có dữ liệu độ phủ khớp bố cục mã của thế giới khó (CoordBackend gắn cứng bố cục của thế giới đơn giản)."""
+
+    def __init__(self, impls: Sequence[SimImpl], world: HardWorld) -> None:
+        super().__init__(impls)
+        self._lcov = lcov(world)
+
+    async def run(  # type: ignore[override]
+        self, scenario: ScenarioProposal, params: dict[str, int | str], endpoint: Any, seed: int
+    ) -> EventTrace:
+        trace = await super().run(scenario, params, endpoint, seed)
+        return dataclasses.replace(trace, lcov=self._lcov)

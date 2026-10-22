@@ -48,6 +48,7 @@ Mỗi cấu hình nên chạy mỗi ca **ít nhất 3 lần** vì kết quả c�
 | 7 | 2026-10-22 | như trên | correct | **NEEDS_REVIEW V7 (3/3)** | 3, 3, 3 | 47-57 | 708.379 / 576.907 / 638.468 | 0% | 0/4 (3 lần) | 0 nạp lại |
 | 8 | 2026-10-22 | #7 + Schema gate chặn THRESHOLD MISMATCH khi `observed` bằng giá trị trong `where` (`THRESHOLD_EQUALS_EXPECTED`) + Report agent và Output gate | faulty | VIOLATION V2 (3/3) | 1 | 20-26 | 243.512 / 255.126 / 277.047 | 0% | 0/2 (3 lần) | 0 nạp lại |
 | 8 | 2026-10-22 | như trên | correct | COMPLIANT V5 (3/3) | 4, 4, 4 | 62-70 | 715.827 / 749.436 / 767.078 | 0% | 0/5 (3 lần) | 0 nạp lại |
+| 9 | 2026-10-22 | #8 trên thế giới khó về REACTION (`e2e_hard.py`): phản ứng ở `HandleError`, xa phép kiểm tra; 3 ca x 3 lần | hard-correct / hard-wrong-alert / hard-no-close | COMPLIANT 3/3, VIOLATION 3/3, VIOLATION 3/3 (đúng đáp án cả 9) | 1-4 | - | Code Reader trung bình 476.000 / 154.000 / 202.000 | - | - | - |
 
 \* Lãng phí = token tiêu trong các lần chạy agent bị hỏng, chia tổng token. Mỗi ca mới chạy **một lần**, chưa đủ để nói về
 độ ổn định. Khi thêm dòng, ghi thêm thay đổi so với lần trước vào cột Cấu hình.
@@ -283,6 +284,8 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 - **Hướng sửa:** đo trên mã thật (wolfSSL) trước khi tối ưu, vì mã giả nhỏ không đại diện; ứng viên: tóm tắt lịch sử hội thoại giữa các lời gọi công cụ, cho TRACE_PATHS dùng lại vị trí T1 đã có thay vì tìm lại từ đầu.
 - **Đã làm (BL-14, Nhật ký đo #7, #8):** Code Reader nhận `task.prior_findings` ở LOCATE và TRACE_PATHS thay vì tìm lại từ đầu. Ca bản đúng: token Code Reader 524.000 giảm còn 396.000 (-24%), tổng 957.000 giảm còn 744.000 (-22%); ca bản lỗi (chỉ một lượt LOCATE) không đổi (244.000 và 258.000, trong nhiễu). T1 giữ nguyên: 6/6 nhãn đúng, mọi khía cạnh đúng. Chi phí mỗi ca bản đúng vẫn cao (~740.000 token); phần còn lại nằm ở ngữ cảnh cố định (~8.000 token) gửi lại mỗi bước và ở lời gọi công cụ lặp trong một lượt.
 - **Đóng khi:** có số đo trên wolfSSL thật và quyết định ngưỡng chi phí chấp nhận.
+
+- **BL-41 (đo 2026-10-22):** recall khía cạnh REACTION của Code Reader là 12/12 và nhãn đúng 9/9 ngay cả ở thế giới khó (phản ứng đi qua mã lỗi, `switch` và dòng đóng kết nối; ca gửi sai cảnh báo và ca không đóng), nên không thêm skill REACTION: không còn chỗ cải thiện đo được, mà skill thêm token. Thế giới khó ([hard_world.py](../../backend/src/rfcv/eval/hard_world.py), [e2e_hard.py](../../backend/scripts/e2e_hard.py), [measure_reaction.py](../../backend/scripts/measure_reaction.py)) dùng lại được cho BL-74. Hạn chế: mã giả một tệp, chưa đo trên mã thật.
 
 ## Đã xử lý
 

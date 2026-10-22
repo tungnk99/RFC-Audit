@@ -35,6 +35,34 @@ def test_rfc_text_is_supplied_as_trusted_context_by_the_sentence_id_of_the_rbs(m
     assert any("} TLSCiphertext;" in d for d in ctx["rfc.definitions"].value)  # Test agent nhận khối định nghĩa
 
 
+def test_every_verdict_records_the_exact_rfc_text_it_was_judged_against(manifest: AdapterManifest) -> None:
+    """BL-26: kết luận ghi định danh câu, băm câu và tài liệu nguồn (RFC, định dạng, băm), kể cả khi chưa có bản RFC."""
+    from rfcv.common.hashing import text_hash
+    from rfcv.evidence.verdict_engine import StopReason, decide
+
+    inv = investigation(manifest, RFC_DIR)
+    req = inv.requirement
+    spec = decide(req, [], StopReason.BUDGET).to_json()["spec"]
+    assert spec["ref"] == "RFC8446§5.2#p4s3"
+    assert spec["sentence_hash"] == text_hash(inv.context["rfc.sentence"].value)
+    assert spec["document"].startswith("RFC8446 xml sha256:") and len(spec["document"]) == len("RFC8446 xml ") + 71
+    # Không có bản RFC: vẫn ghi định danh câu nhưng không bịa băm; người đọc biết kết luận dựa trên RBS.
+    bare = decide(investigation(manifest, None).requirement, [], StopReason.BUDGET).to_json()["spec"]
+    assert bare == {"ref": "RFC8446§5.2#p4s3", "sentence_hash": "", "document": ""}
+
+
+def test_the_document_digest_follows_the_text_and_the_format(manifest: AdapterManifest, tmp_path: Path) -> None:
+    """Cùng RFC, khác nội dung hay khác định dạng (XML so với TXT) là hai nguồn khác nhau: định danh đoạn không chung."""
+    from rfcv.domains.rfc_protocol.rfc_gate import RfcDocument
+
+    xml = (RFC_DIR / "rfc8446.xml").read_text(encoding="utf-8")
+    edited = xml.replace("The length (in bytes)", "The size (in bytes)")
+    assert edited != xml
+    a, b = RfcDocument(xml, 8446), RfcDocument(edited, 8446)
+    txt = RfcDocument.from_text((RFC_DIR / "rfc9999.txt").read_text(encoding="utf-8"), 9999)
+    assert a.source != b.source and a.source.split()[1] == "xml" and txt.source.split()[1] == "txt"
+
+
 def test_without_an_rfc_input_store_agents_see_only_the_structured_requirement(
     manifest: AdapterManifest, tmp_path: Path
 ) -> None:

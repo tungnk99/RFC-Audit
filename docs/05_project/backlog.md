@@ -61,7 +61,7 @@ quyết định số đo của mọi lần chạy sau.
 | BL-11 | Bỏ giới hạn `llm_calls` của mọi agent (quyết định 2026-10-22, thay cho nâng lên 20) và đo lại; token, công cụ và thời gian vẫn bị chặn | CT-02, AG-05, CR-4 | – | S | Ngay | Không còn `UsageLimitExceeded` qua 3 lần mỗi ca (đạt: Nhật ký đo #6, 3+3 lần, 0 lần hỏng). Token mỗi ca đã tăng gấp ~3 so với #4 do viết lại prompt và skill ở #5, theo dõi ở CT-25 và BL-14, không tính vào việc này | Xong |
 | BL-12 | Rút gọn `evidence.summary`: gộp T3 theo biến thể và kết quả, giữ chi tiết cho ca FAIL, mâu thuẫn, ca được trích | CT-03, VF-7 | – | M | Ngay | Token đầu vào của Verifier giảm so với mốc 55k; `verifier_smoke` vẫn nêu đúng hai tình huống | Xong |
 | BL-13 | Sửa chỉ số bám sổ tay: kế hoạch chứa đủ nhiệm vụ được gợi ý tính là `followed` | CT-04, PL-6 | – | S | Ngay | Có test; ca bản lỗi không còn bị ghi `deviated_unannounced` | Xong |
-| BL-14 | Giảm chi phí Code Reader: rút gọn đầu ra công cụ đọc mã, dừng sớm khi các khía cạnh đã đủ | CT-17, CT-25, CR-5 | BL-10, BL-11, BL-08 | M | G1 | Token Code Reader mỗi ca giảm có số đo mà độ chính xác T1 không đổi | Chưa làm |
+| BL-14 | Giảm chi phí Code Reader: rút gọn đầu ra công cụ đọc mã, dừng sớm khi các khía cạnh đã đủ | CT-17, CT-25, CR-5 | BL-10, BL-11, BL-08 | M | G1 | Token Code Reader mỗi ca giảm có số đo mà độ chính xác T1 không đổi | Xong |
 | BL-15 | Thử `MAP_COMPONENTS` với LLM thật; quyết định quy tắc vòng 1 của sổ tay và skill Verifier cho `WRONG_LOCATION` | CT-18, CI-3, CI-4 | – | S | G2 | Có số đo gán thành phần trên 30 hàm; sổ tay và skill được cập nhật theo kết quả | Xong |
 | BL-16 | Thêm một mô hình họ khác vào `models` và gán cho Verifier và `rfc_analyst.b` | CT-07, RA-6 | – | S | G2 | Verifier chạy bằng mô hình khác họ; có số đo so với dùng chung | Chặn |
 
@@ -72,7 +72,7 @@ quyết định số đo của mọi lần chạy sau.
 | BL-25 | Chốt phạm vi hỗ trợ RFC cùng thầy: bảng giao thức nhân mức hỗ trợ (đầy đủ, mức chứng minh, chưa hỗ trợ) và các điểm cần xác nhận ở yêu cầu đầu ra | YD-14, CT-22 | thầy | S | Ngay | Bảng phạm vi được chốt và ghi vào báo cáo | Chưa làm |
 | BL-20 | Cấp câu RFC (`rfc.sentence`, `rfc.paragraph`, `rfc.context_pack`) vào ngữ cảnh agent, lấy theo trường nguồn của RBS qua RFC gate | YD-01, CT-05 | – | M | G1 | `KNOWN_UNSUPPLIED` không còn các trường `rfc.*` đã cấp; Verifier thấy câu RFC | Xong |
 | BL-21 | Đo RFC gate trên toàn văn RFC 8446: số câu tách được so với đếm độc lập, ranh giới câu đúng trên 30 câu | YD-01 | – | S | G1 | Có bảng số đo; sai lệch được giải thích hoặc sửa | Xong |
-| BL-26 | Ghi phiên bản RFC, errata và hash vào mọi kết luận; xử lý RFC 8446 và RFC 9846 theo quyết định của thầy | YD-05, CT-23 | BL-25 | S | G1 | 100% kết luận ghi phiên bản RFC và hash | Chưa làm |
+| BL-26 | Ghi phiên bản RFC, errata và hash vào mọi kết luận; xử lý RFC 8446 và RFC 9846 theo quyết định của thầy | YD-05, CT-23 | BL-25 | S | G1 | 100% kết luận ghi phiên bản RFC và hash | Đang làm |
 | BL-23 | Nối RFC Analyst: hai luồng dùng hai họ mô hình khác nhau, so khớp, phân loại A–D, bất đồng chuyển người duyệt | YD-03, YD-04, CT-12, RA-1, RA-3, RA-5 | BL-16, BL-20 | L | G2 | Phân loại A–D đúng ≥ 90% (ĐX) trên 30 mục hai người gán; câu hai luồng lệch không tự quyết (100%) | Chưa làm |
 | BL-24 | Trạng thái cuối cho **mọi** câu quy phạm (cả "ngoài phạm vi" và "thiếu adapter") kèm lý do | YD-02, YD-04, YD-11, YD-42 | BL-23, BL-30 | M | G2 | Tổng theo trạng thái bằng tổng câu tách được; mỗi câu ngoài ngữ pháp hay thiếu adapter có lý do | Chưa làm |
 | BL-22 | Bộ phân tích RFC bản TXT (DNS, SSH), hoặc chọn RFC có bản XML | YD-12, CT-22 | BL-25 | M | DNS | Tách câu đúng ranh giới trên 30 câu mỗi giao thức | Xong |
@@ -82,7 +82,7 @@ quyết định số đo của mọi lần chạy sau.
 | ID | Việc cần làm | Đáp ứng | Phụ thuộc | Cỡ | Giai đoạn | Xong khi | Trạng thái |
 |---|---|---|---|---|---|---|---|
 | BL-46 | Viết test riêng cho nhánh SUT sập sau khi nhận dữ liệu kích hoạt (`sut_crashed`) | YD-27 | – | S | G1 | Test pass; ca sập có cờ và là FAIL | Xong |
-| BL-41 | Skill và prompt cho khía cạnh REACTION (lần từ mã lỗi nội bộ tới cảnh báo, kiểm có đóng kết nối) và cho tìm điểm vào, mẫu tìm theo cấu trúc | YD-22, CR-2 | BL-10 | S | G1 | Đo recall khía cạnh REACTION trước và sau, có cải thiện hoặc ghi rõ không đổi | Chưa làm |
+| BL-41 | Skill và prompt cho khía cạnh REACTION (lần từ mã lỗi nội bộ tới cảnh báo, kiểm có đóng kết nối) và cho tìm điểm vào, mẫu tìm theo cấu trúc | YD-22, CR-2 | BL-10 | S | G1 | Đo recall khía cạnh REACTION trước và sau, có cải thiện hoặc ghi rõ không đổi | Xong |
 | BL-40 | Bộ quét nhánh nghi vấn (T2 `suspicious_branch`): so sánh với hằng khớp giá trị thử, đọc biến môi trường hay tên máy, trên đường xử lý của yêu cầu | YD-25, CG-6, QS-11 | – | L | G2 | Phát hiện kịch bản A7 mức 1 và 2: 100%; mức 3 được báo cáo trung thực | Xong |
 | BL-44 | Đo `TRACE_PATHS`: ca nhiều đường xử lý, kiểm `unexplored` điền đúng khi cạn ngân sách | YD-24, CR-7 | BL-04 | M | G2 | 100% T1 có `unexplored` đúng; tỉ lệ yêu cầu loại "mọi" đủ đường được báo cáo | Chưa làm |
 | BL-45 | Bộ ca "hợp lệ nhưng làm khác" (cách làm thay thế RFC cho phép) để kiểm báo sai | YD-26, QS-21 | BL-04, BL-70 | M | DNS | Precision VIOLATION đo được; không ca hợp lệ nào bị báo VIOLATION | Chưa làm |
@@ -93,11 +93,11 @@ quyết định số đo của mọi lần chạy sau.
 
 | ID | Việc cần làm | Đáp ứng | Phụ thuộc | Cỡ | Giai đoạn | Xong khi | Trạng thái |
 |---|---|---|---|---|---|---|---|
-| BL-30 | Nối Report agent và Output gate: giải thích chỉ trích bằng chứng có thật, nhãn không đổi | YD-40, CT-11, RP-1, RP-2, RP-3, RP-4 | BL-04 | M | G2 | 100% `evidence_id` trích có trong kho; 0 thay đổi nhãn; mỗi VIOLATION nêu T3 và vị trí T1 | Chưa làm |
-| BL-31 | Lệnh `rfcv report --format html\|json\|sarif` (Jinja2, nối [sarif.py](../../backend/src/rfcv/ui/sarif.py)) với bản tổng hợp độ phủ: số yêu cầu theo nhãn và assurance, tách MUST, SHOULD, MAY, loại D, UNVERIFIABLE theo lý do | YD-31, YD-42 | BL-30 | L | G2 | Báo cáo sinh ra có đủ các phần; SARIF hợp lệ theo schema; tổng các nhóm bằng tổng số yêu cầu | Chưa làm |
+| BL-30 | Nối Report agent và Output gate: giải thích chỉ trích bằng chứng có thật, nhãn không đổi | YD-40, CT-11, RP-1, RP-2, RP-3, RP-4 | BL-04 | M | G2 | 100% `evidence_id` trích có trong kho; 0 thay đổi nhãn; mỗi VIOLATION nêu T3 và vị trí T1 | Xong |
+| BL-31 | Lệnh `rfcv report --format html\|json\|sarif` (Jinja2, nối [sarif.py](../../backend/src/rfcv/ui/sarif.py)) với bản tổng hợp độ phủ: số yêu cầu theo nhãn và assurance, tách MUST, SHOULD, MAY, loại D, UNVERIFIABLE theo lý do | YD-31, YD-42 | BL-30 | L | G2 | Báo cáo sinh ra có đủ các phần; SARIF hợp lệ theo schema; tổng các nhóm bằng tổng số yêu cầu | Xong |
 | BL-33 | Lệnh `rfcv specs`: duyệt RBS bất đồng và mẫu 10% | YD-03, RA-4 | BL-23 | M | G2 | Người duyệt chấp nhận, sửa hoặc loại được; công người đo được | Chưa làm |
 | BL-32 | Lệnh `rfcv review`: bảng duyệt NEEDS\_REVIEW (quy tắc gây nhãn, bằng chứng đặt cạnh nhau, nhân chứng, mã dạng văn bản không tin cậy), bản ghi Review riêng | YD-41 | BL-31 | M | DNS | 100% mục NEEDS\_REVIEW có đủ các phần; nhãn máy không bị sửa | Chưa làm |
-| BL-34 | Lệnh `rfcv status`: tiến độ theo trạng thái và chi phí đã dùng | YD-60 | BL-04 | S | DNS | Hiển thị tiến độ và token, USD của một lần chạy | Chưa làm |
+| BL-34 | Lệnh `rfcv status`: tiến độ theo trạng thái và chi phí đã dùng | YD-60 | BL-04 | S | DNS | Hiển thị tiến độ và token, USD của một lần chạy | Đang làm |
 | BL-35 | Kịch bản tái lập một lệnh cho mỗi VIOLATION; người ngoài chạy lại mẫu 20 bản ghi T3 (E2) | YD-40 | BL-31 | M | G3 | ≥ 90% mẫu tái lập được (ĐX) | Chưa làm |
 
 ## EP-6. Vòng đời phát triển (tầng 3 theo Bảng 26)

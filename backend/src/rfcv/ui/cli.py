@@ -313,6 +313,12 @@ def run(
     ] = None,
     sut_launcher: Annotated[str | None, typer.Option(help="Tên bộ chạy SUT trong registry")] = None,
     tenant: Annotated[str, typer.Option()] = "default",
+    explain: Annotated[
+        bool,
+        typer.Option(
+            "--explain/--no-explain", help="Report agent viết giải thích cho từng kết luận (Output gate kiểm)"
+        ),
+    ] = True,
 ) -> None:
     """Chạy kiểm chứng: lắp ráp runtime từ cấu hình rồi điều tra từng yêu cầu."""
     from rfcv.assembly import MissingProviderError, RuntimeConfig, build_runtime
@@ -329,6 +335,7 @@ def run(
         code_index=code_index,
         executor=executor,
         sut_launcher=sut_launcher,
+        explain=explain,
     )
     from rfcv.codeindex.workspace import WorkspaceError
 
@@ -489,10 +496,29 @@ def specs(run_id: str) -> None:
 
 
 @app.command()
-def status(run_id: str) -> None:
-    """Tiến độ theo trạng thái, chi phí đã dùng."""
-    typer.echo(f"status: {_NOT_YET}", err=True)
-    raise typer.Exit(2)
+def status(
+    run_id: str,
+    runs: Annotated[Path, typer.Option("--runs", help="Thư mục chứa các lần chạy")] = Path("runs"),
+    as_json: Annotated[bool, typer.Option("--json", help="In JSON")] = False,
+) -> None:
+    """Tiến độ theo trạng thái và chi phí đã dùng (token; USD cần bảng giá, xem BL-76)."""
+    from rfcv.ui.report import progress, resolve_run
+
+    try:
+        data = progress(resolve_run(run_id, runs))
+    except FileNotFoundError as exc:
+        typer.echo(f"LỖI: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    if as_json:
+        typer.echo(json.dumps(data, ensure_ascii=False, indent=2))
+        return
+    req, tok = data["requirements"], data["tokens"]
+    typer.echo(f"Yêu cầu: {req['decided']}/{req['started']} đã có kết luận, {req['in_progress']} đang chạy")
+    typer.echo("Theo nhãn: " + (", ".join(f"{k} {v}" for k, v in sorted(data["by_label"].items())) or "chưa có"))
+    typer.echo(f"Token: {tok['total']:,} (" + ", ".join(f"{k} {v:,}" for k, v in sorted(tok["by_role"].items())) + ")")
+    typer.echo(
+        f"Lời gọi công cụ: {data['tool_calls']['total']} | thời gian: {data['seconds']}s | USD: chưa tính (cần bảng giá)"
+    )
 
 
 @app.command()
@@ -510,7 +536,30 @@ def review(run_id: str) -> None:
 
 
 @app.command()
-def report(run_id: str, format: Annotated[str, typer.Option("--format")] = "html") -> None:
-    """Sinh lại báo cáo HTML, JSON hoặc SARIF."""
-    typer.echo(f"report: {_NOT_YET}", err=True)
-    raise typer.Exit(2)
+def report(
+    run_id: str,
+    format: Annotated[str, typer.Option("--format", help="html | json | sarif")] = "html",
+    runs: Annotated[Path, typer.Option("--runs", help="Thư mục chứa các lần chạy")] = Path("runs"),
+    out: Annotated[Path | None, typer.Option("--out", help="Ghi ra tệp thay vì in ra màn hình")] = None,
+) -> None:
+    """Sinh báo cáo của một lần chạy từ nhật ký và kho bằng chứng: HTML, JSON hoặc SARIF. Nhãn không bao giờ bị sửa."""
+    from rfcv.ui.report import load_run, resolve_run, to_html, to_json, to_sarif
+
+    if format not in ("html", "json", "sarif"):
+        typer.echo(f"LỖI: --format phải là html, json hoặc sarif, không phải '{format}'", err=True)
+        raise typer.Exit(2)
+    try:
+        loaded = load_run(resolve_run(run_id, runs))
+    except FileNotFoundError as exc:
+        typer.echo(f"LỖI: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    text = (
+        to_html(loaded)
+        if format == "html"
+        else json.dumps(to_json(loaded) if format == "json" else to_sarif(loaded), ensure_ascii=False, indent=2)
+    )
+    if out is None:
+        typer.echo(text)
+    else:
+        out.write_text(text, encoding="utf-8")
+        typer.echo(f"Đã ghi {out}")
