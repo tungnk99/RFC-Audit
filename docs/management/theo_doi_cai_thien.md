@@ -185,6 +185,13 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
   theo chủ đề.
 - **Thư mục `docs/html/`:** bản HTML gốc để đối chiếu; xoá khi đã duyệt xong bản Markdown (test `test_naming` sẽ vẫn đạt).
 - **Đóng khi:** từng mục được sửa hoặc quyết định giữ nguyên (ghi lý do vào quy ước), `pytest` và kiểm liên kết đều sạch.
+- **Kết quả (BL-91):** (1) hai gói `agents`: **giữ nguyên có chủ đích**. Đổi tên gói ngoài kéo theo khoảng 22 tệp import, đường dẫn dữ liệu `role.yaml`,
+  cấu hình import-linter, CI và hơn 40 liên kết tài liệu, trong khi nguy cơ va chạm chỉ xảy ra nếu cài thư viện có gói `agents` (hiện không có). Thay vào đó có
+  `test_the_top_level_agents_package_is_ours_not_a_library_of_the_same_name` báo ngay khi bị che; đổi tên khi thêm một thư viện như vậy. (2) `eval/scripts/` đã gộp
+  vào `scripts/` với tiền tố `eval_` (`eval_prepare.ps1`, `eval_collect_wolfssl_commits.py`, `eval_make_manifest.py`); `eval/` còn lại chỉ là dữ liệu và cấu hình, mã chấm vẫn ở `src/rfcv/eval/`.
+  (3) `test_misc.py` đã tách theo chủ đề (`test_requirement_registry.py`, `test_adapter_checker.py`, `test_cli.py`, `test_sarif.py`, `test_eval_metrics.py`,
+  `test_tlsfuzzer_backend.py`). Giữ `test_agents_layout.py` và `test_agents_root.py` (số nhiều: kiểm thư mục `agents/`) khác với `test_agent_runtime.py` (số ít: runtime của
+  một agent), vì tên theo đúng đối tượng được kiểm. (4) `docs/html/` giữ lại để đối chiếu với bản Markdown; xoá khi bạn duyệt xong, không cần sửa test.
 
 ### CT-20 · P1 · Ngưỡng chất lượng chưa thống nhất giữa các tài liệu thiết kế
 - **Bằng chứng:** Bảng 8 (thiết kế đánh giá) và Bảng 13 (đánh giá khả thi) đặt tỉ lệ COMPLIANT sai 0 (tối đa 5%) và precision VIOLATION ≥ 80%.

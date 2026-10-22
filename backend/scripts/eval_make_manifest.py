@@ -1,7 +1,7 @@
 """Ghi eval_manifest: hash mọi đầu vào ảnh hưởng kết luận (thiết kế đánh giá, N1 và bước 2 của mục 9).
 
-    python eval/scripts/make_manifest.py             # in tổng hash, ghi eval/manifest/eval_manifest.json
-    python eval/scripts/make_manifest.py --check     # so với bản đã ghi; thoát 1 nếu có tệp đổi (tức là đã sửa sau khi chốt)
+    python scripts/eval_make_manifest.py          # in tổng hash, ghi eval/manifest/eval_manifest.json
+    python scripts/eval_make_manifest.py --check  # so với bản đã ghi; thoát 1 nếu có tệp đổi (tức là đã sửa sau khi chốt)
 """
 
 from __future__ import annotations
@@ -12,10 +12,10 @@ import json
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "eval" / "manifest" / "eval_manifest.json"
 GLOBS = [
-    "eval/config/**/*", "eval/dataset/**/*", "eval/scripts/**/*.py",
+    "eval/config/**/*", "eval/dataset/**/*", "scripts/eval_*",
     "adapters/**/*", "agents/**/*.md", "agents/**/*.yaml", "skills/**/*", "config/models.yaml",
     "src/rfcv/domains/rfc_protocol/rules.py", "uv.lock",
 ]

@@ -2,7 +2,7 @@
 
 Chỉ dùng thư viện chuẩn + git. Đầu ra là CSV để người lọc tay; script KHÔNG quyết định commit nào là lỗi tuân thủ.
 
-    python eval/scripts/collect_wolfssl_commits.py --repo eval/work/wolfssl --out eval/dataset/real/wolfssl_commit_ung_vien.csv
+    python scripts/eval_collect_wolfssl_commits.py --repo eval/work/wolfssl --out eval/dataset/real/wolfssl_commit_ung_vien.csv
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from pathlib import Path
 
 import yaml
 
-CONFIG = Path(__file__).resolve().parents[1] / "config" / "eval.yaml"
+CONFIG = Path(__file__).resolve().parents[1] / "eval" / "config" / "eval.yaml"
 FIELDS = [
     "sha", "parent", "date", "split", "subject", "keywords", "files", "touches_src", "touches_tests",
     "type", "keep", "requirement", "notes",

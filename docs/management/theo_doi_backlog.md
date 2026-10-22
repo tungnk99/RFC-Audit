@@ -143,7 +143,7 @@ quyết định số đo của mọi lần chạy sau.
 |---|---|---|---|---|---|---|---|
 | BL-90 | CI xanh: sửa 16 lỗi `pyright`, 2 lỗi `ruff`, định dạng khoảng 10 file | CT-14 | – | M | Ngay | `pyright`, `ruff check`, `ruff format --check`, `lint-imports`, `pytest` đều sạch | Xong |
 | BL-92 | Quyết định CLI có tự nạp `.env` hay chỉ ghi rõ trong README | CT-15 | – | S | Ngay | Quyết định được ghi; `rfcv models` không còn báo sai khoá | Xong |
-| BL-91 | Xử lý các chỗ tên chưa thống nhất: gói `agents` và `src/rfcv/agents`, `eval/scripts`, tên file test | CT-19 | – | M | G1 | Từng mục được sửa hoặc ghi lý do giữ nguyên; `pytest` và kiểm liên kết sạch | Chưa làm |
+| BL-91 | Xử lý các chỗ tên chưa thống nhất: gói `agents` và `src/rfcv/agents`, `eval/scripts`, tên file test | CT-19 | – | M | G1 | Từng mục được sửa hoặc ghi lý do giữ nguyên; `pytest` và kiểm liên kết sạch | Xong |
 | BL-93 | Cập nhật tài liệu thiết kế cho khớp mã sau khi dựng xong phần chạy thật (ví dụ `R0–R7` và `V0–V9`) | – | BL-04 | M | G3 | Không còn chỗ lệch đã biết giữa thiết kế và mã | Chưa làm |
 | BL-95 | Gói tái lập cho lần chạy chính thức, hướng dẫn tái lập từng bước, gắn thẻ git cho phiên bản nộp | – | BL-73 | M | LV | Người ngoài chạy lại được từ commit tới bảng kết quả | Chưa làm |
 | BL-94 | Viết luận văn (các chương, RQ1–RQ5, hạn chế, tham khảo), slide, bản demo; nộp 05/2027; bảo vệ đầu 06/2027 | – | BL-73 | XL | LV | Luận văn nộp; bảo vệ xong | Chưa làm |
