@@ -119,6 +119,7 @@ Mức: **P0** chặn đánh giá thật, **P1** ảnh hưởng độ tin cậy h
   họ mô hình khác để lỗi ít tương quan (M2).
 - **Hướng sửa:** thêm một mô hình họ khác vào `models` rồi đổi dòng của `verifier` và `rfc_analyst.b`.
 - **Đóng khi:** Verifier chạy bằng mô hình khác họ và có số đo so với lần dùng chung; hoặc ghi rõ đây là hạn chế của luận văn.
+- **Quyết định (2026-10-22):** tạm thời chỉ dùng DeepSeek. BL-16 chuyển sang "Chặn" (chờ có khoá của một họ mô hình khác) và việc này được ghi là hạn chế của luận văn: kết luận chưa dựa vào hai họ mô hình độc lập. Khi có khoá, thêm mô hình vào `models.yaml` và đổi dòng `verifier` và `rfc_analyst.b` (mô hình cục bộ không cần khoá cũng dùng được, xem BL-63).
 
 ### CT-08 · P1 · Chưa thử đối kháng với mô hình thật
 - **Bằng chứng:** cơ chế cách ly (vùng cách ly, IFC, Schema gate) mới được kiểm bằng test đơn vị. Chưa có lần chạy nào đặt chỉ
@@ -266,6 +267,6 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 ## Hạn chế đã biết (cho phần hạn chế của luận văn)
 
 - Phép thử đầu-cuối dùng SUT, backend kiểm thử và mã nguồn **giả**; chưa có kết quả trên wolfSSL thật (CT-09).
-- Mọi agent dùng một mô hình, nên Verifier và luồng dịch thứ hai chưa độc lập về họ mô hình (CT-07).
+- Mọi agent dùng một mô hình (DeepSeek, quyết định tạm thời 2026-10-22), nên Verifier và luồng dịch thứ hai chưa độc lập về họ mô hình (CT-07).
 - Chưa kiểm tra đối kháng bằng mô hình thật (CT-08); chưa có số đo thống kê (CT-16).
-- Agent không thấy câu RFC gốc (CT-05); loại C và D, Report và RFC Analyst chưa nối đầy đủ (CT-10, CT-11, CT-12).
+- Agent thấy câu RFC gốc khi có bản RFCXML trong `inputs/rfc/` (BL-20), nhưng RFC 8446 không có XML chính thức (CT-23, CT-05); loại C và D, Report và RFC Analyst chưa nối đầy đủ (CT-10, CT-11, CT-12).
