@@ -38,6 +38,8 @@ Mỗi cấu hình nên chạy mỗi ca **ít nhất 3 lần** vì kết quả c�
 | 2 | 2026-10-22 | #1 + prompt "nạp skill một lần" (BL-10), `llm_calls` Code Reader 20 (BL-11), gộp T3 thường trong `evidence.summary` (BL-12); 3 lần mỗi ca | faulty | VIOLATION V2 (3/3) | 1 | 9-13 | 75.679 / 95.007 / 96.553 | 0% | 0/2 (3 lần) | 3 (0) |
 | 2 | 2026-10-22 | như trên | correct | COMPLIANT V5 (3/3) | 2 / 2 / 7 | 18 / 26 / 128 | 170.996 / 270.201 / 1.184.441 | 0% / 0% / 14% | 0/3, 0/3, **1/8** | 5 (0) mỗi lần |
 | 3 | 2026-10-22 | #2 + sổ tay phản biện lại sau khi vấn đề được xử lý (R2/R3-recritique-after-fix); 5 lần | correct | COMPLIANT (5/5: V5 x4, V6 x1) | 2 (5/5) | 22-33 | 182.218 / 196.336 / 253.887 / 291.734 / 303.415 | 0-1 lần hỏng | 0/3 x4, **1/3** | 0 nạp lại |
+| 4 | 2026-10-22 | #3 + bỏ giới hạn `llm_calls` mọi agent; 3 lần faulty, 5 lần correct | faulty | VIOLATION V2 (3/3) | 1 | 11-14 | 64.938 / 97.146 / 97.825 | 0% | 0/2 (3 lần) | 0 nạp lại |
+| 4 | 2026-10-22 | như trên | correct | COMPLIANT V5 (4/5), **NEEDS_REVIEW V7 (1/5)** | 2, 2, 3, 2, 2 | 26-55 | 239.886 / 240.727 / 291.220 / 304.593 / **467.265** | 0-1 lần hỏng | 0/3 x4, **1/4** | 0 nạp lại |
 
 \* Lãng phí = token tiêu trong các lần chạy agent bị hỏng, chia tổng token. Mỗi ca mới chạy **một lần**, chưa đủ để nói về
 độ ổn định. Khi thêm dòng, ghi thêm thay đổi so với lần trước vào cột Cấu hình.
@@ -52,6 +54,10 @@ Dòng 3: lần correct tệ nhất trước đó (1,18 triệu token) do **lặp
 TRACE_PATHS 4 vòng liền mà không phản biện lại. Đã sửa trong `advisor.py` (vấn đề đã được nhiệm vụ đề xuất xử lý thì coi là `stale`, gợi ý phản biện lại). Kết quả: cả 5 lần
 dừng ở vòng 2, tối đa 303k token. Còn một lần (correct-4) Code Reader vẫn dính `UsageLimitExceeded` dù `llm_calls` = 20, và vì thế nhãn cuối là V6 (BEHAVIORAL) thay vì V5
 (LINKED): lỗi này làm yếu mức bảo đảm chứ không đổi nhãn. Nên BL-11 và `worker_first_failures` của BL-10 vẫn chưa đạt; cần quyết định tăng `llm_calls` hay rút gọn việc Code Reader làm.
+
+Dòng 4: bỏ `llm_calls` không đủ để hết `UsageLimitExceeded`. Lần hỏng (correct-2) lần này là **giới hạn token của Code Reader** (`total_tokens=258959` so với 250000, sau 27 lời gọi công cụ, mỗi lượt gọi LLM khoảng 9k token vì
+ngữ cảnh tăng dần), nhãn cuối thành NEEDS_REVIEW V7 (cảnh báo giả trên SUT đúng, an toàn nhưng tốn công duyệt). Nghĩa là BL-11 và `worker_first_failures` của BL-10 vẫn chưa đạt, nguyên nhân giờ là ngân sách
+token (`budget_per_task.tokens`) chứ không phải số lượt. Việc 4/5 lần `correct` đạt V5 trong 240-305k token cho thấy 250k sát ngưỡng với ca bình thường. Quyết định cần có: nâng hay bỏ `tokens` của Code Reader.
 
 ## Vấn đề đang mở
 
