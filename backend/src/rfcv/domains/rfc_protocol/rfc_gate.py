@@ -392,14 +392,23 @@ class RfcDocument:
 
     def __init__(self, xml_text: str, rfc_number: int) -> None:
         self.rfc = rfc_number
+        self.fmt = "xml"
+        self.digest = text_hash(xml_text)
         self._sections = _xml_sections(ET.fromstring(xml_text))
 
     @classmethod
     def from_text(cls, text: str, rfc_number: int) -> RfcDocument:
         doc = cls.__new__(cls)
         doc.rfc = rfc_number
+        doc.fmt = "txt"
+        doc.digest = text_hash(text)
         doc._sections = _txt_sections(text)
         return doc
+
+    @property
+    def source(self) -> str:
+        """Tài liệu nguồn đã đọc, ghi vào kết luận: tên, định dạng và băm (cùng RFC khác định dạng thì định danh đoạn cũng khác)."""
+        return f"RFC{self.rfc} {self.fmt} {self.digest}"
 
     def requirements(self, sections_in_scope: Iterable[str] | None = None) -> list[RfcSentence]:
         scope = list(sections_in_scope) if sections_in_scope is not None else None

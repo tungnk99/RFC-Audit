@@ -172,6 +172,7 @@ class ExecutionLoop:
             {
                 "rtype": req.rtype,
                 "modal": req.modal,
+                "spec_ref": req.spec_ref,
                 "budget": dataclasses.asdict(self._budget),
                 "feasible": dict(inv.feasible),
                 "rules_version": self._rules.version,

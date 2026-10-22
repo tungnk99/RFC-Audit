@@ -43,6 +43,11 @@ class RequirementView:
     requirement_id: str
     rtype: str
     modal: str
+    # Nguồn đặc tả của yêu cầu, ghi nguyên vào kết luận (BL-26): kết luận chỉ có giá trị cho đúng văn bản đã đọc.
+    # Rỗng khi miền hay lần chạy không có văn bản nguồn (agent chỉ thấy RBS).
+    spec_ref: str = ""  # định danh câu, ví dụ RFC8446§5.2#p9s3
+    spec_hash: str = ""  # băm văn bản câu
+    spec_doc: str = ""  # tài liệu nguồn: "<tên> <định dạng> <băm tài liệu>", ví dụ "RFC8446 txt sha256:..."
 
 
 @dataclass(frozen=True)
@@ -143,6 +148,9 @@ class VerdictRecord:
     stop_reason: StopReason
     rules_version: str
     conflicts: tuple[Conflict, ...] = field(default=())
+    spec_ref: str = ""
+    spec_hash: str = ""
+    spec_doc: str = ""
 
     def to_json(self) -> dict[str, object]:
         return {
@@ -154,6 +162,7 @@ class VerdictRecord:
             "modal": self.modal,
             "evidence_ids": list(self.evidence_ids),
             "stop_reason": self.stop_reason.value,
+            "spec": {"ref": self.spec_ref, "sentence_hash": self.spec_hash, "document": self.spec_doc},
         }
 
 
@@ -194,4 +203,7 @@ def decide(
         stop_reason=stop_reason,
         rules_version=rs.version,
         conflicts=report.conflicts,
+        spec_ref=req.spec_ref,
+        spec_hash=req.spec_hash,
+        spec_doc=req.spec_doc,
     )

@@ -91,14 +91,21 @@ def hard_index(case: HardCase) -> InMemoryCodeIndex:
     put(850, "            SendAlert(ssl, alert_fatal, internal_error);")
     put(851, "            break;")
     put(852, "    }")
-    put(853, "    ssl->options.isClosed = 1;" if world.closes else "    /* keep the connection open so the peer can retry */")
+    put(
+        853,
+        "    ssl->options.isClosed = 1;"
+        if world.closes
+        else "    /* keep the connection open so the peer can retry */",
+    )
     put(854, "    return err;")
     put(855, "}")
     return InMemoryCodeIndex(
         sources={FILE: src},
         symbols=[
             SymbolInfo(FILE, "ProcessReply", "function", 300, 420, "int ProcessReply(WOLFSSL* ssl)"),
-            SymbolInfo(FILE, "GetRecordHeader", "function", 800, 830, "static int GetRecordHeader(WOLFSSL* ssl, word32* size)"),
+            SymbolInfo(
+                FILE, "GetRecordHeader", "function", 800, 830, "static int GetRecordHeader(WOLFSSL* ssl, word32* size)"
+            ),
             SymbolInfo(FILE, "HandleError", "function", 840, 855, "static int HandleError(WOLFSSL* ssl, int err)"),
             SymbolInfo(FILE, "MAX_RECORD_SIZE", "macro", 20, 20, "#define MAX_RECORD_SIZE 16384"),
             SymbolInfo(FILE, "MAX_MSG_EXTRA", "macro", 21, 21, "#define MAX_MSG_EXTRA 256"),

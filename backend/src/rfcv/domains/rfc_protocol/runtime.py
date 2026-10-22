@@ -16,6 +16,7 @@ from agents.common import ORACLE_KEY, TaskType
 from agents.locator.service import Locator, requirement_keywords
 from agents.tester.handler import ScenarioHandler
 from agents.verifier.handler import NoopHandler
+from rfcv.common.hashing import text_hash
 from rfcv.core.execution_loop import Investigation
 from rfcv.core.ifc import Labeled, TrustLabel
 from rfcv.domains.rfc_protocol.adapter_view import to_vocabulary, vocabulary_terms
@@ -126,10 +127,17 @@ class ProtocolRuntime:
             text = f.read_text(encoding="utf-8")
             rbs = parse_rbs(text)
             oracle = compile_oracle(rbs, vocab)
+            # Câu RFC gốc, đoạn chứa câu và gói ngữ cảnh, lấy theo trường nguồn của RBS qua RFC gate (RFC là đầu vào TRUSTED).
+            # Không có bản RFC trong Input store thì agent làm việc chỉ với RBS có cấu trúc, như trước.
+            rfc = lookup_sentence(rfc_docs, rbs.sentence_id)
+            source_doc = rfc_docs.get(rfc.rfc) if rfc is not None else None
             requirement = ProtocolRequirement(
                 requirement_id=rbs.requirement_id,
                 rtype=rbs.rtype,
                 modal=rbs.modal,
+                spec_ref=rbs.sentence_id,
+                spec_hash=text_hash(rfc.sentence) if rfc is not None else "",
+                spec_doc=source_doc.source if source_doc is not None else "",
                 required_variants=oracle.required_variant_names,
                 random_k=oracle.random_k,
                 valid_random_k=oracle.valid_random_k,
@@ -144,9 +152,6 @@ class ProtocolRuntime:
                 "adapter.component_taxonomy": Labeled(list(manifest.component_taxonomy), TrustLabel.TRUSTED),
                 "adapter.locator_hints": Labeled(hints, TrustLabel.TRUSTED),
             }
-            # Câu RFC gốc, đoạn chứa câu và gói ngữ cảnh, lấy theo trường nguồn của RBS qua RFC gate (RFC là đầu vào TRUSTED).
-            # Không có bản RFC trong Input store thì agent làm việc chỉ với RBS có cấu trúc, như trước.
-            rfc = lookup_sentence(rfc_docs, rbs.sentence_id)
             if rfc is not None:
                 context["rfc.sentence"] = Labeled(rfc.sentence, TrustLabel.TRUSTED)
                 context["rfc.paragraph"] = Labeled(rfc.paragraph, TrustLabel.TRUSTED)
