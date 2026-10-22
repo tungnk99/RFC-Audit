@@ -124,7 +124,7 @@ Mã: [llm_gateway.py](../../backend/src/rfcv/core/llm_gateway.py), [runner.py](.
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
-| LG-1 | Khoá API chỉ đọc từ biến môi trường và chỉ trong gateway; không có trong hash cấu hình | 0 rò | Đạt (test); quét trace và bằng chứng đã có trên lần chạy giả, quét tự động sau mỗi lần chạy thật là BL-62 ([QS-07](tieu_chuan_he_thong.md#tầng-a-an-toàn-bất-biến-0-vi-phạm)) |
+| LG-1 | Khoá API chỉ đọc từ biến môi trường và chỉ trong gateway; không có trong hash cấu hình | 0 rò | Đạt (test); quét trace, bằng chứng và artifacts tự động sau mỗi lần chạy ([test_leak_scan.py](../../backend/tests/test_leak_scan.py); [QS-07](tieu_chuan_he_thong.md#tầng-a-an-toàn-bất-biến-0-vi-phạm)) |
 | LG-2 | Khai báo mô hình một lần, gán cho agent ở mục riêng; agent chưa được gán bị từ chối lúc khởi động | 100% | Đạt (test) |
 | LG-3 | Lỗi nhà cung cấp (hết hạn mức, lỗi HTTP, sai định dạng) thành lỗi vai trò có trace, không làm sập lượt chạy | 100% | Đạt (test) |
 | LG-4 | Token đã tiêu trước khi hỏng vẫn tính vào ngân sách | 100% | Đạt (test) |

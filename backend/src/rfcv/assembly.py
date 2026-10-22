@@ -32,6 +32,7 @@ from rfcv.evidence.store import EvidenceStore
 from rfcv.evidence.verdict_engine import RuleSet, VerdictRecord
 from rfcv.gates.code_gate import build_code_tools
 from rfcv.gates.explore_policy import CodeScope
+from rfcv.gates.leak_scan import ScanResult, scan_run
 from rfcv.gates.tool_gateway import ToolGateway, ToolSpec
 from rfcv.manifest import RunManifest, package_versions, registry_fingerprint
 from rfcv.plugins import Registry, current_registry, use_registry
@@ -105,6 +106,19 @@ class Runtime:
             close = getattr(prov, "close", None)
             if callable(close):
                 close()
+
+    def scan_leaks(self) -> ScanResult:
+        """Quét dữ liệu lần chạy tìm khoá API và nội dung tệp ngoài phạm vi (QS-07). Gọi sau `close()`; ghi
+        `leak_scan.json` vào thư mục lần chạy."""
+        scope = self.manifest.code_scope
+        exclude = tuple(scope.exclude) or CodeScope(Path(".")).exclude
+        return scan_run(
+            self.config.run_dir / self.run_id,
+            secrets=self.llm.api_keys(),
+            code_root=self.config.code_root,
+            include=tuple(scope.include),
+            exclude=exclude,
+        )
 
     async def run_all(self, source: Path) -> list[VerdictRecord]:
         """Điều tra lần lượt từng yêu cầu miền nạp được từ `source`, ghi vòng đời vào Requirement registry."""
