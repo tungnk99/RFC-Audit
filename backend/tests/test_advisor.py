@@ -138,6 +138,24 @@ def test_adherence_is_classified() -> None:
     assert adherence(None, "stop", (), "INFEASIBLE", "DEVIATE_PLAYBOOK") == "no_advice"
 
 
+def test_a_plan_that_contains_all_advised_tasks_is_followed_even_with_extras() -> None:
+    """CT-04: sổ tay gợi ý SELECT_TESTS, Planner giao SELECT_TESTS + LOCATE (cả hai cùng thiếu) vẫn là bám sổ tay."""
+    miss = [
+        {"need": "T3", "variant": "boundary:record.length=16641", "reason": "x"},
+        {"need": "T1", "variant": None, "reason": "y"},
+    ]
+    a = advice(missing=miss, history=ONE_ROUND)
+    extra = advice(missing=[miss[1]], history=ONE_ROUND)
+    assert a is not None and extra is not None and names(a) == ["SELECT_TESTS"] and names(extra) == ["LOCATE"]
+    superset = [*a.tasks, *extra.tasks]
+    assert adherence(a, "dispatch", superset, "INITIAL_TYPE_B", "DEVIATE_PLAYBOOK") == "followed"
+    # Thiếu một nhiệm vụ được gợi ý thì vẫn là chệch; đổi sang việc khác hoàn toàn cũng vậy.
+    both = advice(rtype="A")
+    assert both is not None and len(both.tasks) > 1
+    assert adherence(both, "dispatch", both.tasks[:1], "INITIAL_TYPE_B", "DEVIATE_PLAYBOOK") == "deviated_unannounced"
+    assert adherence(a, "dispatch", extra.tasks, "INITIAL_TYPE_B", "DEVIATE_PLAYBOOK") == "deviated_unannounced"
+
+
 def test_playbook_version_follows_content_not_order() -> None:
     assert playbook_version(PLAYBOOK) == playbook_version(tuple(reversed(PLAYBOOK)))
     extra = PlaybookRule("R9", When(rtypes=frozenset({"A"})), (Suggest("LOCATE"),), "INITIAL_TYPE_A")
