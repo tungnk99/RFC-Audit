@@ -32,7 +32,7 @@ uv run rfcv trace runs/<run_id> -r TLS13-0042   # xem lại luồng xử lý: gi
 
 **Theo dõi cải thiện:** vấn đề đã biết, bằng chứng, cách đo và cách biết đã sửa xong nằm ở [docs/management/theo_doi_cai_thien.md](../docs/management/theo_doi_cai_thien.md). Đổi prompt, skill, cấu hình hay mô hình thì chạy lại phép thử và ghi một dòng vào Nhật ký đo ở đó.
 
-Khoá API chỉ đọc từ biến môi trường (tên biến khai báo cho từng mô hình, ví dụ `DEEPSEEK_API_KEY`) và chỉ trong LLM gateway; `rfcv` không tự nạp `.env`, hãy đặt biến vào môi trường trước khi chạy. Cấu hình mô hình: [config/models.yaml](config/models.yaml), gồm hai phần: `models` (kho mô hình hỗ trợ, khai báo một lần kèm biến chứa khoá) và `agents` (agent nào dùng mô hình nào). Xem bằng `uv run rfcv models`.
+Khoá API chỉ đọc từ biến môi trường (tên biến khai báo cho từng mô hình, ví dụ `DEEPSEEK_API_KEY`) và chỉ trong LLM gateway; `rfcv` không tự nạp `.env`, hãy đặt biến vào môi trường trước khi chạy (PowerShell: `$env:DEEPSEEK_API_KEY = "..."`; bash: `export DEEPSEEK_API_KEY=...`). Đây là quyết định có chủ đích (CT-15): khoá không đi qua tệp nào mà CLI tự đọc. Cấu hình mô hình: [config/models.yaml](config/models.yaml), gồm hai phần: `models` (kho mô hình hỗ trợ, khai báo một lần kèm biến chứa khoá) và `agents` (agent nào dùng mô hình nào). Xem bằng `uv run rfcv models`.
 
 ## Kiến trúc
 
