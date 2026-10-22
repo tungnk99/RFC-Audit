@@ -182,6 +182,11 @@ Mức: **P0** chặn đánh giá thật, **P1** ảnh hưởng độ tin cậy h
 - **Bằng chứng:** `agents/code_indexer/handler.py` đã có và agent được đánh dấu nối; sổ tay vòng 1 chưa có quy tắc dùng nó; skill
   Verifier đang dặn không nêu `WRONG_LOCATION` vì từng chưa có bản đồ thành phần.
 - **Đóng khi:** chạy thử `MAP_COMPONENTS` với LLM thật, rồi quyết định cập nhật sổ tay và skill Verifier.
+- **Kết quả (BL-15):** đo bằng [measure_component_map.py](../../backend/scripts/measure_component_map.py) với chỉ mục tree-sitter thật của ba tệp wolfSSL (1162 hàm) và DeepSeek thật. **Bộ dễ** (30 hàm,
+  tên lộ thành phần): 30/30 ở cả 3 lần, 76-115k token. **Bộ khó** (14 hàm, tên không lộ như `TLS_hmac`, `CreateCookie`, `ALPN_Select`): 14/14 ở cả 3 lần, 21k token. Không mục nào bị handler loại.
+  **Giới hạn:** nhãn chuẩn do một người gán (trợ lý AI), không phải hai người độc lập; `temperature` = 0 nên ba lần chạy gần như cùng một mẫu (token giống hệt nhau), nên chưa đo được độ biến thiên; chưa có hàm lưng chừng giữa hai thành phần.
+  **Quyết định:** chưa thêm quy tắc vòng 1 cho `MAP_COMPONENTS` và giữ nguyên thận trọng của skill Verifier với `WRONG_LOCATION`, vì (1) hub chưa cấp `task.scope` và `TaskParams` không có trường vùng mã nên vòng điều tra chưa giao được việc này;
+  (2) bản đồ chỉ ảnh hưởng hạng tử `comp` của Locator (trọng số 2), chưa có số đo cho thấy nó đổi kết quả `LOCATE`. Việc nối vào vòng điều tra (thêm `scope` vào TaskParams và cấp `task.scope`) để sau, khi có SUT thật (BL-03).
 
 ### CT-19 · P3 · Tên chưa thống nhất ở vài chỗ
 Quy ước đã ghi ở [quy_uoc_dat_ten.md](../conventions/quy_uoc_dat_ten.md) và có test giữ ([test_naming.py](../../backend/tests/test_naming.py)). Còn các chỗ

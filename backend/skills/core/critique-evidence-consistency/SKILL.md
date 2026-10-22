@@ -34,8 +34,8 @@ A false issue only costs budget; a missed one can let a wrong `COMPLIANT` throug
 | 4 | No T1 at all; or a T1 lacks an aspect its type needs (A: CONDITION, THRESHOLD; B: + REACTION; C: ORDER_STATE, REACTION; D: EFFECT); or that aspect is `UNCLEAR`; or type D has no validated T2 | `MISSING_EVIDENCE` | the T1 if there is one | `LOCATE` (type D without T2: `STATIC_QUERY`) |
 | 5 | The T1 symbol or call path clearly belongs to another protocol layer than the RFC section (for example a record-layer requirement located in a handshake message handler) | `WRONG_LOCATION` | the T1 | `LOCATE` |
 
-Raise check 5 only when the names make it obvious. There is no component map yet, so a guess here sends the code
-reader in the wrong direction.
+Raise check 5 only when the names make it obvious. The component map is not wired into the investigation loop yet (it
+is accurate when run on its own, but the hub does not give it a code region to map), so a guess here sends the code reader in the wrong direction.
 
 ## Rules for the output
 
