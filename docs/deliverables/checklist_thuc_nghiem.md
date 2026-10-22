@@ -31,10 +31,10 @@ Mỗi câu hỏi chỉ được tích khi có số liệu từ thực nghiệm t
 - [ ] TLS 1.3: khoảng 40–60 yêu cầu trên ba bản triển khai, mỗi kho mã cố định tại một commit
 - [ ] DNS: khoảng 15–20 yêu cầu trên ba bản triển khai
 - [ ] Tập chia phát triển và đánh giá chính (47 commit sau 7/2026 làm tập chính, các commit trước làm tập phát triển)
-- [ ] Danh sách lỗi thật đã được người xác nhận: [commit ứng viên](../../eval/dataset/real/wolfssl_commit_ung_vien.csv) còn cột do người điền
-- [ ] Năm commit loại B sau 7/2026 (gồm `c18833f52`) bọc thành mẫu adapter, chạy tay trên commit cha và commit sửa (hạn giữa tháng 11). Hiện [known_bugs.yaml](../../adapters/tls13/validation/known_bugs.yaml) mới có **1/5**
+- [ ] Danh sách lỗi thật đã được người xác nhận: [commit ứng viên](../../backend/eval/dataset/real/wolfssl_commit_ung_vien.csv) còn cột do người điền
+- [ ] Năm commit loại B sau 7/2026 (gồm `c18833f52`) bọc thành mẫu adapter, chạy tay trên commit cha và commit sửa (hạn giữa tháng 11). Hiện [known_bugs.yaml](../../backend/adapters/tls13/validation/known_bugs.yaml) mới có **1/5**
 - [ ] Báo cáo kết quả tách trước và sau mốc kiến thức của mô hình (chống rò rỉ dữ liệu)
-- [ ] Cố định phiên bản: commit kho mã, mô hình, hash lời nhắc, hash skill ghi trong bản kê lần chạy (cơ chế đã có ở [manifest.py](../../src/rfcv/manifest.py); cần dùng cho lần chạy thật)
+- [ ] Cố định phiên bản: commit kho mã, mô hình, hash lời nhắc, hash skill ghi trong bản kê lần chạy (cơ chế đã có ở [manifest.py](../../backend/src/rfcv/manifest.py); cần dùng cho lần chạy thật)
 
 ## Tiêu chí "work thực tế" (Bảng 13 của đánh giá khả thi)
 
@@ -54,7 +54,7 @@ Ngưỡng là đề xuất, **cần thầy chốt**.
 
 ## Phép đo đã có (không tính là số liệu thực nghiệm)
 
-- [x] Mô phỏng cơ chế (`rfcv eval sim`, `rfcv eval coord`), có đăng ký trước và băm cấu hình: [coord_prereg.py](../../src/rfcv/eval/coord_prereg.py)
+- [x] Mô phỏng cơ chế (`rfcv eval sim`, `rfcv eval coord`), có đăng ký trước và băm cấu hình: [coord_prereg.py](../../backend/src/rfcv/eval/coord_prereg.py)
 - [x] Phép thử đầu-cuối với LLM thật trên SUT giả, hai ca: bản lỗi ra `VIOLATION` (V2), bản đúng ra `COMPLIANT` (V5, LINKED). Số đo và cách chạy lại ở [sổ theo dõi](../management/theo_doi_cai_thien.md#nhật-ký-đo)
 - [ ] Mỗi ca chạy ít nhất 3 lần để biết độ ổn định ([CT-16](../management/theo_doi_cai_thien.md#ct-16--p1--chưa-có-số-đo-thống-kê))
 - [ ] Phép thử đối kháng với mô hình thật, ca có chỉ thị độc trong mã ([CT-08](../management/theo_doi_cai_thien.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật))

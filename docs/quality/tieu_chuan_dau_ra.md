@@ -32,7 +32,7 @@ nhưng **không thể bảo đảm theo nghĩa đen** với bất kỳ công c�
 
 | Mã | Hệ thống phải giải quyết được | Mức đạt và cách đo | Hiện tại |
 |---|---|---|---|
-| YD-01 | Tách **mọi câu quy phạm** BCP 14 (MUST, MUST NOT, SHOULD, MAY…) của một RFC trong phạm vi, mỗi câu có định danh ổn định truy về mục và câu gốc (ví dụ `RFC8446§5.2#p3s2`) | Số câu tách được bằng số đếm độc lập; ranh giới câu đúng trên 30 câu mỗi giao thức (TK, E3) | RFC gate đã cài ([rfc_gate.py](../../src/rfcv/domains/rfc_protocol/rfc_gate.py), 4 test); **chưa đo trên toàn văn RFC thật** |
+| YD-01 | Tách **mọi câu quy phạm** BCP 14 (MUST, MUST NOT, SHOULD, MAY…) của một RFC trong phạm vi, mỗi câu có định danh ổn định truy về mục và câu gốc (ví dụ `RFC8446§5.2#p3s2`) | Số câu tách được bằng số đếm độc lập; ranh giới câu đúng trên 30 câu mỗi giao thức (TK, E3) | RFC gate đã cài ([rfc_gate.py](../../backend/src/rfcv/domains/rfc_protocol/rfc_gate.py), 4 test); **chưa đo trên toàn văn RFC thật** |
 | YD-02 | Mỗi câu quy phạm kết thúc ở **đúng một trạng thái**: một trong bốn nhãn, hoặc "ngoài phạm vi" kèm lý do. Không câu nào bị bỏ lặng lẽ | Tổng theo trạng thái bằng tổng câu tách được (100%) | Nhãn có; trạng thái "ngoài phạm vi" và bảng tổng hợp **chưa có** (Report chưa nối) |
 | YD-03 | Phân loại A–D và MUST, SHOULD, MAY cho mọi yêu cầu; báo cáo tách riêng (BR5) | Độ chính xác phân loại ≥ 90% (ĐX), hai người gán, kappa | RFC Analyst chưa nối |
 | YD-04 | Câu **không biểu diễn được** bằng RBS không bị bỏ qua: thành UNVERIFIABLE có lý do và được thống kê | 100% câu ngoài ngữ pháp có lý do; tỉ lệ ngoài ngữ pháp được báo cáo (ĐX: ≤ 20% trong phạm vi TLS 1.3) | Chưa đo |
@@ -42,7 +42,7 @@ nhưng **không thể bảo đảm theo nghĩa đen** với bất kỳ công c�
 
 | Mã | Hệ thống phải giải quyết được | Mức đạt và cách đo | Hiện tại |
 |---|---|---|---|
-| YD-10 | Thêm giao thức hay RFC mới **chỉ bằng adapter**, không sửa lõi (MT2) | 0 dòng đổi trong lõi (`git diff --stat`); công sức adapter (tuần công) được báo cáo (TK) | Đạt với miền giả ([test_generality.py](../../tests/test_generality.py)); DNS chưa làm |
+| YD-10 | Thêm giao thức hay RFC mới **chỉ bằng adapter**, không sửa lõi (MT2) | 0 dòng đổi trong lõi (`git diff --stat`); công sức adapter (tuần công) được báo cáo (TK) | Đạt với miền giả ([test_generality.py](../../backend/tests/test_generality.py)); DNS chưa làm |
 | YD-11 | RFC **chưa có adapter**: vẫn tách yêu cầu và báo cáo từng yêu cầu là "chưa kiểm chứng được: thiếu adapter"; không bịa nhãn | 100% yêu cầu có trạng thái này | Chưa có (cần Report và trạng thái ở YD-02) |
 | YD-12 | **RFC cũ chỉ có bản TXT** (ví dụ DNS, SSH) đọc được | Tách câu đúng như YD-01 | **Chưa**: RFC gate mới đọc RFCXML v3, "bản TXT chưa cài" |
 | YD-13 | Nhiều bản triển khai và nhiều ngôn ngữ (C, Rust, Go) cho cùng một giao thức; mỗi giao thức ít nhất 3 bản (TK) | Số bản triển khai chạy được; chỉ số tầng C trên từng bản | Chưa chạy bản thật nào |
@@ -66,7 +66,7 @@ nhưng **không thể bảo đảm theo nghĩa đen** với bất kỳ công c�
 | Mã | Hệ thống phải giải quyết được | Mức đạt và cách đo | Hiện tại |
 |---|---|---|---|
 | YD-30 | Mã đổi (commit mới): **kiểm chứng lại gia tăng**. Giữ bằng chứng còn hiệu lực, chạy lại mọi T3, chỉ điều tra lại yêu cầu bị ảnh hưởng | Chi phí kiểm chứng lại ≤ 30% lần đầu (ĐX); nhãn khớp lần chạy toàn bộ trên mẫu | **Chưa** (`rfcv rerun` chưa cài) |
-| YD-31 | Chạy như một bước **CI cho pull request**; kết quả vào GitHub code scanning và IDE qua SARIF 2.1.0 | SARIF hợp lệ theo schema; mỗi VIOLATION có vị trí mã thành một `result` | Có hàm dựng SARIF ([sarif.py](../../src/rfcv/ui/sarif.py)); chưa nối vào lệnh `rfcv report` |
+| YD-31 | Chạy như một bước **CI cho pull request**; kết quả vào GitHub code scanning và IDE qua SARIF 2.1.0 | SARIF hợp lệ theo schema; mỗi VIOLATION có vị trí mã thành một `result` | Có hàm dựng SARIF ([sarif.py](../../backend/src/rfcv/ui/sarif.py)); chưa nối vào lệnh `rfcv report` |
 | YD-32 | Kết luận gắn đúng với commit, phiên bản RFC, adapter và quy tắc (BR4); chạy lại cùng đầu vào cho cùng nhãn | Tái lập kết luận 100%; bằng chứng T3 chạy lại cùng kết quả | Cơ chế đạt (test); chưa với lần chạy thật |
 | YD-33 | Chạy được bằng Docker trên máy của nhóm phát triển, không cần hạ tầng lớn; một yêu cầu xong trong ngân sách thời gian | ≤ 30 phút mỗi yêu cầu (ngân sách mặc định 1800 giây) | Mô phỏng: 26–30 giây; chưa đo trên SUT thật |
 
@@ -85,7 +85,7 @@ nhưng **không thể bảo đảm theo nghĩa đen** với bất kỳ công c�
 | Mã | Hệ thống phải giải quyết được | Mức đạt và cách đo | Hiện tại |
 |---|---|---|---|
 | YD-50 | Mã không tin cậy (có thể do đối thủ viết) **không thể** đổi nhãn, chạy lệnh, đọc ngoài phạm vi hay lấy khoá | Đổi nhãn dưới A1–A6: 0 ca (TK, Bảng 30) | Đạt ở kiểm thử đơn vị; chưa thử với LLM thật ([CT-08](../management/theo_doi_cai_thien.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
-| YD-51 | **Kiểm soát dữ liệu gửi ra ngoài**: chỉ phần mã trong phạm vi `code_scope` tới nhà cung cấp LLM, loại tệp nhạy cảm (`*.pem`, `*.key`); hỗ trợ mô hình cục bộ cho mã không được phép gửi ra ngoài | 0 tệp ngoài phạm vi trong các lời gọi LLM (quét trace) | Phạm vi và loại tệp nhạy cảm được ép ([test_codeindex.py](../../tests/test_codeindex.py)); quét trace chưa có ([CT-21](../management/theo_doi_cai_thien.md#ct-21--p3--một-số-bất-biến-chưa-có-kiểm-thử-riêng)); mô hình cục bộ (endpoint tương thích OpenAI) chưa thử |
+| YD-51 | **Kiểm soát dữ liệu gửi ra ngoài**: chỉ phần mã trong phạm vi `code_scope` tới nhà cung cấp LLM, loại tệp nhạy cảm (`*.pem`, `*.key`); hỗ trợ mô hình cục bộ cho mã không được phép gửi ra ngoài | 0 tệp ngoài phạm vi trong các lời gọi LLM (quét trace) | Phạm vi và loại tệp nhạy cảm được ép ([test_codeindex.py](../../backend/tests/test_codeindex.py)); quét trace chưa có ([CT-21](../management/theo_doi_cai_thien.md#ct-21--p3--một-số-bất-biến-chưa-có-kiểm-thử-riêng)); mô hình cục bộ (endpoint tương thích OpenAI) chưa thử |
 | YD-52 | **Thất bại an toàn**: mọi lỗi (mô hình, API, SUT, hết ngân sách) dẫn tới UNVERIFIABLE hoặc NEEDS\_REVIEW kèm lý do, không ra nhãn sai và không làm mất kết quả của yêu cầu khác | 100% | Đạt (test); quan sát thật: Planner hỏng cả 8 vòng, hệ ra UNVERIFIABLE |
 
 ## G. Quy mô và chi phí thực tế

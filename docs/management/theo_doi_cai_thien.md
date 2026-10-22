@@ -72,7 +72,7 @@ Mức: **P0** chặn đánh giá thật, **P1** ảnh hưởng độ tin cậy h
 - **Bằng chứng:** Verifier nhận 55.229 token đầu vào, Planner 30.915 ở vòng cuối, vì tóm tắt liệt kê từng dòng T3 (khoảng 60 dòng).
   Tăng tuyến tính theo số biến thể.
 - **Hướng sửa:** gộp T3 theo biến thể và kết quả; giữ chi tiết cho ca FAIL, mâu thuẫn hoặc được trích trong nhãn. Sửa ở
-  `summarize_evidence` ([context_builder.py](../../src/rfcv/core/context_builder.py)) và các hàm tóm tắt trong `payloads.py`.
+  `summarize_evidence` ([context_builder.py](../../backend/src/rfcv/core/context_builder.py)) và các hàm tóm tắt trong `payloads.py`.
   Phải giữ các trường mà skill Verifier dựa vào (`alert`, `variant_class`, `outcome`, `linked`).
 - **Đóng khi:** token đầu vào của Verifier giảm rõ rệt (ghi số) mà Verifier vẫn nêu đúng 2 kịch bản thử trong
   `verifier_smoke` (MISSING_EVIDENCE và CONTRADICTION).
@@ -80,14 +80,14 @@ Mức: **P0** chặn đánh giá thật, **P1** ảnh hưởng độ tin cậy h
 ### CT-04 · P3 · Chỉ số "bám sổ tay" khắt khe với kế hoạch là tập cha
 - **Bằng chứng:** ca faulty vòng 2, sổ tay gợi ý `SELECT_TESTS`, Planner giao `SELECT_TESTS` + `LOCATE` (cả hai cùng thiếu sau khi
   hỏng) nên bị ghi `deviated_unannounced`. Kế hoạch hợp lý nhưng bị tính là chệch.
-- **Hướng sửa:** trong `adherence` ([advisor.py](../../src/rfcv/core/advisor.py)) coi kế hoạch chứa đủ nhiệm vụ được gợi ý là `followed`,
+- **Hướng sửa:** trong `adherence` ([advisor.py](../../backend/src/rfcv/core/advisor.py)) coi kế hoạch chứa đủ nhiệm vụ được gợi ý là `followed`,
   và ghi riêng `followed_plus` nếu muốn phân biệt.
 - **Đóng khi:** test cho ca tập cha; ca faulty hiện tại không còn bị tính là chệch.
 - **Kết quả (BL-13):** dherence coi kế hoạch chứa đủ nhiệm vụ được gợi ý là ollowed (có test ca tập cha và hai ca đối chứng). Ca faulty thật chỉ xác nhận lại khi đo ở đợt BL-10/11/12.
 
 ### CT-05 · P1 · Agent không thấy câu RFC
 - **Bằng chứng:** `rfc.sentence`, `rfc.paragraph`, `rfc.context_pack` nằm trong `KNOWN_UNSUPPLIED`
-  ([test_coordination_contracts.py](../../tests/test_coordination_contracts.py)), vì RFC Analyst chưa nối và hệ đọc thẳng file `*.rbs`.
+  ([test_coordination_contracts.py](../../backend/tests/test_coordination_contracts.py)), vì RFC Analyst chưa nối và hệ đọc thẳng file `*.rbs`.
   Code Reader và Verifier chỉ thấy RBS có cấu trúc. Phép kiểm "every/all" của skill Verifier cần câu RFC nên chưa chạy được.
 - **Hướng sửa:** tối thiểu, lấy câu RFC theo trường nguồn của RBS (`RFC8446§5.2#p4s3`) qua RFC gate và cấp vào ngữ cảnh. Đầy đủ
   là nối RFC Analyst (CT-12).
@@ -170,7 +170,7 @@ Mức: **P0** chặn đánh giá thật, **P1** ảnh hưởng độ tin cậy h
 - **Đóng khi:** chạy thử `MAP_COMPONENTS` với LLM thật, rồi quyết định cập nhật sổ tay và skill Verifier.
 
 ### CT-19 · P3 · Tên chưa thống nhất ở vài chỗ
-Quy ước đã ghi ở [quy_uoc_dat_ten.md](../conventions/quy_uoc_dat_ten.md) và có test giữ ([test_naming.py](../../tests/test_naming.py)). Còn các chỗ
+Quy ước đã ghi ở [quy_uoc_dat_ten.md](../conventions/quy_uoc_dat_ten.md) và có test giữ ([test_naming.py](../../backend/tests/test_naming.py)). Còn các chỗ
 lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục làm riêng, kèm chạy `pytest` và kiểm liên kết.
 - **Hai gói tên `agents`:** gói ngoài `agents/` (mã và dữ liệu từng agent) và gói lõi `src/rfcv/agents/` (schema kế hoạch,
   phản biện). Dễ nhầm, và tên `agents` ở mức cao nhất có thể va chạm với thư viện khác cùng tên (ví dụ OpenAI Agents SDK).
@@ -215,17 +215,17 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 
 | ID | Vấn đề | Nguyên nhân gốc | Đã sửa ở | Bài học |
 |---|---|---|---|---|
-| R-01 | Mọi lần gọi agent thật sập ngay: `Agent() got an unexpected keyword argument 'output_retries'` | `pydantic-ai 2.59.0` đổi sang `retries={'tools':…, 'output':…}` | [runner.py](../../src/rfcv/runtime/pydantic_ai/runner.py) | Test dùng mô hình giả vẫn bắt được vì dựng `Agent` thật; chạy `pytest` sau mỗi lần nâng phiên bản |
-| R-02 | Planner hỏng cả 8 vòng với 400 "Thinking mode does not support this tool_choice" | `deepseek-flash` mặc định bật thinking | [models.yaml](../../config/models.yaml): `extra_body: {thinking: {type: disabled}}` | `thinking: false` chung của pydantic-ai **không** dịch sang tham số DeepSeek; dùng `extra_body`. Xem `llm_failure` trong trace |
+| R-01 | Mọi lần gọi agent thật sập ngay: `Agent() got an unexpected keyword argument 'output_retries'` | `pydantic-ai 2.59.0` đổi sang `retries={'tools':…, 'output':…}` | [runner.py](../../backend/src/rfcv/runtime/pydantic_ai/runner.py) | Test dùng mô hình giả vẫn bắt được vì dựng `Agent` thật; chạy `pytest` sau mỗi lần nâng phiên bản |
+| R-02 | Planner hỏng cả 8 vòng với 400 "Thinking mode does not support this tool_choice" | `deepseek-flash` mặc định bật thinking | [models.yaml](../../backend/config/models.yaml): `extra_body: {thinking: {type: disabled}}` | `thinking: false` chung của pydantic-ai **không** dịch sang tham số DeepSeek; dùng `extra_body`. Xem `llm_failure` trong trace |
 | R-03 | Test agent thấy T1, trái Bảng 11 | `role.yaml` của Test khai báo `evidence.summary` | `verdict.missing` mới; bỏ `evidence.summary` khỏi Test | Ngữ cảnh mỗi agent phải khớp bảng trong tài liệu và có test kiểm |
-| R-04 | Code Reader không thấy từ vựng adapter nên dễ bị cổng từ chối `observed` | thiếu `adapter.vocabulary` | [code_reader/role.yaml](../../agents/code_reader/role.yaml) | Cổng từ chối vẫn xảy ra thi thoảng (thấy 1 lần), mô hình tự sửa được |
-| R-05 | `Critique.kind` là chuỗi tự do nên viết sai mã làm sổ tay bỏ qua vấn đề không báo lỗi | schema không ép enum | `build_critique_model` trong [agents/schemas.py](../../src/rfcv/agents/schemas.py) | Đầu ra của LLM phải ép bằng schema đóng |
+| R-04 | Code Reader không thấy từ vựng adapter nên dễ bị cổng từ chối `observed` | thiếu `adapter.vocabulary` | [code_reader/role.yaml](../../backend/agents/code_reader/role.yaml) | Cổng từ chối vẫn xảy ra thi thoảng (thấy 1 lần), mô hình tự sửa được |
+| R-05 | `Critique.kind` là chuỗi tự do nên viết sai mã làm sổ tay bỏ qua vấn đề không báo lỗi | schema không ép enum | `build_critique_model` trong [agents/schemas.py](../../backend/src/rfcv/agents/schemas.py) | Đầu ra của LLM phải ép bằng schema đóng |
 | R-06 | Hai skill dẫn tới trường không tồn tại; báo cáo độ đủ thiếu `feasible` | skill viết trước khi ngữ cảnh chốt | skill Planner và Test; `report_json` | Mỗi trường skill nhắc tới phải có trong `context_fields` |
 | R-07 | Trace thiếu nội dung phản biện, chi tiết lý do dừng, so sánh sổ tay, hội thoại khi hỏng; token không tính khi lỗi; `ModelAPIError` làm sập lượt chạy; lỗi môi trường làm sập driver | chưa ghi, chưa bắt | `requirement_start`, `round_start`, `plan_context`, `critique_result`, `role_run`, `stop`, `llm_failure`, `t3_case`; lệnh `rfcv trace` | Quan sát phải có trước khi cần; trace đã chỉ ra R-02 trong vài giây |
-| R-08 | Khai báo khoá API riêng cho từng agent | cấu hình theo vai trò | `models` + `agents` trong [models.yaml](../../config/models.yaml) | Khai báo mô hình một lần; đổi agent là đổi một dòng; `rfcv models` để xem |
+| R-08 | Khai báo khoá API riêng cho từng agent | cấu hình theo vai trò | `models` + `agents` trong [models.yaml](../../backend/config/models.yaml) | Khai báo mô hình một lần; đổi agent là đổi một dòng; `rfcv models` để xem |
 | R-09 | Skill tự chọn agent dùng nó (`rfcv-roles`) nên nhìn `agents/` không thấy agent có skill nào | khai báo ở sai phía | `skills:` trong `role.yaml`; `rfcv-roles` bị từ chối | Agent khai báo cái nó dùng |
 | R-10 | Mã agent tách khỏi dữ liệu agent, trùng tên thư mục | cấu trúc | `agents/<tên>/` chứa cả `role.yaml`, `prompt.md` và mã | Mỗi agent một thư mục |
-| R-11 | Chỉ số `skills_loaded` luôn rỗng khi chạy thật, dẫn tới kết luận sai "skill không được nạp" | tham số lời gọi công cụ là **chuỗi JSON** với nhà cung cấp thật, code chỉ chấp nhận `dict` | `_tool_args` trong [runner.py](../../src/rfcv/runtime/pydantic_ai/runner.py); `analyze_run.py` tính lại từ hội thoại | Test dùng mô hình giả cho dạng `dict`, không phản ánh nhà cung cấp thật. Trace chạy trước 2026-10-22 có `skills_loaded` sai |
+| R-11 | Chỉ số `skills_loaded` luôn rỗng khi chạy thật, dẫn tới kết luận sai "skill không được nạp" | tham số lời gọi công cụ là **chuỗi JSON** với nhà cung cấp thật, code chỉ chấp nhận `dict` | `_tool_args` trong [runner.py](../../backend/src/rfcv/runtime/pydantic_ai/runner.py); `analyze_run.py` tính lại từ hội thoại | Test dùng mô hình giả cho dạng `dict`, không phản ánh nhà cung cấp thật. Trace chạy trước 2026-10-22 có `skills_loaded` sai |
 
 ## Hạn chế đã biết (cho phần hạn chế của luận văn)
 

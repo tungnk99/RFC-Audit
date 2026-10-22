@@ -9,7 +9,7 @@ hoặc phép đo. Bảng bất biến đầy đủ và nơi ép từng bất bi�
 
 ## Execution loop (hub điều phối)
 
-Mã: [execution_loop.py](../../src/rfcv/core/execution_loop.py). Test: [test_execution_loop.py](../../tests/test_execution_loop.py).
+Mã: [execution_loop.py](../../backend/src/rfcv/core/execution_loop.py). Test: [test_execution_loop.py](../../backend/tests/test_execution_loop.py).
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
@@ -23,7 +23,7 @@ Mã: [execution_loop.py](../../src/rfcv/core/execution_loop.py). Test: [test_exe
 
 ## Context builder và IFC (nhãn tin cậy)
 
-Mã: [context_builder.py](../../src/rfcv/core/context_builder.py), [ifc.py](../../src/rfcv/core/ifc.py). Test: [test_policy_ifc.py](../../tests/test_policy_ifc.py).
+Mã: [context_builder.py](../../backend/src/rfcv/core/context_builder.py), [ifc.py](../../backend/src/rfcv/core/ifc.py). Test: [test_policy_ifc.py](../../backend/tests/test_policy_ifc.py).
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
@@ -34,19 +34,19 @@ Mã: [context_builder.py](../../src/rfcv/core/context_builder.py), [ifc.py](../.
 
 ## Tool gateway
 
-Mã: [tool_gateway.py](../../src/rfcv/gates/tool_gateway.py). Test: [test_gates.py](../../tests/test_gates.py), [test_assembly.py](../../tests/test_assembly.py).
+Mã: [tool_gateway.py](../../backend/src/rfcv/gates/tool_gateway.py). Test: [test_gates.py](../../backend/tests/test_gates.py), [test_assembly.py](../../backend/tests/test_assembly.py).
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
 | TG-1 | Từ chối mặc định mọi lời gọi công cụ không khai báo cho vai trò | 0 lọt qua | Đạt (test) |
 | TG-2 | Kiểm miền tham số; `explore` chỉ chạy lệnh đọc trong danh sách, không qua shell | 0 lệnh ngoài danh sách chạy được | Đạt (test) |
-| TG-3 | Công cụ nguy hiểm (ghi tệp, gọi mạng, chạy lệnh trên máy chủ) không đăng ký được, kể cả từ plugin | 0 | Đạt (test, [test_plugins.py](../../tests/test_plugins.py)) |
+| TG-3 | Công cụ nguy hiểm (ghi tệp, gọi mạng, chạy lệnh trên máy chủ) không đăng ký được, kể cả từ plugin | 0 | Đạt (test, [test_plugins.py](../../backend/tests/test_plugins.py)) |
 | TG-4 | Mã lỗi từ chối chỉ là mã liệt kê, không kèm chi tiết chính sách | 100% | Đạt (test) cho mã liệt kê và việc không lộ chi tiết chính sách ([test_invariants.py](../../backend/tests/test_invariants.py)) |
 | TG-5 | Chống đối thủ thật: dẫn dắt agent gọi công cụ ngoài quyền | 0 lọt qua | Chưa thử với LLM thật (A3, [CT-08](../management/theo_doi_cai_thien.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
 
 ## Schema gate (T1)
 
-Mã: [schema_gate.py](../../src/rfcv/domains/rfc_protocol/schema_gate.py). Test: [test_gates.py](../../tests/test_gates.py).
+Mã: [schema_gate.py](../../backend/src/rfcv/domains/rfc_protocol/schema_gate.py). Test: [test_gates.py](../../backend/tests/test_gates.py).
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
@@ -59,7 +59,7 @@ Mã: [schema_gate.py](../../src/rfcv/domains/rfc_protocol/schema_gate.py). Test:
 
 ## Code gate và Locator
 
-Mã: [code_gate.py](../../src/rfcv/gates/code_gate.py), [agents/locator/](../../agents/locator/).
+Mã: [code_gate.py](../../backend/src/rfcv/gates/code_gate.py), [agents/locator/](../../backend/agents/locator/).
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
@@ -72,7 +72,7 @@ Mã: [code_gate.py](../../src/rfcv/gates/code_gate.py), [agents/locator/](../../
 
 ## Test driver và oracle
 
-Mã: [driver.py](../../src/rfcv/domains/rfc_protocol/sandbox/driver.py), [oracle_compiler.py](../../src/rfcv/domains/rfc_protocol/spec/oracle_compiler.py). Test: [test_driver_and_coverage.py](../../tests/test_driver_and_coverage.py), [test_spec.py](../../tests/test_spec.py).
+Mã: [driver.py](../../backend/src/rfcv/domains/rfc_protocol/sandbox/driver.py), [oracle_compiler.py](../../backend/src/rfcv/domains/rfc_protocol/spec/oracle_compiler.py). Test: [test_driver_and_coverage.py](../../backend/tests/test_driver_and_coverage.py), [test_spec.py](../../backend/tests/test_spec.py).
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
@@ -86,7 +86,7 @@ Mã: [driver.py](../../src/rfcv/domains/rfc_protocol/sandbox/driver.py), [oracle
 
 ## Coverage linker
 
-Mã: [coverage_linker.py](../../src/rfcv/domains/rfc_protocol/coverage_linker.py).
+Mã: [coverage_linker.py](../../backend/src/rfcv/domains/rfc_protocol/coverage_linker.py).
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
@@ -96,7 +96,7 @@ Mã: [coverage_linker.py](../../src/rfcv/domains/rfc_protocol/coverage_linker.py
 
 ## Verdict engine
 
-Mã: [verdict_engine.py](../../src/rfcv/evidence/verdict_engine.py), [rules.py](../../src/rfcv/domains/rfc_protocol/rules.py). Test: [test_verdict_engine.py](../../tests/test_verdict_engine.py), [test_contracts.py](../../tests/test_contracts.py), [test_label_golden.py](../../tests/test_label_golden.py), [test_versioning.py](../../tests/test_versioning.py).
+Mã: [verdict_engine.py](../../backend/src/rfcv/evidence/verdict_engine.py), [rules.py](../../backend/src/rfcv/domains/rfc_protocol/rules.py). Test: [test_verdict_engine.py](../../backend/tests/test_verdict_engine.py), [test_contracts.py](../../backend/tests/test_contracts.py), [test_label_golden.py](../../backend/tests/test_label_golden.py), [test_versioning.py](../../backend/tests/test_versioning.py).
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
@@ -109,7 +109,7 @@ Mã: [verdict_engine.py](../../src/rfcv/evidence/verdict_engine.py), [rules.py](
 
 ## Evidence store
 
-Mã: [store.py](../../src/rfcv/evidence/store.py). Test: [test_evidence_store.py](../../tests/test_evidence_store.py), [test_generality.py](../../tests/test_generality.py).
+Mã: [store.py](../../backend/src/rfcv/evidence/store.py). Test: [test_evidence_store.py](../../backend/tests/test_evidence_store.py), [test_generality.py](../../backend/tests/test_generality.py).
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
@@ -120,7 +120,7 @@ Mã: [store.py](../../src/rfcv/evidence/store.py). Test: [test_evidence_store.py
 
 ## LLM gateway
 
-Mã: [llm_gateway.py](../../src/rfcv/core/llm_gateway.py), [runner.py](../../src/rfcv/runtime/pydantic_ai/runner.py). Test: [test_agent_runtime.py](../../tests/test_agent_runtime.py).
+Mã: [llm_gateway.py](../../backend/src/rfcv/core/llm_gateway.py), [runner.py](../../backend/src/rfcv/runtime/pydantic_ai/runner.py). Test: [test_agent_runtime.py](../../backend/tests/test_agent_runtime.py).
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
@@ -132,7 +132,7 @@ Mã: [llm_gateway.py](../../src/rfcv/core/llm_gateway.py), [runner.py](../../src
 
 ## Adapter checker
 
-Mã: [checker.py](../../src/rfcv/adapters/checker.py). Tài liệu: [mục 12 của thiết kế adapter](../design/thiet_ke_adapter_kiem_thu.md#12-adapter-checker).
+Mã: [checker.py](../../backend/src/rfcv/adapters/checker.py). Tài liệu: [mục 12 của thiết kế adapter](../design/thiet_ke_adapter_kiem_thu.md#12-adapter-checker).
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|

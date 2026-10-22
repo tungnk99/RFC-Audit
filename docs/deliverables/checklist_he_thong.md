@@ -9,57 +9,57 @@ Một hạng mục chỉ được tích `[x]` khi có bằng chứng đọc đư
 ## Tầng 1 (bắt buộc, 19 tuần công)
 
 ### 1. Lõi harness (3,5 tuần)
-- [x] Execution loop (hub, giao việc, ngân sách, phát hiện lặp): [execution_loop.py](../../src/rfcv/core/execution_loop.py), [test_execution_loop.py](../../tests/test_execution_loop.py)
-- [x] Context builder: [context_builder.py](../../src/rfcv/core/context_builder.py)
-- [x] IFC (nhãn tin cậy): [ifc.py](../../src/rfcv/core/ifc.py), [test_policy_ifc.py](../../tests/test_policy_ifc.py)
-- [x] LLM gateway (kho mô hình và gán cho agent): [llm_gateway.py](../../src/rfcv/core/llm_gateway.py), [models.yaml](../../config/models.yaml)
-- [x] Policy store: [policy.py](../../src/rfcv/core/policy.py)
-- [x] Schema gate: [schema_gate.py](../../src/rfcv/domains/rfc_protocol/schema_gate.py)
-- [x] Trace log và lệnh `rfcv trace`: [trace.py](../../src/rfcv/core/trace.py)
+- [x] Execution loop (hub, giao việc, ngân sách, phát hiện lặp): [execution_loop.py](../../backend/src/rfcv/core/execution_loop.py), [test_execution_loop.py](../../backend/tests/test_execution_loop.py)
+- [x] Context builder: [context_builder.py](../../backend/src/rfcv/core/context_builder.py)
+- [x] IFC (nhãn tin cậy): [ifc.py](../../backend/src/rfcv/core/ifc.py), [test_policy_ifc.py](../../backend/tests/test_policy_ifc.py)
+- [x] LLM gateway (kho mô hình và gán cho agent): [llm_gateway.py](../../backend/src/rfcv/core/llm_gateway.py), [models.yaml](../../backend/config/models.yaml)
+- [x] Policy store: [policy.py](../../backend/src/rfcv/core/policy.py)
+- [x] Schema gate: [schema_gate.py](../../backend/src/rfcv/domains/rfc_protocol/schema_gate.py)
+- [x] Trace log và lệnh `rfcv trace`: [trace.py](../../backend/src/rfcv/core/trace.py)
 
 ### 2. Bằng chứng và kết luận (1 tuần)
-- [x] Evidence store (chuỗi hash, chỉ ghi thêm): [store.py](../../src/rfcv/evidence/store.py), [test_evidence_store.py](../../tests/test_evidence_store.py)
-- [x] Verdict engine V0–V9: [verdict_engine.py](../../src/rfcv/evidence/verdict_engine.py), [rules.py](../../src/rfcv/domains/rfc_protocol/rules.py), [test_verdict_engine.py](../../tests/test_verdict_engine.py)
-- [x] Requirement registry: [registry.py](../../src/rfcv/evidence/registry.py)
+- [x] Evidence store (chuỗi hash, chỉ ghi thêm): [store.py](../../backend/src/rfcv/evidence/store.py), [test_evidence_store.py](../../backend/tests/test_evidence_store.py)
+- [x] Verdict engine V0–V9: [verdict_engine.py](../../backend/src/rfcv/evidence/verdict_engine.py), [rules.py](../../backend/src/rfcv/domains/rfc_protocol/rules.py), [test_verdict_engine.py](../../backend/tests/test_verdict_engine.py)
+- [x] Requirement registry: [registry.py](../../backend/src/rfcv/evidence/registry.py)
 
 ### 3. Đọc mã (1 tuần)
-- [x] Code gate và bộ công cụ đọc mã: [code_gate.py](../../src/rfcv/gates/code_gate.py)
-- [x] Locator (`locator.suggest`): [agents/locator/](../../agents/locator/)
+- [x] Code gate và bộ công cụ đọc mã: [code_gate.py](../../backend/src/rfcv/gates/code_gate.py)
+- [x] Locator (`locator.suggest`): [agents/locator/](../../backend/agents/locator/)
 - [ ] Quét nhánh nghi vấn (T2 `suspicious_branch`): đã có schema và quy tắc V4, **chưa có bộ quét** tạo bằng chứng
 
 ### 4. Đặc tả hành vi và oracle (1,5 tuần)
-- [x] Ngữ pháp RBS: [rbs.py](../../src/rfcv/domains/rfc_protocol/spec/rbs.py), [test_spec.py](../../tests/test_spec.py)
-- [x] Oracle compiler: [oracle_compiler.py](../../src/rfcv/domains/rfc_protocol/spec/oracle_compiler.py)
-- [ ] So khớp hai luồng dịch: [reconcile.py](../../src/rfcv/domains/rfc_protocol/spec/reconcile.py) có mã nhưng chưa chạy với RFC Analyst thật (xem [CT-05](../management/theo_doi_cai_thien.md#ct-05--p1--agent-không-thấy-câu-rfc), [CT-12](../management/theo_doi_cai_thien.md#ct-12--p2--rfc-analyst-chưa-nối-loại-c-d-thiếu-mẫu-và-skill))
+- [x] Ngữ pháp RBS: [rbs.py](../../backend/src/rfcv/domains/rfc_protocol/spec/rbs.py), [test_spec.py](../../backend/tests/test_spec.py)
+- [x] Oracle compiler: [oracle_compiler.py](../../backend/src/rfcv/domains/rfc_protocol/spec/oracle_compiler.py)
+- [ ] So khớp hai luồng dịch: [reconcile.py](../../backend/src/rfcv/domains/rfc_protocol/spec/reconcile.py) có mã nhưng chưa chạy với RFC Analyst thật (xem [CT-05](../management/theo_doi_cai_thien.md#ct-05--p1--agent-không-thấy-câu-rfc), [CT-12](../management/theo_doi_cai_thien.md#ct-12--p2--rfc-analyst-chưa-nối-loại-c-d-thiếu-mẫu-và-skill))
 
 ### 5. Backend TLS, adapter và kiểm thử thực tế (3,5 tuần)
-- [x] Coverage linker: [coverage_linker.py](../../src/rfcv/domains/rfc_protocol/coverage_linker.py), [test_driver_and_coverage.py](../../tests/test_driver_and_coverage.py)
-- [x] Test driver (vòng đời, sanity, chạy lại ca FAIL, nhân chứng, bản ghi T3): [driver.py](../../src/rfcv/domains/rfc_protocol/sandbox/driver.py)
+- [x] Coverage linker: [coverage_linker.py](../../backend/src/rfcv/domains/rfc_protocol/coverage_linker.py), [test_driver_and_coverage.py](../../backend/tests/test_driver_and_coverage.py)
+- [x] Test driver (vòng đời, sanity, chạy lại ca FAIL, nhân chứng, bản ghi T3): [driver.py](../../backend/src/rfcv/domains/rfc_protocol/sandbox/driver.py)
 - [ ] Backend tlsfuzzer: `validate()` đã có; `run()` và `sanity()` còn `NotImplementedError` ([CT-09](../management/theo_doi_cai_thien.md#ct-09--p0--chưa-có-backend-kiểm-thử-thật-và-bộ-chạy-sut-thật))
 - [ ] Bộ chạy SUT Docker (`DockerSutLauncher`) chưa cài ([CT-09](../management/theo_doi_cai_thien.md#ct-09--p0--chưa-có-backend-kiểm-thử-thật-và-bộ-chạy-sut-thật))
-- [ ] Adapter TLS 1.3: hiện có [một mẫu](../../adapters/tls13/templates/record_length.yaml) và [một ví dụ RBS](../../adapters/tls13/examples/TLS13-0042.rbs); chưa mở rộng danh mục mẫu theo các mục RFC trong phạm vi
-- [ ] Ba bản triển khai TLS: mới khai báo [wolfSSL](../../adapters/tls13/sut/wolfssl.yaml); hai bản tham chiếu còn `<commit>`
+- [ ] Adapter TLS 1.3: hiện có [một mẫu](../../backend/adapters/tls13/templates/record_length.yaml) và [một ví dụ RBS](../../backend/adapters/tls13/examples/TLS13-0042.rbs); chưa mở rộng danh mục mẫu theo các mục RFC trong phạm vi
+- [ ] Ba bản triển khai TLS: mới khai báo [wolfSSL](../../backend/adapters/tls13/sut/wolfssl.yaml); hai bản tham chiếu còn `<commit>`
 - [ ] Bản đo độ phủ của các bản triển khai chưa dựng
-- [x] Adapter checker (kiểm tra hình thức): [checker.py](../../src/rfcv/adapters/checker.py); các kiểm tra cần sandbox (`build.sut`, `oracle.stable`…) đang bỏ qua
+- [x] Adapter checker (kiểm tra hình thức): [checker.py](../../backend/src/rfcv/adapters/checker.py); các kiểm tra cần sandbox (`build.sut`, `oracle.stable`…) đang bỏ qua
 
 ### 6. Bảy agent (1,5 tuần)
-- [x] Lời nhắc, hồ sơ vai trò và schema của bảy agent: [agents/](../../agents/)
+- [x] Lời nhắc, hồ sơ vai trò và schema của bảy agent: [agents/](../../backend/agents/)
 - [ ] Nối cả bảy agent vào luồng chạy: **5/7** (đã nối Planner, Code Reader, Test, Verifier, Code Indexer; chưa nối RFC Analyst và Report). Xem `uv run rfcv agents`
 - [ ] Code Indexer đã có handler nhưng chưa thử với LLM thật ([CT-18](../management/theo_doi_cai_thien.md#ct-18--p3--map_components-đã-có-handler-nhưng-chưa-thử-với-llm-thật))
 
 ### 7. Backend và adapter DNS (2 tuần)
-- [ ] Backend DNS: [dns/\_\_init\_\_.py](../../src/rfcv/backends/dns/__init__.py) mới chỉ có một dòng mô tả
+- [ ] Backend DNS: [dns/\_\_init\_\_.py](../../backend/src/rfcv/backends/dns/__init__.py) mới chỉ có một dòng mô tả
 - [ ] Adapter DNS: `adapters/` mới có `tls13`
 - [ ] Ba bản triển khai DNS (CoreDNS, Knot, thêm một bản tham chiếu)
 
 ### 8. Đường cơ sở (1,5 tuần)
-- [ ] B0: RFCAudit trên cùng kho mã và tập yêu cầu (mới được nhắc tới trong [eval.yaml](../../eval/config/eval.yaml), chưa có bộ chạy)
+- [ ] B0: RFCAudit trên cùng kho mã và tập yêu cầu (mới được nhắc tới trong [eval.yaml](../../backend/eval/config/eval.yaml), chưa có bộ chạy)
 - [ ] B2: không agent, chạy toàn bộ mẫu TLS-Anvil và tlsfuzzer phù hợp
 - [ ] B3: kiểu iPanda (LLM viết chương trình kiểm thử và tự đánh giá)
 
 ### 9. Bộ dữ liệu (1,5 tuần)
-- [ ] Đột biến tự động: có [operators.yaml](../../eval/dataset/mutants/operators.yaml) (toán tử và mẫu bản ghi), chưa có kết quả sinh và kiểm
-- [ ] Lỗi thật: có [danh sách commit ứng viên](../../eval/dataset/real/wolfssl_commit_ung_vien.csv); các cột `type`, `keep`, `requirement` do **người** điền, chưa xong
+- [ ] Đột biến tự động: có [operators.yaml](../../backend/eval/dataset/mutants/operators.yaml) (toán tử và mẫu bản ghi), chưa có kết quả sinh và kiểm
+- [ ] Lỗi thật: có [danh sách commit ứng viên](../../backend/eval/dataset/real/wolfssl_commit_ung_vien.csv); các cột `type`, `keep`, `requirement` do **người** điền, chưa xong
 - [ ] Kịch bản tấn công A1–A7: chưa có kịch bản cụ thể; mô phỏng mới có họ lỗi `a7_canonical`
 
 ### 10. Thực nghiệm và thống kê (2 tuần)
@@ -76,7 +76,7 @@ Một hạng mục chỉ được tích `[x]` khi có bằng chứng đọc đư
 - [ ] Chế độ CI cho người dùng cuối: các lệnh `rfcv rerun`, `rfcv specs`, `rfcv status`, `rfcv review`, `rfcv report` hiện báo "chưa cài"
 
 ## Hạ tầng phát triển và đo lường (ngoài Bảng 26, đã có)
-- [x] Mô phỏng đo cơ chế (`rfcv eval sim`, `rfcv eval coord`): [src/rfcv/eval/](../../src/rfcv/eval/); kết quả là **SYNTHETIC**, không phải độ chính xác ngoài đời
-- [x] Phép thử đầu-cuối với LLM thật (SUT và mã giả): [e2e_live.py](../../scripts/e2e_live.py), [analyze_run.py](../../scripts/analyze_run.py), [verifier_smoke.py](../../scripts/verifier_smoke.py)
-- [x] Ranh giới kiến trúc ép bằng mã: 6 hợp đồng `import-linter` trong [pyproject.toml](../../pyproject.toml)
-- [x] Bộ kiểm thử không gọi LLM thật: [tests/](../../tests/)
+- [x] Mô phỏng đo cơ chế (`rfcv eval sim`, `rfcv eval coord`): [src/rfcv/eval/](../../backend/src/rfcv/eval/); kết quả là **SYNTHETIC**, không phải độ chính xác ngoài đời
+- [x] Phép thử đầu-cuối với LLM thật (SUT và mã giả): [e2e_live.py](../../backend/scripts/e2e_live.py), [analyze_run.py](../../backend/scripts/analyze_run.py), [verifier_smoke.py](../../backend/scripts/verifier_smoke.py)
+- [x] Ranh giới kiến trúc ép bằng mã: 6 hợp đồng `import-linter` trong [pyproject.toml](../../backend/pyproject.toml)
+- [x] Bộ kiểm thử không gọi LLM thật: [tests/](../../backend/tests/)
