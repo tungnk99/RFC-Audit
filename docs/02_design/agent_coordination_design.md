@@ -76,7 +76,7 @@ Cơ chế ③ là điểm khác so với việc chỉ viết lời nhắc. Agent
 
 ## 4. Vòng điều tra
 
-![Hình 1](../figures/thiet_ke_phoi_hop_agent_hinh_1.svg)
+![Hình 1](../assets/figures/agent_coordination_design_figure_1.svg)
 
 ***Hình 1.** Một vòng điều tra cho một yêu cầu. ① Planner đọc trạng thái và ra `PlanAction`. ② Execution loop chuyển việc tới agent hoặc thành phần đích. ③ Kết quả đi qua các cổng thành bằng chứng. ④ Verdict engine đánh giá. ⑤ Trạng thái mới quay về Planner. Không có mũi tên nào nối trực tiếp hai agent.*
 
@@ -84,13 +84,13 @@ Cơ chế ③ là điểm khác so với việc chỉ viết lời nhắc. Agent
 
 | Ký hiệu | Ý nghĩa |
 | --- | --- |
-| <img src="../figures/legend/legend_01.svg" width="56" height="24" alt=""> | Agent đặc quyền |
-| <img src="../figures/legend/legend_04.svg" width="56" height="24" alt=""> | Agent cách ly (đọc mã nguồn) |
-| <img src="../figures/legend/legend_64.svg" width="56" height="24" alt=""> | Execution loop (hub) |
-| <img src="../figures/legend/legend_02.svg" width="56" height="24" alt=""> | Thành phần tất định hoặc kho dữ liệu của harness |
-| <img src="../figures/legend/legend_03.svg" width="56" height="24" alt=""> | Cổng kiểm tra trước khi ghi bằng chứng |
-| <img src="../figures/legend/legend_06.svg" width="56" height="24" alt=""> | Luồng dữ liệu |
-| <img src="../figures/legend/legend_07.svg" width="56" height="24" alt=""> | `Critique` của Verifier, qua Schema gate, thành một phần trạng thái cho Planner |
+| <img src="../assets/figures/legend/legend_01.svg" width="56" height="24" alt=""> | Agent đặc quyền |
+| <img src="../assets/figures/legend/legend_04.svg" width="56" height="24" alt=""> | Agent cách ly (đọc mã nguồn) |
+| <img src="../assets/figures/legend/legend_64.svg" width="56" height="24" alt=""> | Execution loop (hub) |
+| <img src="../assets/figures/legend/legend_02.svg" width="56" height="24" alt=""> | Thành phần tất định hoặc kho dữ liệu của harness |
+| <img src="../assets/figures/legend/legend_03.svg" width="56" height="24" alt=""> | Cổng kiểm tra trước khi ghi bằng chứng |
+| <img src="../assets/figures/legend/legend_06.svg" width="56" height="24" alt=""> | Luồng dữ liệu |
+| <img src="../assets/figures/legend/legend_07.svg" width="56" height="24" alt=""> | `Critique` của Verifier, qua Schema gate, thành một phần trạng thái cho Planner |
 
 **Quy tắc của vòng.**
 

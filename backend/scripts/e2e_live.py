@@ -1,4 +1,4 @@
-"""Phép thử đầu-cuối với LLM THẬT, để đo lại sau mỗi lần cải thiện (xem docs/management/theo_doi_cai_thien.md).
+"""Phép thử đầu-cuối với LLM THẬT, để đo lại sau mỗi lần cải thiện (xem docs/05_project/improvement_log.md).
 
 Chạy cả vòng điều tra thật: Planner, Code Reader, Test, Verifier dùng mô hình trong config/models.yaml.
 Phần giả: SUT và backend kiểm thử (bộ mô phỏng rfcv.eval), và chỉ mục mã (một tệp C nhỏ trong bộ nhớ, nhất quán với lỗi

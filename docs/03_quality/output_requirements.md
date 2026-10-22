@@ -2,14 +2,14 @@
 
 "Đầu ra" ở đây không phải định dạng báo cáo mà là **năng lực**: khi một nhóm phát triển hay một người kiểm chứng đem hệ thống vào việc thật,
 nó phải giải quyết được những tình huống nào. Mỗi yêu cầu có mã `YD-nn` (yêu cầu đầu ra), mức đạt đo được và trạng thái hiện tại. Tiêu chuẩn
-kỹ thuật chi tiết của từng thành phần nằm ở [toàn hệ thống](tieu_chuan_he_thong.md), [các agent](tieu_chuan_agent.md) và
-[các thành phần tất định](tieu_chuan_thanh_phan_tat_dinh.md); trang này nhìn từ phía **người dùng**.
+kỹ thuật chi tiết của từng thành phần nằm ở [toàn hệ thống](system_standards.md), [các agent](agent_standards.md) và
+[các thành phần tất định](deterministic_component_standards.md); trang này nhìn từ phía **người dùng**.
 
-Nguồn: các điểm đau P1–P8 và mục tiêu MT1–MT3 trong [thiết kế chi tiết](../design/thiet_ke_chi_tiet_he_thong.md), các quy tắc nghiệp vụ BR1–BR6,
-[thiết kế nguồn RFC](../design/thiet_ke_cung_cap_rfc.md) và [thiết kế đánh giá](../evaluation/thiet_ke_danh_gia.md). Cách đọc ký hiệu **TK** (con số lấy từ
+Nguồn: các điểm đau P1–P8 và mục tiêu MT1–MT3 trong [thiết kế chi tiết](../02_design/system_design.md), các quy tắc nghiệp vụ BR1–BR6,
+[thiết kế nguồn RFC](../02_design/rfc_provisioning_design.md) và [thiết kế đánh giá](../04_evaluation/evaluation_design.md). Cách đọc ký hiệu **TK** (con số lấy từ
 thiết kế) và **ĐX** (con số do tài liệu này đề xuất, cần thầy chốt) giống các tài liệu tiêu chuẩn khác.
 
-Việc cụ thể để đạt từng yêu cầu nằm ở [backlog công việc](../management/theo_doi_backlog.md), có bảng truy vết từ `YD-nn` tới `BL-nn`.
+Việc cụ thể để đạt từng yêu cầu nằm ở [backlog công việc](../05_project/backlog.md), có bảng truy vết từ `YD-nn` tới `BL-nn`.
 
 ## Hai yêu cầu cốt lõi, hiểu cho đúng
 
@@ -46,16 +46,16 @@ nhưng **không thể bảo đảm theo nghĩa đen** với bất kỳ công c�
 | YD-11 | RFC **chưa có adapter**: vẫn tách yêu cầu và báo cáo từng yêu cầu là "chưa kiểm chứng được: thiếu adapter"; không bịa nhãn | 100% yêu cầu có trạng thái này | Chưa có (cần Report và trạng thái ở YD-02) |
 | YD-12 | **RFC cũ chỉ có bản TXT** (ví dụ DNS, SSH) đọc được | Tách câu đúng như YD-01 | **Chưa**: RFC gate mới đọc RFCXML v3, "bản TXT chưa cài" |
 | YD-13 | Nhiều bản triển khai và nhiều ngôn ngữ (C, Rust, Go) cho cùng một giao thức; mỗi giao thức ít nhất 3 bản (TK) | Số bản triển khai chạy được; chỉ số tầng C trên từng bản | Chưa chạy bản thật nào |
-| YD-14 | Nêu rõ giao thức nào "hỗ trợ đầy đủ", "mức chứng minh", "chưa hỗ trợ" | Một bảng phạm vi công bố cùng báo cáo | Mới có TLS 1.3 với một mẫu kiểm thử ([CT-22](../management/theo_doi_cai_thien.md#ct-22--p1--phạm-vi-hỗ-trợ-rfc-chưa-chốt)) |
+| YD-14 | Nêu rõ giao thức nào "hỗ trợ đầy đủ", "mức chứng minh", "chưa hỗ trợ" | Một bảng phạm vi công bố cùng báo cáo | Mới có TLS 1.3 với một mẫu kiểm thử ([CT-22](../05_project/improvement_log.md#ct-22--p1--phạm-vi-hỗ-trợ-rfc-chưa-chốt)) |
 
 ## C. Phát hiện triển khai sai RFC, không bỏ sót
 
 | Mã | Hệ thống phải giải quyết được | Mức đạt và cách đo | Hiện tại |
 |---|---|---|---|
-| YD-20 | **COMPLIANT chỉ được cấp khi đủ bằng chứng tối thiểu** của loại yêu cầu (BR1); thiếu thì là UNVERIFIABLE hoặc NEEDS\_REVIEW. Lỗi vẫn lọt qua mọi lớp là có thể, nên tỉ lệ này phải **bị chặn trên** | Tỉ lệ COMPLIANT sai ≤ 5% tối thiểu, ≤ 2% mục tiêu ([QS-20](tieu_chuan_he_thong.md#tầng-c-đúng-mt1)) | Chưa đo. Cơ chế có: COMPLIANT đòi đủ biến thể, liên kết độ phủ và một lần phản biện sạch |
+| YD-20 | **COMPLIANT chỉ được cấp khi đủ bằng chứng tối thiểu** của loại yêu cầu (BR1); thiếu thì là UNVERIFIABLE hoặc NEEDS\_REVIEW. Lỗi vẫn lọt qua mọi lớp là có thể, nên tỉ lệ này phải **bị chặn trên** | Tỉ lệ COMPLIANT sai ≤ 5% tối thiểu, ≤ 2% mục tiêu ([QS-20](system_standards.md#tầng-c-đúng-mt1)) | Chưa đo. Cơ chế có: COMPLIANT đòi đủ biến thể, liên kết độ phủ và một lần phản biện sạch |
 | YD-21 | Mọi yêu cầu loại A–C mà bản triển khai vi phạm theo cách **quan sát được qua giao thức** đều bị phát hiện | Recall VIOLATION ≥ 60% trên lỗi thật loại A–C (TK); ≥ 90% trên đột biến tự tạo, vì nhãn đúng biết chắc (ĐX) | Chưa đo |
 | YD-22 | Phát hiện lỗi dù **kiểm tra đúng nhưng phản ứng sai** (ví dụ kiểm độ dài đúng ngưỡng nhưng gửi sai cảnh báo): đối chiếu theo năm khía cạnh CONDITION, THRESHOLD, REACTION, ORDER\_STATE, EFFECT | Recall theo từng khía cạnh | THRESHOLD, REACTION, CONDITION đúng 2/2 ca trong mô phỏng; ORDER\_STATE và EFFECT chưa chạy được |
-| YD-23 | **Hành vi nội bộ không thấy được từ ngoài** (loại D, ví dụ xoá bí mật cũ) được kiểm bằng phân tích tĩnh kết hợp vị trí mã; cái không kiểm được báo cáo là UNVERIFIABLE | Chỉ cấu hình đầy đủ kết luận được loại D (giả thuyết H3 của thiết kế đánh giá) | **Chưa** (`STATIC_QUERY` chưa nối, [CT-10](../management/theo_doi_cai_thien.md#ct-10--p2--static_query-loại-d-chưa-nối)) |
+| YD-23 | **Hành vi nội bộ không thấy được từ ngoài** (loại D, ví dụ xoá bí mật cũ) được kiểm bằng phân tích tĩnh kết hợp vị trí mã; cái không kiểm được báo cáo là UNVERIFIABLE | Chỉ cấu hình đầy đủ kết luận được loại D (giả thuyết H3 của thiết kế đánh giá) | **Chưa** (`STATIC_QUERY` chưa nối, [CT-10](../05_project/improvement_log.md#ct-10--p2--static_query-loại-d-chưa-nối)) |
 | YD-24 | Xét **mọi đường xử lý** tới điểm kiểm tra ("mọi bản ghi nhận vào"); đường chưa xét được liệt kê, không ngụ ý đầy đủ | 100% T1 điền đúng `unexplored` khi cạn ngân sách; tỉ lệ yêu cầu loại "mọi" đủ đường được báo cáo | Cơ chế có (`TRACE_PATHS`, `unexplored`); chưa đo |
 | YD-25 | Phát hiện **mã bất thường nhằm đánh lừa kiểm thử**: nhận ra kiểm thử, so sánh với hằng khớp giá trị thử, đọc biến môi trường hay tên máy | Mức 1, 2: 100%; mức 3: báo cáo trung thực (TK, Bảng 30) | Đã có bộ quét tất định ([suspicious.py](../../backend/src/rfcv/domains/rfc_protocol/suspicious.py), [test_suspicious.py](../../backend/tests/test_suspicious.py)): trên bộ biến thể tự viết, mức 1 bắt 10/10, mức 2 bắt 10/10, mã bình thường báo nhầm 0/15; **mức 3 bắt 0/5** (nói thẳng là không bắt được). Trên 1162 hàm wolfSSL thật: 4 chỗ bị báo trong 2 hàm, đều là  xFFFF của epoch DTLS, không nằm trên đường xử lý của TLS13-0042. Biến thể do người viết bộ quét tự soạn nên chưa phải đối thủ thật |
 | YD-26 | **Không báo sai**: bản triển khai hợp lệ nhưng làm khác (cách làm thay thế RFC cho phép) không bị báo VIOLATION; mọi VIOLATION có nhân chứng dương | Precision VIOLATION ≥ 80% tối thiểu, ≥ 95% mục tiêu | Chưa đo |
@@ -84,7 +84,7 @@ nhưng **không thể bảo đảm theo nghĩa đen** với bất kỳ công c�
 
 | Mã | Hệ thống phải giải quyết được | Mức đạt và cách đo | Hiện tại |
 |---|---|---|---|
-| YD-50 | Mã không tin cậy (có thể do đối thủ viết) **không thể** đổi nhãn, chạy lệnh, đọc ngoài phạm vi hay lấy khoá | Đổi nhãn dưới A1–A6: 0 ca (TK, Bảng 30) | Đạt ở kiểm thử đơn vị; chưa thử với LLM thật ([CT-08](../management/theo_doi_cai_thien.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
+| YD-50 | Mã không tin cậy (có thể do đối thủ viết) **không thể** đổi nhãn, chạy lệnh, đọc ngoài phạm vi hay lấy khoá | Đổi nhãn dưới A1–A6: 0 ca (TK, Bảng 30) | Đạt ở kiểm thử đơn vị; chưa thử với LLM thật ([CT-08](../05_project/improvement_log.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
 | YD-51 | **Kiểm soát dữ liệu gửi ra ngoài**: chỉ phần mã trong phạm vi `code_scope` tới nhà cung cấp LLM, loại tệp nhạy cảm (`*.pem`, `*.key`); hỗ trợ mô hình cục bộ cho mã không được phép gửi ra ngoài | 0 tệp ngoài phạm vi trong các lời gọi LLM (quét trace) | Phạm vi và loại tệp nhạy cảm được ép ([test_codeindex.py](../../backend/tests/test_codeindex.py)); quét dữ liệu lần chạy tìm nội dung tệp ngoài phạm vi đã có, chạy sau mỗi `rfcv run` khi có `--code-root` ([test_leak_scan.py](../../backend/tests/test_leak_scan.py)); quét lời gọi LLM ở mức nhà cung cấp chưa có; mô hình cục bộ: cổng LLM đã cho phép khai báo mô hình không cần khoá (bỏ `api_key_env`) và có test qua HTTP giả kiểu OpenAI ([test_llm_local.py](../../backend/tests/test_llm_local.py)); **chưa thử với mô hình cục bộ thật** (BL-63, cần máy chủ vLLM hay Ollama) |
 | YD-52 | **Thất bại an toàn**: mọi lỗi (mô hình, API, SUT, hết ngân sách) dẫn tới UNVERIFIABLE hoặc NEEDS\_REVIEW kèm lý do, không ra nhãn sai và không làm mất kết quả của yêu cầu khác | 100% | Đạt (test); quan sát thật: Planner hỏng cả 8 vòng, hệ ra UNVERIFIABLE |
 
@@ -106,7 +106,7 @@ nhưng **không thể bảo đảm theo nghĩa đen** với bất kỳ công c�
 
 ## Cần thầy xác nhận
 
-1. **Phạm vi "mọi RFC"** có đúng như cách hiểu ở trên không (mọi RFC thêm được bằng adapter, và phạm vi cam kết là TLS 1.3 và DNS)? Xem [CT-22](../management/theo_doi_cai_thien.md#ct-22--p1--phạm-vi-hỗ-trợ-rfc-chưa-chốt).
+1. **Phạm vi "mọi RFC"** có đúng như cách hiểu ở trên không (mọi RFC thêm được bằng adapter, và phạm vi cam kết là TLS 1.3 và DNS)? Xem [CT-22](../05_project/improvement_log.md#ct-22--p1--phạm-vi-hỗ-trợ-rfc-chưa-chốt).
 2. **Cách hiểu "không bỏ sót"** là "không bỏ sót im lặng, kèm tỉ lệ bỏ sót đo và công bố" có chấp nhận được không, hay cần một ngưỡng recall cụ thể cho từng loại A–D?
 3. Các con số **ĐX** trong tài liệu này: recall ≥ 90% trên đột biến, tỉ lệ ngoài ngữ pháp ≤ 20%, chi phí kiểm chứng lại ≤ 30%, tái lập ≥ 90%.
 4. Loại C và D có nằm trong cam kết của luận văn không (hiện thuộc tầng 2: học máy trạng thái, CodeQL)? Nếu không, YD-22 (ORDER\_STATE, EFFECT) và YD-23 chuyển thành "báo cáo là hạn chế".

@@ -58,7 +58,7 @@ Trang **Duyệt & phản hồi** (`#/review`) và bảng "⑤ Đánh giá của 
 - **Nhận định:** Đồng ý / Không đồng ý / Chưa chắc. Không đồng ý thì bắt buộc chọn nhãn đúng, ít nhất một nguyên nhân (bảng phân loại cố định: dương tính giả, bỏ sót, kịch bản sai, oracle/RBS dịch sai, định vị mã sai, bằng chứng chưa đủ, môi trường lỗi, RFC mơ hồ, khác) và lý do từ 10 ký tự. Có thể gắn cờ từng bằng chứng (then chốt / sai / không liên quan, ở bảng so sánh, thẻ chú thích trên mã và ngăn chi tiết) và chấm từng lượt agent (tốt/kém, ở tab Hội thoại). Nháp lưu cục bộ nên không mất khi tải lại.
 - **Lưu trữ (BR3):** nhận định là bản ghi RIÊNG trong bảng `reviews` của Evidence store của lần chạy, chỉ ghi thêm (trigger chặn sửa/xoá). **Nhãn của hệ thống không bao giờ bị đổi.** Mỗi người, mỗi yêu cầu, nhận định mới nhất là hiệu lực; bản cũ vẫn nằm trong kho.
 - **Thống kê:** đồng thuận người–AI, ma trận nhầm lẫn (dương tính giả, bỏ sót), đồng thuận theo quy tắc, nguyên nhân bất đồng, đánh giá agent, độ phủ duyệt, các ca bất đồng gần đây.
-- **Quay lại cải thiện:** nút *Xuất tập phản hồi* (JSONL, mỗi dòng kèm digest của bản kê và RBS để tái hiện) và *Sao chép tóm tắt* (markdown dán vào `docs/management/theo_doi_cai_thien.md`).
+- **Quay lại cải thiện:** nút *Xuất tập phản hồi* (JSONL, mỗi dòng kèm digest của bản kê và RBS để tái hiện) và *Sao chép tóm tắt* (markdown dán vào `docs/05_project/improvement_log.md`).
 - Người duyệt là **tài khoản đã đăng nhập**: máy chủ tự gắn tên từ phiên, tên do máy khách gửi bị bỏ qua nên không mạo danh được. (Chỉ khi chạy `--no-auth` mới có tên tự khai.)
 
 ## Soạn thảo có kiểm soát

@@ -95,18 +95,18 @@ More commands and the full architecture: [backend/README.md](backend/README.md).
 |---|---|
 | Core, plugin registry, composition root, run manifest, versioned data | Implemented and tested |
 | `rfc_protocol` domain pack (evidence T1–T3, rules V0–V9, RBS and oracle compiler, gates, test driver, coverage linker) | Implemented, tested against simulated targets |
-| Real-LLM end-to-end loop (DeepSeek, simulated SUT and code) | Works: faulty build gives `VIOLATION` (V2), correct build gives `COMPLIANT` (V5, LINKED); 6/6 labels correct in the latest measurements, cost and reliability tracked in the [improvement log](docs/management/theo_doi_cai_thien.md) |
+| Real-LLM end-to-end loop (DeepSeek, simulated SUT and code) | Works: faulty build gives `VIOLATION` (V2), correct build gives `COMPLIANT` (V5, LINKED); 6/6 labels correct in the latest measurements, cost and reliability tracked in the [improvement log](docs/05_project/improvement_log.md) |
 | RFC gate for RFCXML and plain-text RFCs | Implemented; measured on DNS, SSH and HPACK RFCs |
 | Adversarial checks (injection, secret leakage, suspicious-branch scan) | Unit-tested; live adversarial runs pending |
 | Web UI, auth, review loop, output gate, reports | Implemented and tested |
 | **Run against real implementations (wolfSSL)** | **Not yet**: needs the real test backend and Docker-based SUT launcher; no experimental results exist |
 | RFC Analyst (two-stream translation), STATIC_QUERY, incremental re-verification, CI mode | Planned |
 
-Known limitations are listed openly in the [improvement log](docs/management/theo_doi_cai_thien.md#hạn-chế-đã-biết-cho-phần-hạn-chế-của-luận-văn): single model family (DeepSeek) for now, no statistical results yet, and RFC 8446 has no official XML source.
+Known limitations are listed openly in the [improvement log](docs/05_project/improvement_log.md#hạn-chế-đã-biết-cho-phần-hạn-chế-của-luận-văn): single model family (DeepSeek) for now, no statistical results yet, and RFC 8446 has no official XML source.
 
 ## Documentation
 
-Start with the [system overview](docs/overview/tong_quan_he_thong.md), then the [detailed design](docs/design/thiet_ke_chi_tiet_he_thong.md). Work tracking: [backlog](docs/management/theo_doi_backlog.md) (what to do), [improvement log](docs/management/theo_doi_cai_thien.md) (what is wrong, with measurements), [deliverable checklists](docs/deliverables/README.md) (what is delivered). The full index is in [docs/README.md](docs/README.md).
+Start with the [system overview](docs/01_overview/system_overview.md), then the [detailed design](docs/02_design/system_design.md). Work tracking: [backlog](docs/05_project/backlog.md) (what to do), [improvement log](docs/05_project/improvement_log.md) (what is wrong, with measurements), [deliverable checklists](docs/05_project/README.md) (what is delivered). The full index is in [docs/README.md](docs/README.md).
 
 ## Contributing
 
@@ -120,4 +120,4 @@ uv run lint-imports
 uv run pytest -q
 ```
 
-If you change a prompt, skill, model configuration or budget, re-run the measurement scripts and add a row to the measurement log in the improvement log. Naming rules: [docs/conventions/quy_uoc_dat_ten.md](docs/conventions/quy_uoc_dat_ten.md).
+If you change a prompt, skill, model configuration or budget, re-run the measurement scripts and add a row to the measurement log in the improvement log. Naming rules: [docs/01_overview/naming_conventions.md](docs/01_overview/naming_conventions.md).

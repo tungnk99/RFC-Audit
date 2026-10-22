@@ -44,7 +44,7 @@
 
 ## 2. Kiến trúc tổng thể
 
-![Hình 1](../figures/thiet_ke_adapter_kiem_thu_hinh_1.svg)
+![Hình 1](../assets/figures/adapter_and_testing_design_figure_1.svg)
 
 ***Hình 1.** Kiến trúc tạo T3. Test Agent chỉ chọn mẫu và biến thể. Tool gateway ghép mẫu với yêu cầu và tính tham số một cách tất định. Test driver chạy trong sandbox, chuẩn hoá quan sát; oracle tính kết quả; Evidence store ghi T3.*
 
@@ -52,13 +52,13 @@
 
 | Ký hiệu | Ý nghĩa |
 | --- | --- |
-| <img src="../figures/legend/legend_01.svg" width="56" height="24" alt=""> | Agent đặc quyền |
-| <img src="../figures/legend/legend_02.svg" width="56" height="24" alt=""> | Thành phần tất định hoặc kho dữ liệu của harness |
-| <img src="../figures/legend/legend_03.svg" width="56" height="24" alt=""> | Điểm kiểm tra |
-| <img src="../figures/legend/legend_04.svg" width="56" height="24" alt=""> | Hệ thống đang được kiểm chứng (SUT), không tin cậy |
-| <img src="../figures/legend/legend_05.svg" width="56" height="24" alt=""> | Ranh giới sandbox |
-| <img src="../figures/legend/legend_06.svg" width="56" height="24" alt=""> | Luồng dữ liệu hoặc lời gọi |
-| <img src="../figures/legend/legend_07.svg" width="56" height="24" alt=""> | Lưu dữ liệu thô; không tới agent |
+| <img src="../assets/figures/legend/legend_01.svg" width="56" height="24" alt=""> | Agent đặc quyền |
+| <img src="../assets/figures/legend/legend_02.svg" width="56" height="24" alt=""> | Thành phần tất định hoặc kho dữ liệu của harness |
+| <img src="../assets/figures/legend/legend_03.svg" width="56" height="24" alt=""> | Điểm kiểm tra |
+| <img src="../assets/figures/legend/legend_04.svg" width="56" height="24" alt=""> | Hệ thống đang được kiểm chứng (SUT), không tin cậy |
+| <img src="../assets/figures/legend/legend_05.svg" width="56" height="24" alt=""> | Ranh giới sandbox |
+| <img src="../assets/figures/legend/legend_06.svg" width="56" height="24" alt=""> | Luồng dữ liệu hoặc lời gọi |
+| <img src="../assets/figures/legend/legend_07.svg" width="56" height="24" alt=""> | Lưu dữ liệu thô; không tới agent |
 
 **Phân công.** Test Agent là agent đặc quyền theo bản đề xuất, nhưng phạm vi quyết định của nó hẹp:
 

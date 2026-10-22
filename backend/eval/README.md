@@ -1,6 +1,6 @@
 # Dữ liệu và môi trường đánh giá
 
-Triển khai mục 4, 9 của [docs/evaluation/thiet_ke_danh_gia.md](../../docs/evaluation/thiet_ke_danh_gia.md). Thư mục `eval/` này là dữ liệu và script; mã chấm điểm/mô phỏng nằm ở `src/rfcv/eval/`.
+Triển khai mục 4, 9 của [docs/04_evaluation/evaluation_design.md](../../docs/04_evaluation/evaluation_design.md). Thư mục `eval/` này là dữ liệu và script; mã chấm điểm/mô phỏng nằm ở `src/rfcv/eval/`.
 
 ```
 eval/

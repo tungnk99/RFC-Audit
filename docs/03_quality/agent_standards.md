@@ -1,9 +1,9 @@
 # Tiêu chuẩn chất lượng: các agent
 
 Với mỗi agent: **phải làm được gì** (năng lực, kiểm được bằng có/không) và **phải đạt gì** (chỉ số, có ngưỡng và cách đo). Tiêu chuẩn
-toàn hệ thống ở [tieu_chuan_he_thong.md](tieu_chuan_he_thong.md); các thành phần không dùng LLM ở
-[tieu_chuan_thanh_phan_tat_dinh.md](tieu_chuan_thanh_phan_tat_dinh.md). Ngữ cảnh mỗi agent được thấy theo Bảng 11 của
-[thiết kế phối hợp agent](../design/thiet_ke_phoi_hop_agent.md).
+toàn hệ thống ở [system_standards.md](system_standards.md); các thành phần không dùng LLM ở
+[deterministic_component_standards.md](deterministic_component_standards.md). Ngữ cảnh mỗi agent được thấy theo Bảng 11 của
+[thiết kế phối hợp agent](../02_design/agent_coordination_design.md).
 
 Cách đọc cột: **TK** là ngưỡng lấy từ thiết kế, **ĐX** là ngưỡng do tài liệu này đề xuất (cần thầy chốt). "Hiện tại" ghi trạng thái thật;
 số "mô phỏng" lấy từ phép thử đầu-cuối trên SUT và mã giả ([e2e_live.py](../../backend/scripts/e2e_live.py)) và **không phải số liệu thực nghiệm**.
@@ -15,10 +15,10 @@ Quan sát gồm hai ca (một ca bản lỗi, một ca bản đúng), mỗi ca m
 |---|---|---|---|---|
 | AG-01 | Đầu ra đúng schema của vai trò | 100% (ép bằng schema đóng) | schema, sự kiện `output_retry`, `role_failure` | Đạt (test) |
 | AG-02 | Chỉ dùng công cụ và đọc trường ngữ cảnh đã khai báo; vùng cách ly và đặc quyền tách bạch | 0 vi phạm | [test_policy_ifc.py](../../backend/tests/test_policy_ifc.py), `PolicyStore` | Đạt (test) |
-| AG-03 | Không làm theo chỉ thị nằm trong dữ liệu không tin cậy (mã, chú thích, nhật ký) | 0 ca | kịch bản tấn công A1, A2 | Chưa thử với LLM thật ([CT-08](../management/theo_doi_cai_thien.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
+| AG-03 | Không làm theo chỉ thị nằm trong dữ liệu không tin cậy (mã, chú thích, nhật ký) | 0 ca | kịch bản tấn công A1, A2 | Chưa thử với LLM thật ([CT-08](../05_project/improvement_log.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
 | AG-04 | Hoàn thành ngay lần chạy đầu, không hỏng vì lỗi của chính agent | ≥ 95% lần chạy (ĐX) | `analyze_run.py`: `worker_first_failures` | **Chưa đạt: 3/7 lần chạy worker hỏng lần đầu** (mô phỏng) |
-| AG-05 | Trong ngân sách của vai trò (`budget_per_task` trong `role.yaml`): không `UsageLimitExceeded` | ≥ 95% (ĐX) | sự kiện `llm_failure` | **Chưa đạt:** Code Reader hết hạn mức 1/3 lần ([CT-02](../management/theo_doi_cai_thien.md#ct-02--p1--hạn-mức-llm_calls-của-code-reader-quá-chặt)) |
-| AG-06 | Nạp mỗi skill tối đa một lần, rồi làm theo | `skill_reloads` = 0 | `analyze_run.py` | **Chưa đạt:** 4 và 3 lần nạp lại mỗi ca ([CT-01](../management/theo_doi_cai_thien.md#ct-01--p1--test-và-agent-khác-nạp-lại-skill-đã-nạp-rồi-hỏng)) |
+| AG-05 | Trong ngân sách của vai trò (`budget_per_task` trong `role.yaml`): không `UsageLimitExceeded` | ≥ 95% (ĐX) | sự kiện `llm_failure` | **Chưa đạt:** Code Reader hết hạn mức 1/3 lần ([CT-02](../05_project/improvement_log.md#ct-02--p1--hạn-mức-llm_calls-của-code-reader-quá-chặt)) |
+| AG-06 | Nạp mỗi skill tối đa một lần, rồi làm theo | `skill_reloads` = 0 | `analyze_run.py` | **Chưa đạt:** 4 và 3 lần nạp lại mỗi ca ([CT-01](../05_project/improvement_log.md#ct-01--p1--test-và-agent-khác-nạp-lại-skill-đã-nạp-rồi-hỏng)) |
 | AG-07 | Tái lập: nhiệt độ 0, hash lời nhắc và hồ sơ vai trò ghi trong bản kê | 100% | `manifest.json` | Đạt (cơ chế) |
 
 ## Verifier (agent phản biện)
@@ -31,7 +31,7 @@ Nó nằm vùng đặc quyền, không đọc mã, không thấy chuỗi tự do
 > Để hệ thống work, Verifier **bắt buộc**: (1) không bao giờ trả `issues` rỗng khi nhãn tạm là COMPLIANT mà thiếu bằng chứng mã
 > (T1) hay còn khía cạnh `UNCLEAR` hay còn mâu thuẫn T1–T3; (2) chỉ dùng mã `kind` và `suggested_task` có trong danh mục; (3) không gán
 > nhãn, không giao việc trực tiếp, không bịa `evidence_id`. Phạm lỗi (1) là để lọt COMPLIANT sai, vi phạm tiêu chuẩn
-> [QS-20](tieu_chuan_he_thong.md#tầng-c-đúng-mt1).
+> [QS-20](system_standards.md#tầng-c-đúng-mt1).
 
 **Phải làm được**
 
@@ -56,9 +56,9 @@ Nó nằm vùng đặc quyền, không đọc mã, không thấy chuỗi tự do
 | VF-4 | Không để lọt COMPLIANT sai | Tỉ lệ COMPLIANT sai của hệ ≤ ngưỡng QS-20; đóng góp của Verifier đo bằng B4 (bỏ `CRITIQUE`) | thí nghiệm B4 | Chưa đo |
 | VF-5 | Hiệu quả: tỉ lệ `Critique` dẫn tới bằng chứng mới làm đổi nhãn tạm hoặc giải quyết mâu thuẫn | Báo cáo (TK); ≥ 50% (ĐX) | `critique_result` kết hợp `task_result` | Chưa đo |
 | VF-6 | Không vượt quyền: không gán nhãn, không giao việc, không đọc mã, không bịa `evidence_id` | 0 | trace và schema | Đạt (test): hub ghi `unknown_evidence_ids` vào trace `critique_result` ([test_invariants.py](../../backend/tests/test_invariants.py)); cấu trúc đạt (test) |
-| VF-7 | Chi phí mỗi lần chạy | trong `budget_per_task` (4 lượt gọi, 80k token); ≤ 15k token (ĐX) | `role_run` | Ca thử nhỏ: 4,3–4,8k token. Trong luồng đầu-cuối: **55k** vì `evidence.summary` phình ([CT-03](../management/theo_doi_cai_thien.md#ct-03--p2--evidencesummary-phình-theo-số-bằng-chứng-t3)) |
+| VF-7 | Chi phí mỗi lần chạy | trong `budget_per_task` (4 lượt gọi, 80k token); ≤ 15k token (ĐX) | `role_run` | Ca thử nhỏ: 4,3–4,8k token. Trong luồng đầu-cuối: **55k** vì `evidence.summary` phình ([CT-03](../05_project/improvement_log.md#ct-03--p2--evidencesummary-phình-theo-số-bằng-chứng-t3)) |
 | VF-8 | Ổn định: cùng đầu vào cho cùng tập `kind` qua 3 lần chạy | ≥ 90% (ĐX) | chạy lặp | Chưa đo |
-| VF-9 | Nạp skill phản biện và làm theo thứ tự năm phép kiểm | `skill_reloads` = 0 | `analyze_run.py` | Đạt trong ca thử nhỏ (nạp `critique-evidence-consistency`); hiệu quả của skill chưa đo ([CT-06](../management/theo_doi_cai_thien.md#ct-06--p2--chưa-biết-skill-có-giúp-ích-không)) |
+| VF-9 | Nạp skill phản biện và làm theo thứ tự năm phép kiểm | `skill_reloads` = 0 | `analyze_run.py` | Đạt trong ca thử nhỏ (nạp `critique-evidence-consistency`); hiệu quả của skill chưa đo ([CT-06](../05_project/improvement_log.md#ct-06--p2--chưa-biết-skill-có-giúp-ích-không)) |
 
 ## Planner
 
@@ -82,7 +82,7 @@ Nó nằm vùng đặc quyền, không đọc mã, không thấy chuỗi tự do
 | PL-3 | Dừng sớm khi còn việc làm được | 0 (`stop_rejected`) | trace | Mô phỏng: 0 |
 | PL-4 | Số vòng trung vị theo loại yêu cầu | Báo cáo (TK); loại B ≤ 3 vòng (ĐX) | `round_start` | Mô phỏng: 2 và 3 vòng |
 | PL-5 | Tỉ lệ yêu cầu dừng do LOOP hoặc BUDGET | Báo cáo (TK); ≤ 10% (ĐX) | sự kiện `stop` | Chưa đo (một lần dừng BUDGET là do lỗi cấu hình mô hình, đã sửa) |
-| PL-6 | Bám sổ tay: `followed`, hoặc chệch có khai báo | `deviated_unannounced` = 0 (ĐX) | sự kiện `plan_context` | Mô phỏng: 4 `followed`, 1 `deviated_unannounced` (có thể do chỉ số quá khắt khe, [CT-04](../management/theo_doi_cai_thien.md#ct-04--p3--chỉ-số-bám-sổ-tay-khắt-khe-với-kế-hoạch-là-tập-cha)) |
+| PL-6 | Bám sổ tay: `followed`, hoặc chệch có khai báo | `deviated_unannounced` = 0 (ĐX) | sự kiện `plan_context` | Mô phỏng: 4 `followed`, 1 `deviated_unannounced` (có thể do chỉ số quá khắt khe, [CT-04](../05_project/improvement_log.md#ct-04--p3--chỉ-số-bám-sổ-tay-khắt-khe-với-kế-hoạch-là-tập-cha)) |
 | PL-7 | Planner LLM không kém Planner cố định (B3) về nhãn đúng và số vòng | không kém | thí nghiệm B3 | Chưa đo |
 
 ## Code Reader
@@ -106,9 +106,9 @@ Nó nằm vùng đặc quyền, không đọc mã, không thấy chuỗi tự do
 | CR-1 | **Định vị đúng**: T1 của mục VIOLATION giao với vị trí sửa hoặc dòng bản vá | ≥ 70% (TK) | so với bản vá | Chưa đo |
 | CR-2 | **Đối chiếu khía cạnh đúng**, báo cáo theo từng khía cạnh | Báo cáo (TK); ≥ 85% mỗi khía cạnh THRESHOLD, REACTION, CONDITION (ĐX) | so với người gán | Chưa đo. Mô phỏng: 2/2 ca đúng cả ba khía cạnh |
 | CR-3 | Tỉ lệ T1 bị Schema gate từ chối sau khi làm lại | Báo cáo (TK); ≤ 5% (ĐX) | `gate_reject`, `output_retry` | Mô phỏng: 1 lần làm lại (lỗi từ vựng `observed`), 0 từ chối cuối |
-| CR-4 | Hoàn thành trong ngân sách | ≥ 95% nhiệm vụ không `UsageLimitExceeded` (ĐX) | `llm_failure` | **Chưa đạt:** 1/3 lần ([CT-02](../management/theo_doi_cai_thien.md#ct-02--p1--hạn-mức-llm_calls-của-code-reader-quá-chặt)) |
-| CR-5 | Chi phí mỗi nhiệm vụ | ≤ 100k token (ĐX; hồ sơ vai trò cho 250k) | `role_run` | Mô phỏng: 79,8k thành công, 121,9k khi hỏng. Code Reader chiếm khoảng 80% token ([CT-17](../management/theo_doi_cai_thien.md#ct-17--p2--code-reader-chiếm-khoảng-80-token)) |
-| CR-6 | Không làm theo chỉ thị trong mã | 0 | ca A1 | Chưa thử ([CT-08](../management/theo_doi_cai_thien.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
+| CR-4 | Hoàn thành trong ngân sách | ≥ 95% nhiệm vụ không `UsageLimitExceeded` (ĐX) | `llm_failure` | **Chưa đạt:** 1/3 lần ([CT-02](../05_project/improvement_log.md#ct-02--p1--hạn-mức-llm_calls-của-code-reader-quá-chặt)) |
+| CR-5 | Chi phí mỗi nhiệm vụ | ≤ 100k token (ĐX; hồ sơ vai trò cho 250k) | `role_run` | Mô phỏng: 79,8k thành công, 121,9k khi hỏng. Code Reader chiếm khoảng 80% token ([CT-17](../05_project/improvement_log.md#ct-17--p2--code-reader-chiếm-khoảng-80-token)) |
+| CR-6 | Không làm theo chỉ thị trong mã | 0 | ca A1 | Chưa thử ([CT-08](../05_project/improvement_log.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
 | CR-7 | `unexplored` điền đúng khi cạn ngân sách | 100% | kiểm thủ công | Chưa đo |
 
 ## Test agent
@@ -130,7 +130,7 @@ Nó nằm vùng đặc quyền, không đọc mã, không thấy chuỗi tự do
 | TS-2 | Tỉ lệ T3 là ERROR vì chưa tới trigger | Báo cáo (TK); ≤ 10% (ĐX) | `t3_case` với `reason = trigger_not_reached` | Mô phỏng: 0 |
 | TS-3 | Phủ đủ biến thể bắt buộc | 100% sau tối đa 2 lần giao (ĐX) | `verdict.missing` | Mô phỏng: đủ ngay lần giao thành công |
 | TS-4 | Không thấy T1 hay nhãn tạm | 0 trường | [test_coordination_contracts.py](../../backend/tests/test_coordination_contracts.py) | Đạt (test) |
-| TS-5 | Hoàn thành ngay lần chạy đầu | ≥ 95% (ĐX) | `analyze_run.py` | **Chưa đạt: hỏng lần đầu ở cả hai ca** (vòng nạp skill, [CT-01](../management/theo_doi_cai_thien.md#ct-01--p1--test-và-agent-khác-nạp-lại-skill-đã-nạp-rồi-hỏng)) |
+| TS-5 | Hoàn thành ngay lần chạy đầu | ≥ 95% (ĐX) | `analyze_run.py` | **Chưa đạt: hỏng lần đầu ở cả hai ca** (vòng nạp skill, [CT-01](../05_project/improvement_log.md#ct-01--p1--test-và-agent-khác-nạp-lại-skill-đã-nạp-rồi-hỏng)) |
 
 ## Code Indexer
 
@@ -140,7 +140,7 @@ Nó nằm vùng đặc quyền, không đọc mã, không thấy chuỗi tự do
 |---|---|---|---|---|
 | CI-1 | Chỉ gán thành phần trong danh mục `component_taxonomy` của adapter | 100% (ép bằng cổng) | `ComponentMapHandler` | Có handler; chưa kiểm với LLM thật |
 | CI-2 | Ký hiệu không có trong chỉ mục không được ghi | 0 | cổng đối chiếu chỉ mục | Có handler; chưa kiểm với LLM thật |
-| CI-3 | Độ chính xác gán thành phần | ≥ 90% (ĐX) | mẫu 30 hàm do người gán | Chưa đo ([CT-18](../management/theo_doi_cai_thien.md#ct-18--p3--map_components-đã-có-handler-nhưng-chưa-thử-với-llm-thật)) |
+| CI-3 | Độ chính xác gán thành phần | ≥ 90% (ĐX) | mẫu 30 hàm do người gán | Chưa đo ([CT-18](../05_project/improvement_log.md#ct-18--p3--map_components-đã-có-handler-nhưng-chưa-thử-với-llm-thật)) |
 | CI-4 | Giúp Verifier phát hiện `WRONG_LOCATION` | Báo cáo recall | ca vị trí sai gieo sẵn | Chưa đo |
 
 ## RFC Analyst
@@ -154,7 +154,7 @@ Nó nằm vùng đặc quyền, không đọc mã, không thấy chuỗi tự do
 | RA-3 | Hai luồng lệch nhau thì không tự quyết, chuyển người duyệt | 100% | reconcile ([reconcile.py](../../backend/src/rfcv/domains/rfc_protocol/spec/reconcile.py)) | Có mã reconcile; chưa chạy với LLM thật |
 | RA-4 | Công người duyệt mỗi yêu cầu | ≤ 20% so với thủ công (Bảng 30) | mốc thủ công | Chưa đo |
 | RA-5 | Yêu cầu ngoài ngữ pháp RBS thì vào UNVERIFIABLE và được báo cáo, không bịa | 100% | thống kê | Chưa nối |
-| RA-6 | Hai luồng thực sự khác họ mô hình | Có | [models.yaml](../../backend/config/models.yaml) | **Chưa đạt:** hiện cùng một mô hình ([CT-07](../management/theo_doi_cai_thien.md#ct-07--p2--một-mô-hình-cho-mọi-agent)) |
+| RA-6 | Hai luồng thực sự khác họ mô hình | Có | [models.yaml](../../backend/config/models.yaml) | **Chưa đạt:** hiện cùng một mô hình ([CT-07](../05_project/improvement_log.md#ct-07--p2--một-mô-hình-cho-mọi-agent)) |
 
 ## Report
 
@@ -162,7 +162,7 @@ Nó nằm vùng đặc quyền, không đọc mã, không thấy chuỗi tự do
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Đo bằng | Hiện tại |
 |---|---|---|---|---|
-| RP-1 | Mọi `evidence_id` trích dẫn có trong Evidence store | 100% (ép bằng Output gate) | Output gate | Chưa nối ([CT-11](../management/theo_doi_cai_thien.md#ct-11--p3--report-chưa-nối)) |
+| RP-1 | Mọi `evidence_id` trích dẫn có trong Evidence store | 100% (ép bằng Output gate) | Output gate | Chưa nối ([CT-11](../05_project/improvement_log.md#ct-11--p3--report-chưa-nối)) |
 | RP-2 | Không đổi nhãn | 0 | so nhãn trước và sau | Chưa nối |
 | RP-3 | Mỗi VIOLATION nêu T3 liên quan và vị trí T1 | 100% | kiểm tự động | Chưa nối |
 | RP-4 | NEEDS\_REVIEW và UNVERIFIABLE kèm lý do dừng, báo cáo riêng (BR5, N4) | 100% | kiểm tự động | Chưa nối |

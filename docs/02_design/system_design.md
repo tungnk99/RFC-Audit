@@ -98,7 +98,7 @@ Các bước của việc kiểm chứng chia làm hai loại. Loại thứ nh�
 
 Giải pháp giao hai loại việc cho hai bên khác nhau. Hệ Multi-Agent đảm nhận toàn bộ phần suy luận. Security-Aware Agent Harness, gồm các thành phần chương trình cố định không dùng LLM, đảm nhận toàn bộ phần kiểm soát và phán quyết. Nguyên tắc vận hành là **agent đề xuất, thành phần tất định kiểm chứng**: agent được đề xuất mọi thứ, gồm đặc tả yêu cầu, kịch bản kiểm thử, vị trí mã và truy vấn phân tích tĩnh, nhưng mỗi đề xuất chỉ thành bằng chứng sau khi qua một bộ kiểm chứng không dùng LLM, và nhãn chỉ do quy tắc cố định gán.
 
-![Hình 1](../figures/thiet_ke_chi_tiet_he_thong_hinh_1.svg)
+![Hình 1](../assets/figures/system_design_figure_1.svg)
 
 ***Hình 1.** Ý tưởng cốt lõi: khối HỆ MULTI-AGENT chỉ đề xuất, khối THÀNH PHẦN TẤT ĐỊNH kiểm chứng và phán quyết, cả hai nằm trong SECURITY-AWARE AGENT HARNESS.*
 
@@ -106,14 +106,14 @@ Giải pháp giao hai loại việc cho hai bên khác nhau. Hệ Multi-Agent đ
 
 | Ký hiệu | Ý nghĩa |
 | --- | --- |
-| <img src="../figures/legend/legend_08.svg" width="56" height="24" alt=""> | Đầu vào tin cậy do người kiểm chứng cung cấp |
-| <img src="../figures/legend/legend_09.svg" width="56" height="24" alt=""> | Đầu vào không tin cậy, có thể do đối thủ kiểm soát |
-| <img src="../figures/legend/legend_10.svg" width="56" height="24" alt=""> | Ranh giới SECURITY-AWARE AGENT HARNESS |
-| <img src="../figures/legend/legend_11.svg" width="56" height="24" alt=""> | Phần dùng LLM: các loại đề xuất của hệ Multi-Agent |
-| <img src="../figures/legend/legend_12.svg" width="56" height="24" alt=""> | Phần không dùng LLM: kiểm soát, kiểm chứng và phán quyết |
-| <img src="../figures/legend/legend_13.svg" width="56" height="24" alt=""> | Chức năng giữ quyền kết luận (Evidence store và Verdict engine) |
-| <img src="../figures/legend/legend_14.svg" width="56" height="24" alt=""> | Đầu ra của hệ thống |
-| <img src="../figures/legend/legend_15.svg" width="56" height="24" alt=""> | Luồng dữ liệu; giữa hai khối bên trong harness, agent chỉ gửi "đề xuất" xuống và chỉ nhận "dữ liệu đã kiểm tra" lên |
+| <img src="../assets/figures/legend/legend_08.svg" width="56" height="24" alt=""> | Đầu vào tin cậy do người kiểm chứng cung cấp |
+| <img src="../assets/figures/legend/legend_09.svg" width="56" height="24" alt=""> | Đầu vào không tin cậy, có thể do đối thủ kiểm soát |
+| <img src="../assets/figures/legend/legend_10.svg" width="56" height="24" alt=""> | Ranh giới SECURITY-AWARE AGENT HARNESS |
+| <img src="../assets/figures/legend/legend_11.svg" width="56" height="24" alt=""> | Phần dùng LLM: các loại đề xuất của hệ Multi-Agent |
+| <img src="../assets/figures/legend/legend_12.svg" width="56" height="24" alt=""> | Phần không dùng LLM: kiểm soát, kiểm chứng và phán quyết |
+| <img src="../assets/figures/legend/legend_13.svg" width="56" height="24" alt=""> | Chức năng giữ quyền kết luận (Evidence store và Verdict engine) |
+| <img src="../assets/figures/legend/legend_14.svg" width="56" height="24" alt=""> | Đầu ra của hệ thống |
+| <img src="../assets/figures/legend/legend_15.svg" width="56" height="24" alt=""> | Luồng dữ liệu; giữa hai khối bên trong harness, agent chỉ gửi "đề xuất" xuống và chỉ nhận "dữ liệu đã kiểm tra" lên |
 
 > [!TIP]
 > **Đóng góp dự kiến.** **C1.** Kiến trúc "agent đề xuất, tất định kiểm chứng" cho kiểm chứng tuân thủ RFC: mọi đầu ra LLM chỉ thành bằng chứng sau một bộ kiểm chứng không dùng LLM; nhãn được tính từ bằng chứng theo quy tắc cố định. **C2.** Bằng chứng liên kết mã và hành vi: kết quả kiểm thử chỉ được tính khi oracle có nhân chứng, và độ phủ mã cho thấy kiểm thử đã đi qua đúng đoạn mã được chỉ ra. **C3.** Mô hình đe doạ và cơ chế phòng vệ khi bên viết mã là đối thủ, gồm cả chèn chỉ thị lẫn gian lận kiểm thử. **C4.** Adapter khai báo có kiểm định tự động, cho phép áp dụng cho nhiều giao thức mà không sửa lõi. **C5.** Đánh giá so sánh trực tiếp với RFCAudit và với cách để LLM làm oracle, trên bộ dữ liệu có nhãn đúng được công bố kèm luận văn.
@@ -140,7 +140,7 @@ Mỗi cơ chế dưới đây được trình bày theo cùng trình tự: cơ c
 
 **Cơ chế.** Bảy agent đảm nhận những bước tốn công nhất của chuyên gia, chia thành hai nhóm. Năm agent đặc quyền chỉ làm việc với dữ liệu đã có cấu trúc: RFC Analyst, Planner, Test, Verifier, Report. Hai agent cách ly là nơi duy nhất đọc mã nguồn không tin cậy: Code Indexer, Code Reader. Agent tạo ra bốn loại đề xuất, và mỗi loại có một bộ kiểm chứng riêng (Hình 2).
 
-![Hình 2](../figures/thiet_ke_chi_tiet_he_thong_hinh_2.svg)
+![Hình 2](../assets/figures/system_design_figure_2.svg)
 
 ***Hình 2.** Nguyên tắc đề xuất và kiểm chứng: bốn loại đề xuất ở cột AGENT ĐỀ XUẤT chỉ thành BẰNG CHỨNG sau khi qua cột BỘ KIỂM CHỨNG TẤT ĐỊNH.*
 
@@ -148,14 +148,14 @@ Mỗi cơ chế dưới đây được trình bày theo cùng trình tự: cơ c
 
 | Ký hiệu | Ý nghĩa |
 | --- | --- |
-| <img src="../figures/legend/legend_01.svg" width="56" height="24" alt=""> | Đề xuất của agent đặc quyền |
-| <img src="../figures/legend/legend_09.svg" width="56" height="24" alt=""> | Đề xuất của agent cách ly |
-| <img src="../figures/legend/legend_02.svg" width="56" height="24" alt=""> | Bộ kiểm chứng tất định; tên thành phần thực hiện ghi trong ô |
-| <img src="../figures/legend/legend_16.svg" width="56" height="24" alt=""> | Bằng chứng hoặc yêu cầu đã được chấp nhận |
-| <img src="../figures/legend/legend_13.svg" width="56" height="24" alt=""> | Verdict engine, nơi duy nhất gán nhãn |
-| <img src="../figures/legend/legend_17.svg" width="56" height="24" alt=""> | Đề xuất đi qua bộ kiểm chứng |
-| <img src="../figures/legend/legend_18.svg" width="56" height="24" alt=""> | Không qua kiểm chứng: đề xuất bị loại, hoặc yêu cầu chuyển sang NEEDS\_REVIEW |
-| <img src="../figures/legend/legend_19.svg" width="56" height="24" alt=""> | T3 và T1 được nối với nhau qua dữ liệu độ phủ mã (M4) |
+| <img src="../assets/figures/legend/legend_01.svg" width="56" height="24" alt=""> | Đề xuất của agent đặc quyền |
+| <img src="../assets/figures/legend/legend_09.svg" width="56" height="24" alt=""> | Đề xuất của agent cách ly |
+| <img src="../assets/figures/legend/legend_02.svg" width="56" height="24" alt=""> | Bộ kiểm chứng tất định; tên thành phần thực hiện ghi trong ô |
+| <img src="../assets/figures/legend/legend_16.svg" width="56" height="24" alt=""> | Bằng chứng hoặc yêu cầu đã được chấp nhận |
+| <img src="../assets/figures/legend/legend_13.svg" width="56" height="24" alt=""> | Verdict engine, nơi duy nhất gán nhãn |
+| <img src="../assets/figures/legend/legend_17.svg" width="56" height="24" alt=""> | Đề xuất đi qua bộ kiểm chứng |
+| <img src="../assets/figures/legend/legend_18.svg" width="56" height="24" alt=""> | Không qua kiểm chứng: đề xuất bị loại, hoặc yêu cầu chuyển sang NEEDS\_REVIEW |
+| <img src="../assets/figures/legend/legend_19.svg" width="56" height="24" alt=""> | T3 và T1 được nối với nhau qua dữ liệu độ phủ mã (M4) |
 
 Bảng 4 tóm tắt nhiệm vụ của từng agent. Planner điều phối thứ tự điều tra qua hub của harness; các agent không gọi nhau trực tiếp. Công việc của con người thu lại còn ba việc: viết hoặc duyệt adapter một lần cho mỗi giao thức, duyệt các đặc tả yêu cầu mà hai luồng dịch không thống nhất (M2), và duyệt các yêu cầu NEEDS\_REVIEW.
 
@@ -384,7 +384,7 @@ Luồng xử lý được trình bày ở ba mức chi tiết tăng dần: một
 
 #### Vòng đời một yêu cầu
 
-![Hình 3](../figures/thiet_ke_chi_tiet_he_thong_hinh_3.svg)
+![Hình 3](../assets/figures/system_design_figure_3.svg)
 
 ***Hình 3.** Vòng đời của một yêu cầu; dòng chữ dưới mỗi trạng thái là thành phần đưa yêu cầu vào trạng thái đó.*
 
@@ -392,18 +392,18 @@ Luồng xử lý được trình bày ở ba mức chi tiết tăng dần: một
 
 | Ký hiệu | Ý nghĩa |
 | --- | --- |
-| <img src="../figures/legend/legend_20.svg" width="56" height="24" alt=""> | Trạng thái được xử lý một lần; SPECIFIED nghĩa là đã có RBS được chấp nhận và oracle đã biên dịch |
-| <img src="../figures/legend/legend_21.svg" width="56" height="24" alt=""> | Trạng thái INVESTIGATING: các agent lặp nhiều vòng trong ngân sách giới hạn |
-| <img src="../figures/legend/legend_22.svg" width="56" height="24" alt=""> | Trạng thái DECIDED mang một trong bốn nhãn; chỉ Verdict engine đưa yêu cầu vào đây |
-| <img src="../figures/legend/legend_23.svg" width="56" height="24" alt=""> | Chuyển trạng thái thông thường; "duyệt" là bước duyệt bất đồng của Auditor, "đủ" nghĩa là áp dụng được một trong V0–V8 |
-| <img src="../figures/legend/legend_24.svg" width="56" height="24" alt=""> | Chuyển do hết ngân sách hoặc phát hiện lặp; nhãn vẫn tính theo quy tắc trên bằng chứng hiện có |
-| <img src="../figures/legend/legend_25.svg" width="56" height="24" alt=""> | Vòng lặp điều tra (chi tiết một vòng ở Hình 4) |
+| <img src="../assets/figures/legend/legend_20.svg" width="56" height="24" alt=""> | Trạng thái được xử lý một lần; SPECIFIED nghĩa là đã có RBS được chấp nhận và oracle đã biên dịch |
+| <img src="../assets/figures/legend/legend_21.svg" width="56" height="24" alt=""> | Trạng thái INVESTIGATING: các agent lặp nhiều vòng trong ngân sách giới hạn |
+| <img src="../assets/figures/legend/legend_22.svg" width="56" height="24" alt=""> | Trạng thái DECIDED mang một trong bốn nhãn; chỉ Verdict engine đưa yêu cầu vào đây |
+| <img src="../assets/figures/legend/legend_23.svg" width="56" height="24" alt=""> | Chuyển trạng thái thông thường; "duyệt" là bước duyệt bất đồng của Auditor, "đủ" nghĩa là áp dụng được một trong V0–V8 |
+| <img src="../assets/figures/legend/legend_24.svg" width="56" height="24" alt=""> | Chuyển do hết ngân sách hoặc phát hiện lặp; nhãn vẫn tính theo quy tắc trên bằng chứng hiện có |
+| <img src="../assets/figures/legend/legend_25.svg" width="56" height="24" alt=""> | Vòng lặp điều tra (chi tiết một vòng ở Hình 4) |
 
 #### Một vòng điều tra
 
 Hình 4 là biểu đồ tuần tự của một vòng điều tra cho ca K3: RFC 8446 §5.2 yêu cầu bên nhận bản ghi đã mã hoá dài hơn 2<sup>14</sup>+256 byte phải kết thúc kết nối bằng cảnh báo record\_overflow. Ví dụ giả định bản triển khai có kiểm tra độ dài nhưng gửi cảnh báo decode\_error thay vì record\_overflow.
 
-![Hình 4](../figures/thiet_ke_chi_tiet_he_thong_hinh_4.svg)
+![Hình 4](../assets/figures/system_design_figure_4.svg)
 
 ***Hình 4.** Biểu đồ tuần tự của một vòng điều tra cho ca K3, từ lúc Verdict engine báo bằng chứng còn thiếu tới lúc Planner dừng.*
 
@@ -411,13 +411,13 @@ Hình 4 là biểu đồ tuần tự của một vòng điều tra cho ca K3: RF
 
 | Ký hiệu | Ý nghĩa |
 | --- | --- |
-| <img src="../figures/legend/legend_26.svg" width="56" height="24" alt=""> | Agent đặc quyền (Planner, Test Agent) |
-| <img src="../figures/legend/legend_27.svg" width="56" height="24" alt=""> | Agent cách ly (Code Reader) |
-| <img src="../figures/legend/legend_28.svg" width="56" height="24" alt=""> | Thành phần tất định của harness; riêng Execution loop tô xanh |
-| <img src="../figures/legend/legend_29.svg" width="56" height="24" alt=""> | Đường sống: thời gian chạy từ trên xuống |
-| <img src="../figures/legend/legend_30.svg" width="56" height="24" alt=""> | Thông điệp hoặc lời gọi, đánh số theo thứ tự ①–⑬ |
-| <img src="../figures/legend/legend_31.svg" width="56" height="24" alt=""> | Ghi bằng chứng vào Evidence store; chỉ thành phần tất định thực hiện |
-| <img src="../figures/legend/legend_32.svg" width="56" height="24" alt=""> | Các bước ⑧–⑩ chạy song song với các bước ③–⑦ |
+| <img src="../assets/figures/legend/legend_26.svg" width="56" height="24" alt=""> | Agent đặc quyền (Planner, Test Agent) |
+| <img src="../assets/figures/legend/legend_27.svg" width="56" height="24" alt=""> | Agent cách ly (Code Reader) |
+| <img src="../assets/figures/legend/legend_28.svg" width="56" height="24" alt=""> | Thành phần tất định của harness; riêng Execution loop tô xanh |
+| <img src="../assets/figures/legend/legend_29.svg" width="56" height="24" alt=""> | Đường sống: thời gian chạy từ trên xuống |
+| <img src="../assets/figures/legend/legend_30.svg" width="56" height="24" alt=""> | Thông điệp hoặc lời gọi, đánh số theo thứ tự ①–⑬ |
+| <img src="../assets/figures/legend/legend_31.svg" width="56" height="24" alt=""> | Ghi bằng chứng vào Evidence store; chỉ thành phần tất định thực hiện |
+| <img src="../assets/figures/legend/legend_32.svg" width="56" height="24" alt=""> | Các bước ⑧–⑩ chạy song song với các bước ③–⑦ |
 
 Hình 4 thể hiện ba tính chất của giải pháp. Test Agent gửi lời gọi về Execution loop (④) chứ không gọi Tool gateway trực tiếp, nên mọi hành động đi qua một điểm kiểm soát. Không agent nào ghi bằng chứng: T3 do Test driver ghi kèm kết quả nhân chứng (⑦), T1 do Schema gate ghi sau khi đối chiếu chỉ mục và độ phủ (⑩). Quyết định dừng đến từ Verdict engine (⑫); Planner chỉ thực hiện (⑬). Kết quả là VIOLATION theo V2: mã có kiểm tra độ dài, độ phủ cho thấy kiểm thử đã chạy qua đúng chỗ đó, nhưng phản ứng sai so với đặc tả. Nếu chỉ đọc mã như RFCAudit, trường hợp này dễ bị kết luận nhầm là tuân thủ.
 
@@ -480,7 +480,7 @@ Phần I trình bày giải pháp và lý do nó hiệu quả. Phần II đặc 
 
 Quy trình chính là kiểm chứng một bản triển khai (Hình 5). Ba quy trình phụ là bổ sung giao thức (soạn adapter, chạy Adapter checker tới khi đạt, gắn phiên bản), kiểm chứng lại khi mã thay đổi (M6), và duyệt kết luận.
 
-![Hình 5](../figures/thiet_ke_chi_tiet_he_thong_hinh_5.svg)
+![Hình 5](../assets/figures/system_design_figure_5.svg)
 
 ***Hình 5.** Quy trình nghiệp vụ "kiểm chứng một bản triển khai" theo ba làn AUDITOR, HỆ THỐNG và REVIEWER.*
 
@@ -488,12 +488,12 @@ Quy trình chính là kiểm chứng một bản triển khai (Hình 5). Ba quy 
 
 | Ký hiệu | Ý nghĩa |
 | --- | --- |
-| <img src="../figures/legend/legend_33.svg" width="56" height="24" alt=""> | Làn: vai trò thực hiện các hoạt động trong làn |
-| <img src="../figures/legend/legend_34.svg" width="56" height="24" alt=""> | Hoạt động do con người thực hiện |
-| <img src="../figures/legend/legend_35.svg" width="56" height="24" alt=""> | Hoạt động do hệ thống thực hiện tự động |
-| <img src="../figures/legend/legend_36.svg" width="56" height="24" alt=""> | Trình tự hoạt động |
-| <img src="../figures/legend/legend_37.svg" width="56" height="24" alt=""> | Nhánh có điều kiện: chỉ đi khi có yêu cầu nhận NEEDS\_REVIEW |
-| <img src="../figures/legend/legend_38.svg" width="56" height="24" alt=""> | Nhánh lỗi: adapter không đạt hoặc không dựng được SUT thì quy trình dừng và trả lại cho Auditor |
+| <img src="../assets/figures/legend/legend_33.svg" width="56" height="24" alt=""> | Làn: vai trò thực hiện các hoạt động trong làn |
+| <img src="../assets/figures/legend/legend_34.svg" width="56" height="24" alt=""> | Hoạt động do con người thực hiện |
+| <img src="../assets/figures/legend/legend_35.svg" width="56" height="24" alt=""> | Hoạt động do hệ thống thực hiện tự động |
+| <img src="../assets/figures/legend/legend_36.svg" width="56" height="24" alt=""> | Trình tự hoạt động |
+| <img src="../assets/figures/legend/legend_37.svg" width="56" height="24" alt=""> | Nhánh có điều kiện: chỉ đi khi có yêu cầu nhận NEEDS\_REVIEW |
+| <img src="../assets/figures/legend/legend_38.svg" width="56" height="24" alt=""> | Nhánh lỗi: adapter không đạt hoặc không dựng được SUT thì quy trình dừng và trả lại cho Auditor |
 
 #### Ý nghĩa nghiệp vụ của nhãn và quy tắc nghiệp vụ
 
@@ -517,7 +517,7 @@ Quy trình chính là kiểm chứng một bản triển khai (Hình 5). Ba quy 
 
 Kiến trúc ứng dụng giữ ba lớp của bản đề xuất (môi trường bên ngoài, khung harness, hệ Multi-Agent). Khung harness gồm 20 thành phần tất định chia bốn nhóm (Hình 6). So với bản đề xuất, có sáu thành phần được bổ sung. Bốn thành phần đầu (Policy store, Trace log, Requirement registry, Adapter checker) là các chức năng bản đề xuất đã ngầm cần nhưng chưa liệt kê. Hai thành phần sau (Oracle compiler, Coverage linker) là phần hiện thực của các cơ chế M2 và M4. Tầng backend nằm ngoài harness, nối với Test driver qua giao diện I9.
 
-![Hình 6](../figures/thiet_ke_chi_tiet_he_thong_hinh_6.svg)
+![Hình 6](../assets/figures/system_design_figure_6.svg)
 
 ***Hình 6.** Hai mươi thành phần của Security-Aware Agent Harness theo bốn nhóm và các giao diện I1–I9. Sáu thành phần viền đậm là phần bổ sung so với bản đề xuất.*
 
@@ -525,16 +525,16 @@ Kiến trúc ứng dụng giữ ba lớp của bản đề xuất (môi trườn
 
 | Ký hiệu | Ý nghĩa |
 | --- | --- |
-| <img src="../figures/legend/legend_28.svg" width="56" height="24" alt=""> | Thành phần tất định đã có trong bản đề xuất |
-| <img src="../figures/legend/legend_39.svg" width="56" height="24" alt=""> | Thành phần bổ sung trong giai đoạn thiết kế; ô "Req. registry" là Requirement registry |
-| <img src="../figures/legend/legend_40.svg" width="56" height="24" alt=""> | Khối PRIVILEGED AGENTS: năm agent đặc quyền |
-| <img src="../figures/legend/legend_41.svg" width="56" height="24" alt=""> | Vùng QUARANTINE ZONE: hai agent cách ly |
-| <img src="../figures/legend/legend_42.svg" width="56" height="24" alt=""> | Ranh giới khối MULTI-AGENT SYSTEM |
-| <img src="../figures/legend/legend_43.svg" width="56" height="24" alt=""> | EXECUTION LOOP: hub chuyển thông điệp qua giao diện I1 |
-| <img src="../figures/legend/legend_44.svg" width="56" height="24" alt=""> | Trao đổi hai chiều giữa agent đặc quyền và hub |
-| <img src="../figures/legend/legend_45.svg" width="56" height="24" alt=""> | "task": hub chỉ giao nhiệm vụ một chiều cho QUARANTINE ZONE |
-| <img src="../figures/legend/legend_46.svg" width="56" height="24" alt=""> | Kết quả từ QUARANTINE ZONE chỉ đi tới Schema gate (I3) |
-| <img src="../figures/legend/legend_47.svg" width="56" height="24" alt=""> | Nhãn giao diện, ý nghĩa ở Bảng 18; nhãn in nhỏ trong mỗi ô là các giao diện mà thành phần đó thực hiện |
+| <img src="../assets/figures/legend/legend_28.svg" width="56" height="24" alt=""> | Thành phần tất định đã có trong bản đề xuất |
+| <img src="../assets/figures/legend/legend_39.svg" width="56" height="24" alt=""> | Thành phần bổ sung trong giai đoạn thiết kế; ô "Req. registry" là Requirement registry |
+| <img src="../assets/figures/legend/legend_40.svg" width="56" height="24" alt=""> | Khối PRIVILEGED AGENTS: năm agent đặc quyền |
+| <img src="../assets/figures/legend/legend_41.svg" width="56" height="24" alt=""> | Vùng QUARANTINE ZONE: hai agent cách ly |
+| <img src="../assets/figures/legend/legend_42.svg" width="56" height="24" alt=""> | Ranh giới khối MULTI-AGENT SYSTEM |
+| <img src="../assets/figures/legend/legend_43.svg" width="56" height="24" alt=""> | EXECUTION LOOP: hub chuyển thông điệp qua giao diện I1 |
+| <img src="../assets/figures/legend/legend_44.svg" width="56" height="24" alt=""> | Trao đổi hai chiều giữa agent đặc quyền và hub |
+| <img src="../assets/figures/legend/legend_45.svg" width="56" height="24" alt=""> | "task": hub chỉ giao nhiệm vụ một chiều cho QUARANTINE ZONE |
+| <img src="../assets/figures/legend/legend_46.svg" width="56" height="24" alt=""> | Kết quả từ QUARANTINE ZONE chỉ đi tới Schema gate (I3) |
+| <img src="../assets/figures/legend/legend_47.svg" width="56" height="24" alt=""> | Nhãn giao diện, ý nghĩa ở Bảng 18; nhãn in nhỏ trong mỗi ô là các giao diện mà thành phần đó thực hiện |
 
 #### Hai mươi thành phần
 
@@ -628,7 +628,7 @@ Dữ liệu là sản phẩm chính của hệ thống: báo cáo chỉ có giá
 
 #### Mô hình dữ liệu khái niệm
 
-![Hình 7](../figures/thiet_ke_chi_tiet_he_thong_hinh_7.svg)
+![Hình 7](../assets/figures/system_design_figure_7.svg)
 
 ***Hình 7.** Mô hình dữ liệu khái niệm gồm mười một thực thể; Evidence và Verdict (viền đậm) là trung tâm của tính truy vết.*
 
@@ -636,9 +636,9 @@ Dữ liệu là sản phẩm chính của hệ thống: báo cáo chỉ có giá
 
 | Ký hiệu | Ý nghĩa |
 | --- | --- |
-| <img src="../figures/legend/legend_48.svg" width="56" height="24" alt=""> | Thực thể dữ liệu: tên ở dải trên, thuộc tính chính bên dưới |
-| <img src="../figures/legend/legend_49.svg" width="56" height="24" alt=""> | Thực thể trung tâm |
-| <img src="../figures/legend/legend_50.svg" width="56" height="24" alt=""> | Quan hệ giữa hai thực thể |
+| <img src="../assets/figures/legend/legend_48.svg" width="56" height="24" alt=""> | Thực thể dữ liệu: tên ở dải trên, thuộc tính chính bên dưới |
+| <img src="../assets/figures/legend/legend_49.svg" width="56" height="24" alt=""> | Thực thể trung tâm |
+| <img src="../assets/figures/legend/legend_50.svg" width="56" height="24" alt=""> | Quan hệ giữa hai thực thể |
 | 1:n | Bản số, đọc từ thực thể bên trái hoặc bên trên sang thực thể bên phải hoặc bên dưới |
 
 Hai chuỗi truy vết chính trên Hình 7 là Verdict → Evidence → Artifact và CodeSnapshot (bằng chứng nào, ở đâu), và Verdict → Requirement → RfcSentence (kết luận về câu RFC nào, qua RBS nào). Run giữ phiên bản mọi đầu vào, digest các image và seed của biến thể ngẫu nhiên, nên mỗi kết luận gắn với đúng một bộ đầu vào cố định (BR4). Thuộc tính `function_hashes` là cơ sở cho M6; `witness` và `coverage_link` là cơ sở cho M3 và M4.
@@ -721,7 +721,7 @@ Bộ dữ liệu chuẩn lưu tách khỏi hệ thống để hệ thống khôn
 
 Kiến trúc triển khai hiện thực ranh giới tin cậy ở tầng hạ tầng: mỗi vùng tin cậy chạy trong một vùng mạng riêng. Ngay cả khi một thành phần phần mềm có lỗi, mã độc trong kho mã cũng không có đường mạng để tác động ra ngoài.
 
-![Hình 8](../figures/thiet_ke_chi_tiet_he_thong_hinh_8.svg)
+![Hình 8](../assets/figures/system_design_figure_8.svg)
 
 ***Hình 8.** Triển khai trên một máy chủ thực nghiệm với ba vùng mạng CONTROL ZONE, ANALYSIS ZONE, TEST ZONE và các ổ dữ liệu VOLUMES.*
 
@@ -729,17 +729,17 @@ Kiến trúc triển khai hiện thực ranh giới tin cậy ở tầng hạ t�
 
 | Ký hiệu | Ý nghĩa |
 | --- | --- |
-| <img src="../figures/legend/legend_51.svg" width="56" height="24" alt=""> | Nút vật lý MÁY CHỦ THỰC NGHIỆM |
-| <img src="../figures/legend/legend_52.svg" width="56" height="24" alt=""> | CONTROL ZONE: vùng tin cậy, chỉ ra ngoài qua egress-proxy |
-| <img src="../figures/legend/legend_53.svg" width="56" height="24" alt=""> | ANALYSIS ZONE: xử lý mã không tin cậy, không có mạng |
-| <img src="../figures/legend/legend_54.svg" width="56" height="24" alt=""> | TEST ZONE: test-driver, SUT và các bản tham chiếu, chỉ có mạng nội bộ giữa chúng |
-| <img src="../figures/legend/legend_08.svg" width="56" height="24" alt=""> | Container |
-| <img src="../figures/legend/legend_02.svg" width="56" height="24" alt=""> | VOLUMES: ổ dữ liệu gắn vào container |
-| <img src="../figures/legend/legend_55.svg" width="56" height="24" alt=""> | Hệ thống bên ngoài máy chủ |
-| <img src="../figures/legend/legend_56.svg" width="56" height="24" alt=""> | Mạng nội bộ trong TEST ZONE giữa test-driver, SUT và bản tham chiếu |
-| <img src="../figures/legend/legend_57.svg" width="56" height="24" alt=""> | Kết nối mạng ra ngoài duy nhất, từ egress-proxy tới Dịch vụ LLM |
-| <img src="../figures/legend/legend_58.svg" width="56" height="24" alt=""> | Lệnh điều khiển từ rfcv-harness qua Docker API (tạo container, gửi lệnh, nhận kết quả qua ổ dữ liệu), không phải kết nối mạng giữa các vùng |
-| <img src="../figures/legend/legend_59.svg" width="56" height="24" alt=""> | Tải dữ liệu một lần trước khi chạy |
+| <img src="../assets/figures/legend/legend_51.svg" width="56" height="24" alt=""> | Nút vật lý MÁY CHỦ THỰC NGHIỆM |
+| <img src="../assets/figures/legend/legend_52.svg" width="56" height="24" alt=""> | CONTROL ZONE: vùng tin cậy, chỉ ra ngoài qua egress-proxy |
+| <img src="../assets/figures/legend/legend_53.svg" width="56" height="24" alt=""> | ANALYSIS ZONE: xử lý mã không tin cậy, không có mạng |
+| <img src="../assets/figures/legend/legend_54.svg" width="56" height="24" alt=""> | TEST ZONE: test-driver, SUT và các bản tham chiếu, chỉ có mạng nội bộ giữa chúng |
+| <img src="../assets/figures/legend/legend_08.svg" width="56" height="24" alt=""> | Container |
+| <img src="../assets/figures/legend/legend_02.svg" width="56" height="24" alt=""> | VOLUMES: ổ dữ liệu gắn vào container |
+| <img src="../assets/figures/legend/legend_55.svg" width="56" height="24" alt=""> | Hệ thống bên ngoài máy chủ |
+| <img src="../assets/figures/legend/legend_56.svg" width="56" height="24" alt=""> | Mạng nội bộ trong TEST ZONE giữa test-driver, SUT và bản tham chiếu |
+| <img src="../assets/figures/legend/legend_57.svg" width="56" height="24" alt=""> | Kết nối mạng ra ngoài duy nhất, từ egress-proxy tới Dịch vụ LLM |
+| <img src="../assets/figures/legend/legend_58.svg" width="56" height="24" alt=""> | Lệnh điều khiển từ rfcv-harness qua Docker API (tạo container, gửi lệnh, nhận kết quả qua ổ dữ liệu), không phải kết nối mạng giữa các vùng |
+| <img src="../assets/figures/legend/legend_59.svg" width="56" height="24" alt=""> | Tải dữ liệu một lần trước khi chạy |
 
 - **Một đường ra ngoài duy nhất:** chỉ egress-proxy có kết nối Internet, và chỉ tới endpoint LLM; container trong ANALYSIS ZONE và TEST ZONE không có cổng ra.
 - **Kho mã được tải trước:** kho mã và bản tham chiếu được lấy tại commit cố định trước khi chạy rồi gắn chỉ đọc; trong lúc chạy không có thao tác Git.

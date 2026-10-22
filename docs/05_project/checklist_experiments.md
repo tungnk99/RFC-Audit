@@ -1,7 +1,7 @@
 # Checklist: thực nghiệm và đánh giá
 
-Nguồn: [thiết kế đánh giá](../evaluation/thiet_ke_danh_gia.md), [phương pháp đánh giá (mục 5.3)](../design/thiet_ke_chi_tiet_he_thong.md#53-phương-pháp-đánh-giá)
-và [kế hoạch kiểm chứng thực tế](../evaluation/danh_gia_kha_thi_thuc_nghiem.md#7-kế-hoạch-kiểm-chứng-thực-tế). Quy ước đánh dấu: xem
+Nguồn: [thiết kế đánh giá](../04_evaluation/evaluation_design.md), [phương pháp đánh giá (mục 5.3)](../02_design/system_design.md#53-phương-pháp-đánh-giá)
+và [kế hoạch kiểm chứng thực tế](../04_evaluation/feasibility_assessment.md#7-kế-hoạch-kiểm-chứng-thực-tế). Quy ước đánh dấu: xem
 [README](README.md). Trạng thái ghi theo ngày **2026-10-22**.
 
 > [!WARNING]
@@ -49,13 +49,13 @@ Ngưỡng là đề xuất, **cần thầy chốt**.
 | Tỉ lệ được kết luận, loại A–C | ≥ 60% | chưa đo |
 | Chi phí mỗi yêu cầu | đo ở lát cắt dọc rồi đặt trần | mô phỏng: khoảng 210–250 nghìn token mỗi yêu cầu (SUT giả, chưa đại diện) |
 
-- [ ] Thầy chốt các ngưỡng trên (và thống nhất với Bảng 8 và Bảng 30, xem [CT-20](../management/theo_doi_cai_thien.md#ct-20--p1--ngưỡng-chất-lượng-chưa-thống-nhất-giữa-các-tài-liệu-thiết-kế); mức tối thiểu và mục tiêu đầy đủ ở [tiêu chuẩn hệ thống](../quality/tieu_chuan_he_thong.md))
+- [ ] Thầy chốt các ngưỡng trên (và thống nhất với Bảng 8 và Bảng 30, xem [CT-20](../05_project/improvement_log.md#ct-20--p1--ngưỡng-chất-lượng-chưa-thống-nhất-giữa-các-tài-liệu-thiết-kế); mức tối thiểu và mục tiêu đầy đủ ở [tiêu chuẩn hệ thống](../03_quality/system_standards.md))
 - [ ] Đo đủ sáu tiêu chí trên lát cắt dọc, sau đó trên tập mở rộng
 
 ## Phép đo đã có (không tính là số liệu thực nghiệm)
 
 - [x] Mô phỏng cơ chế (`rfcv eval sim`, `rfcv eval coord`), có đăng ký trước và băm cấu hình: [coord_prereg.py](../../backend/src/rfcv/eval/coord_prereg.py)
-- [x] Phép thử đầu-cuối với LLM thật trên SUT giả, hai ca: bản lỗi ra `VIOLATION` (V2), bản đúng ra `COMPLIANT` (V5, LINKED). Số đo và cách chạy lại ở [sổ theo dõi](../management/theo_doi_cai_thien.md#nhật-ký-đo)
-- [ ] Mỗi ca chạy ít nhất 3 lần để biết độ ổn định ([CT-16](../management/theo_doi_cai_thien.md#ct-16--p1--chưa-có-số-đo-thống-kê))
-- [ ] Phép thử đối kháng với mô hình thật, ca có chỉ thị độc trong mã ([CT-08](../management/theo_doi_cai_thien.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật))
-- [ ] So sánh có và không có skill ([CT-06](../management/theo_doi_cai_thien.md#ct-06--p2--chưa-biết-skill-có-giúp-ích-không))
+- [x] Phép thử đầu-cuối với LLM thật trên SUT giả, hai ca: bản lỗi ra `VIOLATION` (V2), bản đúng ra `COMPLIANT` (V5, LINKED). Số đo và cách chạy lại ở [sổ theo dõi](../05_project/improvement_log.md#nhật-ký-đo)
+- [ ] Mỗi ca chạy ít nhất 3 lần để biết độ ổn định ([CT-16](../05_project/improvement_log.md#ct-16--p1--chưa-có-số-đo-thống-kê))
+- [ ] Phép thử đối kháng với mô hình thật, ca có chỉ thị độc trong mã ([CT-08](../05_project/improvement_log.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật))
+- [ ] So sánh có và không có skill ([CT-06](../05_project/improvement_log.md#ct-06--p2--chưa-biết-skill-có-giúp-ích-không))

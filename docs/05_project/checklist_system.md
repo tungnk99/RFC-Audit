@@ -1,6 +1,6 @@
 # Checklist: hệ thống và mã nguồn
 
-Nguồn danh mục: [Bảng 26](../design/thiet_ke_chi_tiet_he_thong.md#51-phạm-vi-và-công-sức) của thiết kế chi tiết (ước lượng công sức
+Nguồn danh mục: [Bảng 26](../02_design/system_design.md#51-phạm-vi-và-công-sức) của thiết kế chi tiết (ước lượng công sức
 theo tầng). Quy ước đánh dấu và cách cập nhật: xem [README](README.md). Trạng thái ghi theo ngày **2026-10-22**.
 
 Một hạng mục chỉ được tích `[x]` khi có bằng chứng đọc được (mã, test hoặc kết quả chạy). Hạng mục làm dở thì để `[ ]` và ghi rõ
@@ -30,13 +30,13 @@ Một hạng mục chỉ được tích `[x]` khi có bằng chứng đọc đư
 ### 4. Đặc tả hành vi và oracle (1,5 tuần)
 - [x] Ngữ pháp RBS: [rbs.py](../../backend/src/rfcv/domains/rfc_protocol/spec/rbs.py), [test_spec.py](../../backend/tests/test_spec.py)
 - [x] Oracle compiler: [oracle_compiler.py](../../backend/src/rfcv/domains/rfc_protocol/spec/oracle_compiler.py)
-- [ ] So khớp hai luồng dịch: [reconcile.py](../../backend/src/rfcv/domains/rfc_protocol/spec/reconcile.py) có mã nhưng chưa chạy với RFC Analyst thật (xem [CT-05](../management/theo_doi_cai_thien.md#ct-05--p1--agent-không-thấy-câu-rfc), [CT-12](../management/theo_doi_cai_thien.md#ct-12--p2--rfc-analyst-chưa-nối-loại-c-d-thiếu-mẫu-và-skill))
+- [ ] So khớp hai luồng dịch: [reconcile.py](../../backend/src/rfcv/domains/rfc_protocol/spec/reconcile.py) có mã nhưng chưa chạy với RFC Analyst thật (xem [CT-05](../05_project/improvement_log.md#ct-05--p1--agent-không-thấy-câu-rfc), [CT-12](../05_project/improvement_log.md#ct-12--p2--rfc-analyst-chưa-nối-loại-c-d-thiếu-mẫu-và-skill))
 
 ### 5. Backend TLS, adapter và kiểm thử thực tế (3,5 tuần)
 - [x] Coverage linker: [coverage_linker.py](../../backend/src/rfcv/domains/rfc_protocol/coverage_linker.py), [test_driver_and_coverage.py](../../backend/tests/test_driver_and_coverage.py)
 - [x] Test driver (vòng đời, sanity, chạy lại ca FAIL, nhân chứng, bản ghi T3): [driver.py](../../backend/src/rfcv/domains/rfc_protocol/sandbox/driver.py)
-- [ ] Backend tlsfuzzer: `validate()` đã có; `run()` và `sanity()` còn `NotImplementedError` ([CT-09](../management/theo_doi_cai_thien.md#ct-09--p0--chưa-có-backend-kiểm-thử-thật-và-bộ-chạy-sut-thật))
-- [ ] Bộ chạy SUT Docker (`DockerSutLauncher`) chưa cài ([CT-09](../management/theo_doi_cai_thien.md#ct-09--p0--chưa-có-backend-kiểm-thử-thật-và-bộ-chạy-sut-thật))
+- [ ] Backend tlsfuzzer: `validate()` đã có; `run()` và `sanity()` còn `NotImplementedError` ([CT-09](../05_project/improvement_log.md#ct-09--p0--chưa-có-backend-kiểm-thử-thật-và-bộ-chạy-sut-thật))
+- [ ] Bộ chạy SUT Docker (`DockerSutLauncher`) chưa cài ([CT-09](../05_project/improvement_log.md#ct-09--p0--chưa-có-backend-kiểm-thử-thật-và-bộ-chạy-sut-thật))
 - [ ] Adapter TLS 1.3: hiện có [một mẫu](../../backend/adapters/tls13/templates/record_length.yaml) và [một ví dụ RBS](../../backend/adapters/tls13/examples/TLS13-0042.rbs); chưa mở rộng danh mục mẫu theo các mục RFC trong phạm vi
 - [ ] Ba bản triển khai TLS: mới khai báo [wolfSSL](../../backend/adapters/tls13/sut/wolfssl.yaml); hai bản tham chiếu còn `<commit>`
 - [ ] Bản đo độ phủ của các bản triển khai chưa dựng
@@ -45,7 +45,7 @@ Một hạng mục chỉ được tích `[x]` khi có bằng chứng đọc đư
 ### 6. Bảy agent (1,5 tuần)
 - [x] Lời nhắc, hồ sơ vai trò và schema của bảy agent: [agents/](../../backend/agents/)
 - [ ] Nối cả bảy agent vào luồng chạy: **5/7** (đã nối Planner, Code Reader, Test, Verifier, Code Indexer; chưa nối RFC Analyst và Report). Xem `uv run rfcv agents`
-- [ ] Code Indexer đã có handler nhưng chưa thử với LLM thật ([CT-18](../management/theo_doi_cai_thien.md#ct-18--p3--map_components-đã-có-handler-nhưng-chưa-thử-với-llm-thật))
+- [ ] Code Indexer đã có handler nhưng chưa thử với LLM thật ([CT-18](../05_project/improvement_log.md#ct-18--p3--map_components-đã-có-handler-nhưng-chưa-thử-với-llm-thật))
 
 ### 7. Backend và adapter DNS (2 tuần)
 - [ ] Backend DNS: [dns/\_\_init\_\_.py](../../backend/src/rfcv/backends/dns/__init__.py) mới chỉ có một dòng mô tả
@@ -63,11 +63,11 @@ Một hạng mục chỉ được tích `[x]` khi có bằng chứng đọc đư
 - [ ] Kịch bản tấn công A1–A7: chưa có kịch bản cụ thể; mô phỏng mới có họ lỗi `a7_canonical`
 
 ### 10. Thực nghiệm và thống kê (2 tuần)
-- Xem [checklist_thuc_nghiem.md](checklist_thuc_nghiem.md).
+- Xem [checklist_experiments.md](checklist_experiments.md).
 
 ## Tầng 2 (chỉ làm khi mốc G2 đạt sớm)
 - [ ] Học máy trạng thái cho loại C (1,5 tuần): đã có quy tắc V3 và schema, chưa có bộ học
-- [ ] Truy vấn CodeQL kiểm định đột biến cho loại D (1,5 tuần): `STATIC_QUERY` chưa nối ([CT-10](../management/theo_doi_cai_thien.md#ct-10--p2--static_query-loại-d-chưa-nối))
+- [ ] Truy vấn CodeQL kiểm định đột biến cho loại D (1,5 tuần): `STATIC_QUERY` chưa nối ([CT-10](../05_project/improvement_log.md#ct-10--p2--static_query-loại-d-chưa-nối))
 - [ ] QUIC (quiche, ngtcp2) trên backend (2 tuần)
 
 ## Tầng 3 (nếu còn thời gian)

@@ -3,7 +3,7 @@
 Sổ này ghi các vấn đề tìm thấy khi thử hệ thống, bằng chứng, hướng sửa và **cách biết đã sửa xong**, để sau này không gặp lại
 cùng một vấn đề và để cải thiện có số đo. Cập nhật sau mỗi lần thử hoặc sửa. Ngày ghi theo dạng năm-tháng-ngày.
 
-> Việc cần làm để gỡ các vấn đề dưới đây nằm ở [backlog công việc](theo_doi_backlog.md); mỗi vấn đề `CT-nn` đang mở có ít nhất một việc `BL-nn` (test kiểm).
+> Việc cần làm để gỡ các vấn đề dưới đây nằm ở [backlog công việc](backlog.md); mỗi vấn đề `CT-nn` đang mở có ít nhất một việc `BL-nn` (test kiểm).
 
 ## Quy tắc
 
@@ -199,7 +199,7 @@ Mức: **P0** chặn đánh giá thật, **P1** ảnh hưởng độ tin cậy h
   (2) bản đồ chỉ ảnh hưởng hạng tử `comp` của Locator (trọng số 2), chưa có số đo cho thấy nó đổi kết quả `LOCATE`. Việc nối vào vòng điều tra (thêm `scope` vào TaskParams và cấp `task.scope`) để sau, khi có SUT thật (BL-03).
 
 ### CT-19 · P3 · Tên chưa thống nhất ở vài chỗ
-Quy ước đã ghi ở [quy_uoc_dat_ten.md](../conventions/quy_uoc_dat_ten.md) và có test giữ ([test_naming.py](../../backend/tests/test_naming.py)). Còn các chỗ
+Quy ước đã ghi ở [naming_conventions.md](../01_overview/naming_conventions.md) và có test giữ ([test_naming.py](../../backend/tests/test_naming.py)). Còn các chỗ
 lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục làm riêng, kèm chạy `pytest` và kiểm liên kết.
 - **Hai gói tên `agents`:** gói ngoài `agents/` (mã và dữ liệu từng agent) và gói lõi `src/rfcv/agents/` (schema kế hoạch,
   phản biện). Dễ nhầm, và tên `agents` ở mức cao nhất có thể va chạm với thư viện khác cùng tên (ví dụ OpenAI Agents SDK).
@@ -211,7 +211,7 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 - **Tên file test:** `test_agents_layout.py`, `test_agents_root.py` (số nhiều) và `test_agent_runtime.py` (số ít); `test_misc.py`
   gom nhiều chủ đề (registry, adapter, CLI, SARIF, thống kê, tlsfuzzer). Hướng sửa: thống nhất số nhiều, tách `test_misc.py`
   theo chủ đề.
-- **Thư mục `docs/html/`:** bản HTML gốc để đối chiếu; xoá khi đã duyệt xong bản Markdown (test `test_naming` sẽ vẫn đạt).
+- **Thư mục `docs/archive/html/`:** bản HTML gốc để đối chiếu; xoá khi đã duyệt xong bản Markdown (test `test_naming` sẽ vẫn đạt).
 - **Đóng khi:** từng mục được sửa hoặc quyết định giữ nguyên (ghi lý do vào quy ước), `pytest` và kiểm liên kết đều sạch.
 - **Kết quả (BL-91):** (1) hai gói `agents`: **giữ nguyên có chủ đích**. Đổi tên gói ngoài kéo theo khoảng 22 tệp import, đường dẫn dữ liệu `role.yaml`,
   cấu hình import-linter, CI và hơn 40 liên kết tài liệu, trong khi nguy cơ va chạm chỉ xảy ra nếu cài thư viện có gói `agents` (hiện không có). Thay vào đó có
@@ -219,7 +219,7 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
   vào `scripts/` với tiền tố `eval_` (`eval_prepare.ps1`, `eval_collect_wolfssl_commits.py`, `eval_make_manifest.py`); `eval/` còn lại chỉ là dữ liệu và cấu hình, mã chấm vẫn ở `src/rfcv/eval/`.
   (3) `test_misc.py` đã tách theo chủ đề (`test_requirement_registry.py`, `test_adapter_checker.py`, `test_cli.py`, `test_sarif.py`, `test_eval_metrics.py`,
   `test_tlsfuzzer_backend.py`). Giữ `test_agents_layout.py` và `test_agents_root.py` (số nhiều: kiểm thư mục `agents/`) khác với `test_agent_runtime.py` (số ít: runtime của
-  một agent), vì tên theo đúng đối tượng được kiểm. (4) `docs/html/` giữ lại để đối chiếu với bản Markdown; xoá khi bạn duyệt xong, không cần sửa test.
+  một agent), vì tên theo đúng đối tượng được kiểm. (4) `docs/archive/html/` giữ lại để đối chiếu với bản Markdown; xoá khi bạn duyệt xong, không cần sửa test.
 
 ### CT-20 · P1 · Ngưỡng chất lượng chưa thống nhất giữa các tài liệu thiết kế
 - **Bằng chứng:** Bảng 8 (thiết kế đánh giá) và Bảng 13 (đánh giá khả thi) đặt tỉ lệ COMPLIANT sai 0 (tối đa 5%) và precision VIOLATION ≥ 80%.
@@ -227,11 +227,11 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
   B2 có ý nghĩa thống kê, công người ≤ 20% so với thủ công). Bảng 30 ghi các ngưỡng này sẽ đăng ký vào luận văn trước G3, nên mâu thuẫn phải được
   giải trước đó.
 - **Hướng sửa:** thầy chốt một bộ ngưỡng. Sửa Bảng 8 và Bảng 13 trỏ về Bảng 30, hoặc định nghĩa rõ hai mức "tối thiểu" và "mục tiêu".
-  Cập nhật [tieu_chuan_he_thong.md](../quality/tieu_chuan_he_thong.md) cho khớp.
+  Cập nhật [system_standards.md](../03_quality/system_standards.md) cho khớp.
 - **Đóng khi:** ba tài liệu cùng một bộ ngưỡng (hoặc hai mức được định nghĩa rõ) và tiêu chuẩn hệ thống không còn cảnh báo.
 
 ### CT-21 · P3 · Một số bất biến chưa có kiểm thử riêng
-- **Bằng chứng:** khi lập [tiêu chuẩn chất lượng](../quality/tieu_chuan_thanh_phan_tat_dinh.md) thấy các mục chưa có test: vòng làm lại khi Schema gate
+- **Bằng chứng:** khi lập [tiêu chuẩn chất lượng](../03_quality/deterministic_component_standards.md) thấy các mục chưa có test: vòng làm lại khi Schema gate
   từ chối (SG-6); không lộ chi tiết chính sách khi từ chối công cụ (TG-4); ngân sách thời gian `seconds` (EL-7); skill chứa symlink bị từ chối (SK-1);
   quét trace và bằng chứng không chứa khoá API (QS-07); phát hiện `evidence_id` bịa trong `Critique` (VF-6).
 - **Hướng sửa:** viết test cho từng mục; rẻ vì dùng mô hình giả và đồng hồ giả.
@@ -240,7 +240,7 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
   vào `critique_result`) vì trước đó chưa có chỗ nào phát hiện mã bịa. QS-07 mới kiểm trên lần chạy giả; quét tự động sau mỗi lần chạy thật là BL-62.
 
 ### CT-22 · P1 · Phạm vi hỗ trợ RFC chưa chốt
-- **Bằng chứng:** nhu cầu thực tế là "hỗ trợ mọi RFC cần lọc và không bỏ sót đoạn mã triển khai sai RFC" ([yêu cầu đầu ra](../quality/tieu_chuan_dau_ra.md)).
+- **Bằng chứng:** nhu cầu thực tế là "hỗ trợ mọi RFC cần lọc và không bỏ sót đoạn mã triển khai sai RFC" ([yêu cầu đầu ra](../03_quality/output_requirements.md)).
   Thiết kế chỉ cam kết TLS 1.3 làm sâu và DNS (tầng 1); QUIC, HTTP/2, SSH nếu còn thời gian. RFC gate chỉ đọc RFCXML v3; RFC cũ chỉ có bản TXT (DNS, SSH)
   cần bộ phân tích riêng, chưa cài. Chưa có bảng phạm vi công bố mức hỗ trợ từng giao thức.
 - **Hướng sửa:** thầy chốt danh sách RFC và giao thức trong phạm vi, kèm mức hỗ trợ (đầy đủ, mức chứng minh, chưa hỗ trợ). Cài bộ phân tích TXT hoặc chọn RFC
@@ -255,7 +255,7 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 
 ### CT-23 · P1 · RFC 8446 không có bản XML chính thức; RBS mẫu trỏ vào câu của RFC 8446
 - **Bằng chứng:** `https://www.rfc-editor.org/rfc/rfc8446.xml` trả 404; RFC Editor chỉ có `.txt` và `.html` cho RFC 8446, còn RFC 9846 có `.xml`
-  (RFCXML v3). Thiết kế ([thiết kế cung cấp RFC](../design/thiet_ke_cung_cap_rfc.md), mục 2.2) coi XML là nguồn ưu tiên và adapter TLS 1.3 chọn RFC 8446 làm
+  (RFCXML v3). Thiết kế ([thiết kế cung cấp RFC](../02_design/rfc_provisioning_design.md), mục 2.2) coi XML là nguồn ưu tiên và adapter TLS 1.3 chọn RFC 8446 làm
   đặc tả chính. Ngoài ra, định danh trong RBS mẫu (`RFC8446§5.2#p4s3`, TLS13-0042) không có nghĩa trên RFC 9846: câu tương ứng nằm ở `RFC9846§5.2#p3.12.1s2`.
 - **Hướng sửa:** quyết định cùng thầy (BL-25, BL-26): (a) dùng RFC 9846 làm đặc tả chính và đối chiếu ngược về 8446; (b) viết bộ phân tích
   bản HTML hay TXT của RFC 8446; (c) giữ 8446 với bản XML của draft cuối (không phải bản chính thức). Dù chọn gì, phải ánh xạ lại `sentence_id` của các RBS.

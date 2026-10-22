@@ -1,4 +1,4 @@
-"""Quy ước đặt tên file và thư mục (docs/conventions/quy_uoc_dat_ten.md). Kiểm bằng mã để quy ước không trôi.
+"""Quy ước đặt tên file và thư mục (docs/01_overview/naming_conventions.md). Kiểm bằng mã để quy ước không trôi.
 
 Thêm một loại file mới thì sửa cả bảng trong tài liệu quy ước và test này.
 """
@@ -15,17 +15,12 @@ SNAKE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 KEBAB = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 VERSION_WORDS = re.compile(r"(^|_)(final|new|old|tmp|temp|copy|backup|v\d+)(_|$)")
 DUNDER = {"__init__", "__main__"}
-# Nhóm tài liệu trong docs/ và tiền tố tên file được phép của từng nhóm (docs/conventions/quy_uoc_dat_ten.md).
-DOC_FOLDERS = {
-    "overview": ("tong_quan_",),
-    "design": ("thiet_ke_",),
-    "evaluation": ("thiet_ke_", "danh_gia_"),
-    "deliverables": ("checklist_",),
-    "management": ("theo_doi_",),
-    "conventions": ("quy_uoc_",),
-    "quality": ("tieu_chuan_",),
-}
-DOC_ASSET_DIRS = {"figures", "html"}
+# Các nhóm tài liệu trong docs/ (docs/01_overview/naming_conventions.md). Tên file bằng tiếng Anh, snake_case.
+DOC_FOLDERS = ("01_overview", "02_design", "03_quality", "04_evaluation", "05_project")
+CHECKLIST_PREFIX = "checklist_"  # mọi checklist deliverable nằm trong 05_project và bắt đầu bằng tiền tố này
+DOC_ASSET_DIRS = {"assets", "archive"}
+FIGURES_DIR = DOCS / "assets" / "figures"
+HTML_DIR = DOCS / "archive" / "html"
 TEST_SUPPORT = {"conftest", "fakes", "helpers", "toy_domain"}
 
 
@@ -78,14 +73,12 @@ def test_docs_are_organised_into_the_known_folders() -> None:
     assert not nested, nested  # không lồng thêm thư mục trong một nhóm
 
 
-def test_docs_are_snake_case_with_the_prefix_of_their_folder_and_no_version_words() -> None:
-    bad = [
-        rel(p)
-        for p in doc_files()
-        if not SNAKE.match(p.stem) or VERSION_WORDS.search(p.stem) or not p.stem.startswith(DOC_FOLDERS[p.parent.name])
-    ]
+def test_docs_are_english_snake_case_and_have_no_version_words() -> None:
+    bad = [rel(p) for p in doc_files() if not SNAKE.match(p.stem) or VERSION_WORDS.search(p.stem)]
     assert not bad, bad
-    html = [p for p in (DOCS / "html").glob("*.html") if not SNAKE.match(p.stem) or VERSION_WORDS.search(p.stem)]
+    vietnamese = re.compile(r"(^|_)(thiet_ke|tieu_chuan|theo_doi|tong_quan|quy_uoc|danh_gia|hinh)(_|$)")
+    assert not [rel(p) for p in doc_files() if vietnamese.search(p.stem)], "tên tài liệu phải bằng tiếng Anh"
+    html = [p for p in HTML_DIR.glob("*.html") if not SNAKE.match(p.stem) or VERSION_WORDS.search(p.stem)]
     assert not html, [p.name for p in html]
 
 
@@ -96,16 +89,16 @@ def test_every_document_folder_has_at_least_one_document() -> None:
 
 def test_every_html_original_has_a_markdown_document() -> None:
     markdown = {p.stem for p in doc_files()}
-    orphans = [p.name for p in (DOCS / "html").glob("*.html") if p.stem not in markdown]
+    orphans = [p.name for p in HTML_DIR.glob("*.html") if p.stem not in markdown]
     assert not orphans, orphans
 
 
 def test_figure_files_follow_the_pattern_and_belong_to_a_document() -> None:
     markdown = {p.stem for p in doc_files()}
-    for p in (DOCS / "figures").glob("*.svg"):
-        m = re.fullmatch(r"([a-z0-9_]+)_hinh_(\d+)\.svg", p.name)
+    for p in FIGURES_DIR.glob("*.svg"):
+        m = re.fullmatch(r"([a-z0-9_]+)_figure_(\d+)\.svg", p.name)
         assert m and m.group(1) in markdown, p.name
-    for p in (DOCS / "figures" / "legend").glob("*.svg"):
+    for p in (FIGURES_DIR / "legend").glob("*.svg"):
         assert re.fullmatch(r"legend_\d{2}\.svg", p.name), p.name
 
 

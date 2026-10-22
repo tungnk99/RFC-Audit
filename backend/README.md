@@ -1,6 +1,6 @@
 # rfcv: framework kiểm chứng tuân thủ đặc tả dựa trên bằng chứng, nhiều agent, an toàn trước đối thủ
 
-Mã nguồn cho luận văn *"Kiểm chứng tự động và an toàn sự tuân thủ đặc tả giao thức mạng dựa trên bằng chứng, sử dụng hệ thống AI đa tác tử"* (Nguyễn Kỳ Tùng, GVHD TS. Tống Văn Vạn). Thiết kế: [docs/design/thiet_ke_chi_tiet_he_thong.md](../docs/design/thiet_ke_chi_tiet_he_thong.md). Toàn bộ tài liệu thiết kế, đánh giá và theo dõi cải thiện: [docs/README.md](../docs/README.md).
+Mã nguồn cho luận văn *"Kiểm chứng tự động và an toàn sự tuân thủ đặc tả giao thức mạng dựa trên bằng chứng, sử dụng hệ thống AI đa tác tử"* (Nguyễn Kỳ Tùng, GVHD TS. Tống Văn Vạn). Thiết kế: [docs/02_design/system_design.md](../docs/02_design/system_design.md). Toàn bộ tài liệu thiết kế, đánh giá và theo dõi cải thiện: [docs/README.md](../docs/README.md).
 
 Nguyên tắc: **agent đề xuất, thành phần tất định kiểm chứng.** LLM chỉ đề xuất. Một đề xuất chỉ thành bằng chứng sau khi qua bộ kiểm chứng không dùng LLM, và nhãn do Verdict engine gán theo một bộ quy tắc cố định, có phiên bản là hash nội dung.
 
@@ -30,9 +30,9 @@ uv run rfcv serve --env-file .env               # GIAO DIỆN WEB (http://127.0.
 uv run rfcv users add <tên> --role admin         # tạo tài khoản bằng CLI (hoặc dùng mã thiết lập lần đầu in ra khi serve); list|passwd|role|disable|enable|remove
 ```
 
-**Tiêu chuẩn chất lượng:** hệ thống phải đạt gì và từng thành phần phải làm được gì nằm ở [docs/quality/](../docs/quality/tieu_chuan_he_thong.md).
+**Tiêu chuẩn chất lượng:** hệ thống phải đạt gì và từng thành phần phải làm được gì nằm ở [docs/03_quality/](../docs/03_quality/system_standards.md).
 
-**Theo dõi cải thiện:** vấn đề đã biết, bằng chứng, cách đo và cách biết đã sửa xong nằm ở [docs/management/theo_doi_cai_thien.md](../docs/management/theo_doi_cai_thien.md). Đổi prompt, skill, cấu hình hay mô hình thì chạy lại phép thử và ghi một dòng vào Nhật ký đo ở đó.
+**Theo dõi cải thiện:** vấn đề đã biết, bằng chứng, cách đo và cách biết đã sửa xong nằm ở [docs/05_project/improvement_log.md](../docs/05_project/improvement_log.md). Đổi prompt, skill, cấu hình hay mô hình thì chạy lại phép thử và ghi một dòng vào Nhật ký đo ở đó.
 
 Khoá API chỉ đọc từ biến môi trường (tên biến khai báo cho từng mô hình, ví dụ `DEEPSEEK_API_KEY`) và chỉ trong LLM gateway; `rfcv` không tự nạp `.env`, hãy đặt biến vào môi trường trước khi chạy (PowerShell: `$env:DEEPSEEK_API_KEY = "..."`; bash: `export DEEPSEEK_API_KEY=...`). Đây là quyết định có chủ đích (CT-15): khoá không đi qua tệp nào mà CLI tự đọc. Cấu hình mô hình: [config/models.yaml](config/models.yaml), gồm hai phần: `models` (kho mô hình hỗ trợ, khai báo một lần kèm biến chứa khoá) và `agents` (agent nào dùng mô hình nào). Xem bằng `uv run rfcv models`.
 
@@ -128,7 +128,7 @@ Phép thử tổng quát: [tests/toy_domain.py](tests/toy_domain.py) là một m
 | Domain pack `rfc_protocol` (bằng chứng, V0–V9, RBS, oracle, Schema gate, Test driver, Coverage linker, handler) | ✅ với đối tượng giả |
 | Ca K3 chạy trọn luồng qua `build_runtime`, LLM thay bằng kịch bản | ✅ ra VIOLATION (V2) |
 | Miền thứ hai làm phép thử tổng quát | ✅ |
-| Chạy với LLM thật (DeepSeek `deepseek-flash`; SUT, backend kiểm thử và mã nguồn **giả**) | ✅ đã thử đầu-cuối 2026-10-22: bản lỗi ra `VIOLATION` (V2), bản đúng ra `COMPLIANT` (V5, LINKED). Còn vấn đề về độ tin cậy và chi phí, xem [sổ theo dõi](../docs/management/theo_doi_cai_thien.md) |
+| Chạy với LLM thật (DeepSeek `deepseek-flash`; SUT, backend kiểm thử và mã nguồn **giả**) | ✅ đã thử đầu-cuối 2026-10-22: bản lỗi ra `VIOLATION` (V2), bản đúng ra `COMPLIANT` (V5, LINKED). Còn vấn đề về độ tin cậy và chi phí, xem [sổ theo dõi](../docs/05_project/improvement_log.md) |
 | **Chạy trên bản triển khai thật (wolfSSL)** | ⏳ chưa: thiếu backend kiểm thử thật và bộ chạy SUT. Chưa có số liệu thực nghiệm nào |
 | Chỉ mục mã tree-sitter → SQLite (C, Rust, Go), bản sao phạm vi tại commit, bộ chạy lệnh trong container, `locator.suggest`, MAP_COMPONENTS | ✅ cài đặt (`rfcv.codeindex`); ⏳ chưa chạy trên wolfSSL thật |
 | `DockerSutLauncher`, `TlsfuzzerBackend.run/sanity` | ⏳ |

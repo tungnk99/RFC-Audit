@@ -1,4 +1,8 @@
-# Checklist deliverable của dự án
+# Quản lý dự án
+
+Thư mục này trả lời ba câu hỏi: **đã giao chưa** (checklist deliverable, bên dưới), **còn vướng gì** ([sổ theo dõi cải thiện](improvement_log.md)) và **làm việc gì để gỡ** ([backlog](backlog.md)).
+
+## Checklist deliverable
 
 Danh sách sản phẩm cần bàn giao của cả dự án, để biết **cái gì đã có bằng chứng, cái gì còn dở, cái gì chưa làm**. Danh mục lấy từ
 các tài liệu thiết kế (Bảng 26 công sức, Bảng 27 mốc, Bảng 28–29 đánh giá), không tự thêm sản phẩm ngoài thiết kế trừ phần hạ tầng
@@ -6,10 +10,10 @@ phát triển đã ghi riêng.
 
 | Checklist | Nội dung |
 |---|---|
-| [checklist_he_thong.md](checklist_he_thong.md) | Hệ thống và mã nguồn theo tầng 1, 2, 3: lõi, bằng chứng, đọc mã, RBS, backend và adapter, agent, DNS, đường cơ sở, dữ liệu |
-| [checklist_thuc_nghiem.md](checklist_thuc_nghiem.md) | Câu hỏi nghiên cứu RQ1–RQ5, đường cơ sở, dữ liệu, tiêu chí "work thực tế" |
-| [checklist_moc_tien_do.md](checklist_moc_tien_do.md) | Lịch từ 10/2026 đến bảo vệ 06/2027 và các cổng G1, G2, G3 |
-| [checklist_tai_lieu_luan_van.md](checklist_tai_lieu_luan_van.md) | Tài liệu, các điểm cần thầy xác nhận, luận văn, bàn giao và tái lập |
+| [checklist_system.md](checklist_system.md) | Hệ thống và mã nguồn theo tầng 1, 2, 3: lõi, bằng chứng, đọc mã, RBS, backend và adapter, agent, DNS, đường cơ sở, dữ liệu |
+| [checklist_experiments.md](checklist_experiments.md) | Câu hỏi nghiên cứu RQ1–RQ5, đường cơ sở, dữ liệu, tiêu chí "work thực tế" |
+| [checklist_milestones.md](checklist_milestones.md) | Lịch từ 10/2026 đến bảo vệ 06/2027 và các cổng G1, G2, G3 |
+| [checklist_thesis_docs.md](checklist_thesis_docs.md) | Tài liệu, các điểm cần thầy xác nhận, luận văn, bàn giao và tái lập |
 
 ## Tiến độ (ảnh chụp ngày 2026-10-22)
 
@@ -29,7 +33,7 @@ chỉ tính bằng một dòng, nên đừng đọc 31% như 31% công việc.
 
 - `- [x]` **Xong**: có bằng chứng đọc được ngay cạnh hạng mục (liên kết tới mã, test, tài liệu hoặc kết quả chạy).
 - `- [ ]` **Chưa xong**: gồm cả chưa làm lẫn làm dở. Làm dở thì ghi rõ trên cùng dòng đã có gì và còn thiếu gì, kèm liên kết tới mục
-  tương ứng trong [sổ theo dõi](../management/theo_doi_cai_thien.md) (CT-xx).
+  tương ứng trong [sổ theo dõi](../05_project/improvement_log.md) (CT-xx).
 - Cổng (G1, G2, G3) chỉ tích khi đạt **đúng tiêu chí của thiết kế**. Đạt trên môi trường giả không tính; ghi chú kết quả giả ngay trên dòng.
 
 ## Cách cập nhật

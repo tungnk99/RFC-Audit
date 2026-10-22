@@ -1,7 +1,7 @@
 # Tổng quan hệ thống
 
 Trang này cho người mới đọc lần đầu: hệ thống làm gì, chạy thế nào, gồm những phần nào và đang ở đâu. Chi tiết nằm ở các tài liệu
-[thiết kế](../design/); tình trạng thật và các vấn đề đang mở nằm ở [sổ theo dõi](../management/theo_doi_cai_thien.md).
+[thiết kế](../02_design/); tình trạng thật và các vấn đề đang mở nằm ở [sổ theo dõi](../05_project/improvement_log.md).
 
 ## Hệ thống làm gì
 
@@ -42,7 +42,7 @@ RFC ──► RFC gate / RFC Analyst ──► đặc tả hành vi (RBS) đã d
 ```
 
 Agent **không gọi nhau**: mọi giao việc là một nhiệm vụ có kiểu đi qua hub. Mỗi vòng tối đa 2 nhiệm vụ; hub dừng khi đủ bằng chứng,
-hết ngân sách hoặc phát hiện lặp. Chi tiết: [phối hợp agent](../design/thiet_ke_phoi_hop_agent.md).
+hết ngân sách hoặc phát hiện lặp. Chi tiết: [phối hợp agent](../02_design/agent_coordination_design.md).
 
 ## Các agent
 
@@ -75,7 +75,7 @@ khai báo ở [config/models.yaml](../../backend/config/models.yaml) và `skills
 | [tests/](../../backend/tests/) | Kiểm thử (không gọi LLM thật) |
 | [docs/](../README.md) | Tài liệu này |
 
-Quy ước đặt tên: [quy_uoc_dat_ten.md](../conventions/quy_uoc_dat_ten.md).
+Quy ước đặt tên: [naming_conventions.md](../01_overview/naming_conventions.md).
 
 ## Chạy thử nhanh
 
@@ -93,9 +93,9 @@ Phép thử `e2e_live.py` dùng SUT và mã nguồn giả nên chỉ cho thấy 
 
 ## Đọc tiếp
 
-1. [Thiết kế chi tiết hệ thống](../design/thiet_ke_chi_tiet_he_thong.md): bài toán, giải pháp, kiến trúc đầy đủ.
-2. Các tài liệu thiết kế thành phần trong [design/](../design/): RFC, đọc mã nguồn, phối hợp agent, adapter và kiểm thử.
-3. [Thiết kế đánh giá](../evaluation/thiet_ke_danh_gia.md) và [thực nghiệm sơ bộ](../evaluation/danh_gia_kha_thi_thuc_nghiem.md).
-4. [Yêu cầu đầu ra](../quality/tieu_chuan_dau_ra.md) và [tiêu chuẩn chất lượng](../quality/tieu_chuan_he_thong.md): hệ thống phải giải quyết được gì khi dùng thực tế, và phải đạt gì ở từng phần.
-5. [Checklist deliverable](../deliverables/README.md): sản phẩm bàn giao của cả dự án và trạng thái từng hạng mục.
-6. [Sổ theo dõi cải thiện](../management/theo_doi_cai_thien.md) và [backlog công việc](../management/theo_doi_backlog.md): vấn đề còn dở, số đo, hạn chế, và việc cần làm theo thứ tự.
+1. [Thiết kế chi tiết hệ thống](../02_design/system_design.md): bài toán, giải pháp, kiến trúc đầy đủ.
+2. Các tài liệu thiết kế thành phần trong [design/](../02_design/): RFC, đọc mã nguồn, phối hợp agent, adapter và kiểm thử.
+3. [Thiết kế đánh giá](../04_evaluation/evaluation_design.md) và [thực nghiệm sơ bộ](../04_evaluation/feasibility_assessment.md).
+4. [Yêu cầu đầu ra](../03_quality/output_requirements.md) và [tiêu chuẩn chất lượng](../03_quality/system_standards.md): hệ thống phải giải quyết được gì khi dùng thực tế, và phải đạt gì ở từng phần.
+5. [Checklist deliverable](../05_project/README.md): sản phẩm bàn giao của cả dự án và trạng thái từng hạng mục.
+6. [Sổ theo dõi cải thiện](../05_project/improvement_log.md) và [backlog công việc](../05_project/backlog.md): vấn đề còn dở, số đo, hạn chế, và việc cần làm theo thứ tự.

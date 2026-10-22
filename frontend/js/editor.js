@@ -26,7 +26,7 @@ Lời nhắc vai trò được nạp làm system prompt. Mỗi thay đổi đổ
 
 - Đừng nới ranh giới an toàn bằng lời: vùng tin cậy và công cụ do mã và \`role.yaml\` quyết định, lời nhắc không thêm được quyền.
 - Khối \`<!-- playbook:begin -->\` của Planner được sinh từ dữ liệu của miền (\`sync_prompt\`): sửa tay sẽ làm lệch.
-- Trước khi đổi lời nhắc, xem sổ theo dõi cải thiện (docs/management/theo_doi_cai_thien.md) và ghi lại phép đo sau khi đổi.`,
+- Trước khi đổi lời nhắc, xem sổ theo dõi cải thiện (docs/05_project/improvement_log.md) và ghi lại phép đo sau khi đổi.`,
   role: `# Hồ sơ agent (role.yaml)
 Khai báo công cụ, skill, trường ngữ cảnh, ngân sách mỗi nhiệm vụ. **Vùng tin cậy và schema đầu ra là kiến trúc** do mã khai báo: \`role.yaml\` phải khớp, nếu không PolicyStore từ chối.
 

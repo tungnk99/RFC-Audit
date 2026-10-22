@@ -94,7 +94,7 @@ Cơ sở dữ liệu errata được tải dưới dạng JSON từ RFC Editor (
 
 ## 3. Kiến trúc tổng thể của luồng đặc tả
 
-![Hình 1](../figures/thiet_ke_cung_cap_rfc_hinh_1.svg)
+![Hình 1](../assets/figures/rfc_provisioning_design_figure_1.svg)
 
 ***Hình 1.** Luồng đặc tả: RFC được tải và cố định TRƯỚC KHI CHẠY; KHI CHẠY, RFC gate dựng chỉ mục RFC và gói ngữ cảnh cho RFC Analyst Agent, kết quả đi qua Schema gate vào Requirement registry.*
 
@@ -102,15 +102,15 @@ Cơ sở dữ liệu errata được tải dưới dạng JSON từ RFC Editor (
 
 | Ký hiệu | Ý nghĩa |
 | --- | --- |
-| <img src="../figures/legend/legend_60.svg" width="56" height="24" alt=""> | Giai đoạn TRƯỚC KHI CHẠY, được phép dùng mạng |
-| <img src="../figures/legend/legend_61.svg" width="56" height="24" alt=""> | Giai đoạn KHI CHẠY, không có mạng |
-| <img src="../figures/legend/legend_55.svg" width="56" height="24" alt=""> | Hệ thống bên ngoài |
-| <img src="../figures/legend/legend_08.svg" width="56" height="24" alt=""> | Công cụ do người kiểm chứng chạy |
-| <img src="../figures/legend/legend_02.svg" width="56" height="24" alt=""> | Thành phần tất định hoặc kho dữ liệu của harness |
-| <img src="../figures/legend/legend_01.svg" width="56" height="24" alt=""> | Agent đặc quyền; RFC là dữ liệu TRUSTED nên đi thẳng tới agent này |
-| <img src="../figures/legend/legend_03.svg" width="56" height="24" alt=""> | Điểm kiểm tra trước khi ghi yêu cầu |
-| <img src="../figures/legend/legend_06.svg" width="56" height="24" alt=""> | Luồng dữ liệu |
-| <img src="../figures/legend/legend_07.svg" width="56" height="24" alt=""> | RFC Analyst gọi công cụ tra RFC khi cần thêm ngữ cảnh |
+| <img src="../assets/figures/legend/legend_60.svg" width="56" height="24" alt=""> | Giai đoạn TRƯỚC KHI CHẠY, được phép dùng mạng |
+| <img src="../assets/figures/legend/legend_61.svg" width="56" height="24" alt=""> | Giai đoạn KHI CHẠY, không có mạng |
+| <img src="../assets/figures/legend/legend_55.svg" width="56" height="24" alt=""> | Hệ thống bên ngoài |
+| <img src="../assets/figures/legend/legend_08.svg" width="56" height="24" alt=""> | Công cụ do người kiểm chứng chạy |
+| <img src="../assets/figures/legend/legend_02.svg" width="56" height="24" alt=""> | Thành phần tất định hoặc kho dữ liệu của harness |
+| <img src="../assets/figures/legend/legend_01.svg" width="56" height="24" alt=""> | Agent đặc quyền; RFC là dữ liệu TRUSTED nên đi thẳng tới agent này |
+| <img src="../assets/figures/legend/legend_03.svg" width="56" height="24" alt=""> | Điểm kiểm tra trước khi ghi yêu cầu |
+| <img src="../assets/figures/legend/legend_06.svg" width="56" height="24" alt=""> | Luồng dữ liệu |
+| <img src="../assets/figures/legend/legend_07.svg" width="56" height="24" alt=""> | RFC Analyst gọi công cụ tra RFC khi cần thêm ngữ cảnh |
 
 ## 4. Thu thập và cố định RFC
 

@@ -1,4 +1,4 @@
-"""Backlog bám sát yêu cầu đầu ra và sổ theo dõi (docs/management/theo_doi_backlog.md).
+"""Backlog bám sát yêu cầu đầu ra và sổ theo dõi (docs/05_project/backlog.md).
 
 Mục đích: backlog không trôi khỏi yêu cầu. Mọi yêu cầu đầu ra (`YD-nn`) và mọi vấn đề đang mở (`CT-nn`) phải có ít nhất một việc (`BL-nn`),
 mọi tham chiếu phải trỏ tới thứ có thật, và bảng truy vết ở cuối backlog phải khớp với các dòng việc.
@@ -10,9 +10,9 @@ import re
 
 from conftest import DOCS
 
-BACKLOG = DOCS / "management" / "theo_doi_backlog.md"
-OUTPUT_REQUIREMENTS = DOCS / "quality" / "tieu_chuan_dau_ra.md"
-TRACKER = DOCS / "management" / "theo_doi_cai_thien.md"
+BACKLOG = DOCS / "05_project" / "backlog.md"
+OUTPUT_REQUIREMENTS = DOCS / "03_quality" / "output_requirements.md"
+TRACKER = DOCS / "05_project" / "improvement_log.md"
 
 COLUMNS = 8  # ID, Việc, Đáp ứng, Phụ thuộc, Cỡ, Giai đoạn, Xong khi, Trạng thái
 SIZES = {"S", "M", "L", "XL"}

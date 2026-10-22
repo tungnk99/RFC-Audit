@@ -350,7 +350,7 @@ def export_jsonl(m: RunManager) -> str:
 
 
 def markdown_digest(s: dict[str, Any]) -> str:
-    """Tóm tắt phản hồi dạng markdown để dán vào sổ theo dõi cải thiện (docs/management/theo_doi_cai_thien.md)."""
+    """Tóm tắt phản hồi dạng markdown để dán vào sổ theo dõi cải thiện (docs/05_project/improvement_log.md)."""
     rate = f"{s['agreement_rate']:.0%}" if s["agreement_rate"] is not None else "chưa có"
     out = [f"### Phản hồi của người duyệt ({s['decided']} nhận định, đồng thuận người–AI {rate})", ""]
     if s["causes"]:

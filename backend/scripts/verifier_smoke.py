@@ -1,4 +1,4 @@
-"""Thử nhanh Verifier với LLM THẬT trên hai tình huống bằng chứng giả (xem docs/management/theo_doi_cai_thien.md, CT-03).
+"""Thử nhanh Verifier với LLM THẬT trên hai tình huống bằng chứng giả (xem docs/05_project/improvement_log.md, CT-03).
 
     uv run python scripts/verifier_smoke.py
 

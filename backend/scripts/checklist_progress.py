@@ -1,4 +1,4 @@
-"""Đếm tiến độ các checklist deliverable trong docs/deliverables/ (xem docs/deliverables/README.md).
+"""Đếm tiến độ các checklist deliverable trong docs/05_project/ (xem docs/05_project/README.md).
 
     uv run python scripts/checklist_progress.py            # bảng tiến độ từng checklist và tổng
     uv run python scripts/checklist_progress.py --open     # liệt kê cả các hạng mục chưa xong
@@ -20,7 +20,7 @@ def main() -> None:
     show_open = "--open" in sys.argv
     rows: list[tuple[str, int, int]] = []
     pending: list[tuple[str, str]] = []
-    for md in sorted((ROOT.parent / "docs" / "deliverables").glob("checklist_*.md")):
+    for md in sorted((ROOT.parent / "docs" / "05_project").glob("checklist_*.md")):
         done = total = 0
         in_code = False
         for line in md.read_text(encoding="utf-8").splitlines():

@@ -61,7 +61,7 @@ Các coding agent và công trình nghiên cứu hiện nay cho thấy năm đi�
 
 ## 3. Kiến trúc tổng thể
 
-![Hình 1](../figures/thiet_ke_doc_ma_nguon_hinh_1.svg)
+![Hình 1](../assets/figures/code_exploration_design_figure_1.svg)
 
 ***Hình 1.** Kiến trúc khám phá mã: Code Reader gọi công cụ qua Tool gateway và lớp bọc Code gate; mọi lệnh chạy trong SANDBOX code-index-worker; Schema gate đối chiếu kết luận với Trace log trước khi ghi T1.*
 
@@ -69,15 +69,15 @@ Các coding agent và công trình nghiên cứu hiện nay cho thấy năm đi�
 
 | Ký hiệu | Ý nghĩa |
 | --- | --- |
-| <img src="../figures/legend/legend_09.svg" width="56" height="24" alt=""> | Thành phần không tin cậy: agent cách ly đọc mã, và chính kho mã |
-| <img src="../figures/legend/legend_02.svg" width="56" height="24" alt=""> | Thành phần tất định của harness |
-| <img src="../figures/legend/legend_03.svg" width="56" height="24" alt=""> | Điểm kiểm tra cuối trước khi ghi bằng chứng |
-| <img src="../figures/legend/legend_53.svg" width="56" height="24" alt=""> | SANDBOX: container không mạng, kho mã chỉ đọc |
-| <img src="../figures/legend/legend_08.svg" width="56" height="24" alt=""> | Công cụ và dữ liệu bên trong sandbox |
-| <img src="../figures/legend/legend_06.svg" width="56" height="24" alt=""> | Lời gọi công cụ hoặc kết luận của agent |
-| <img src="../figures/legend/legend_07.svg" width="56" height="24" alt=""> | Kết quả đã chuẩn hoá trả về cho agent |
-| <img src="../figures/legend/legend_62.svg" width="56" height="24" alt=""> | Ghi vết và đối chiếu với Trace log |
-| <img src="../figures/legend/legend_63.svg" width="56" height="24" alt=""> | Ghi bằng chứng T1 vào Evidence store |
+| <img src="../assets/figures/legend/legend_09.svg" width="56" height="24" alt=""> | Thành phần không tin cậy: agent cách ly đọc mã, và chính kho mã |
+| <img src="../assets/figures/legend/legend_02.svg" width="56" height="24" alt=""> | Thành phần tất định của harness |
+| <img src="../assets/figures/legend/legend_03.svg" width="56" height="24" alt=""> | Điểm kiểm tra cuối trước khi ghi bằng chứng |
+| <img src="../assets/figures/legend/legend_53.svg" width="56" height="24" alt=""> | SANDBOX: container không mạng, kho mã chỉ đọc |
+| <img src="../assets/figures/legend/legend_08.svg" width="56" height="24" alt=""> | Công cụ và dữ liệu bên trong sandbox |
+| <img src="../assets/figures/legend/legend_06.svg" width="56" height="24" alt=""> | Lời gọi công cụ hoặc kết luận của agent |
+| <img src="../assets/figures/legend/legend_07.svg" width="56" height="24" alt=""> | Kết quả đã chuẩn hoá trả về cho agent |
+| <img src="../assets/figures/legend/legend_62.svg" width="56" height="24" alt=""> | Ghi vết và đối chiếu với Trace log |
+| <img src="../assets/figures/legend/legend_63.svg" width="56" height="24" alt=""> | Ghi bằng chứng T1 vào Evidence store |
 
 Agent không có shell và không kết nối trực tiếp tới MCP server. Mọi lời gọi đi theo một đường duy nhất:
 

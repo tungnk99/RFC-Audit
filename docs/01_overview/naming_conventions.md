@@ -2,12 +2,12 @@
 
 Quy ước này ghi lại cách đặt tên mà repo **đang dùng**, cộng vài điều chỉnh nhỏ cho nhất quán. Phần kiểm được bằng máy nằm ở
 [tests/test_naming.py](../../backend/tests/test_naming.py); đổi quy ước thì sửa cả hai nơi. Những chỗ còn lệch chưa sửa được ghi ở
-[CT-19](../management/theo_doi_cai_thien.md#ct-19--p3--tên-chưa-thống-nhất-ở-vài-chỗ).
+[CT-19](../05_project/improvement_log.md#ct-19--p3--tên-chưa-thống-nhất-ở-vài-chỗ).
 
 ## Nguyên tắc chung
 
 1. **Chỉ dùng ASCII, không dấu, không khoảng trắng.** Nội dung có thể tiếng Việt; tên file và thư mục thì không. Tài liệu tiếng
-   Việt đặt tên bằng tiếng Việt không dấu (`thiet_ke_phoi_hop_agent.md`), mã nguồn đặt tên bằng tiếng Anh.
+   Việt đặt tên bằng tiếng Việt không dấu (`agent_coordination_design.md`), mã nguồn đặt tên bằng tiếng Anh.
 2. **Tên nói nội dung, không nói trạng thái.** Không đặt `final`, `new`, `old`, `copy`, `backup`, `v2` vào tên. Lịch sử thuộc
    về git và về sổ theo dõi.
 3. **Mặc định là `snake_case`.** Chỉ dùng kiểu khác khi một chuẩn bên ngoài đòi hỏi (bảng dưới ghi rõ lý do).
@@ -26,9 +26,9 @@ Quy ước này ghi lại cách đặt tên mà repo **đang dùng**, cộng và
 | Adapter | `adapters/<id>/`, chữ thường liền | `adapters/tls13/` | Tệp YAML trong adapter dùng `snake_case` (`known_bugs.yaml`) |
 | Đặc tả hành vi | Theo mã yêu cầu | `TLS13-0042.rbs` | Mã yêu cầu viết hoa: `<GIAO_THỨC>-<số>` |
 | Cấu hình | `config/<chủ_đề>.yaml` | `config/models.yaml` | Chỉ ghi tên biến môi trường chứa khoá, không ghi khoá |
-| Tài liệu | `docs/<nhóm>/<tiền_tố>_<chủ_đề>.md`, `snake_case` không dấu | `docs/design/thiet_ke_adapter_kiem_thu.md` | Nhóm và tiền tố cho phép: xem mục "Cấu trúc `docs/`" bên dưới. Trang mục lục của thư mục là `README.md` |
-| Hình trong tài liệu | `docs/figures/<tên_tài_liệu>_hinh_<n>.svg` | `thiet_ke_phoi_hop_agent_hinh_1.svg` | Ô chú thích màu: `docs/figures/legend/legend_<nn>.svg` |
-| Bản HTML gốc | `docs/html/<cùng tên tài liệu>.html` | | Chỉ để đối chiếu, có thể xoá |
+| Tài liệu | `docs/<nhóm>/<chủ_đề>.md`, tiếng Anh, `snake_case` | `docs/02_design/adapter_and_testing_design.md` | Nhóm cho phép: xem mục "Cấu trúc `docs/`" bên dưới. Trang mục lục của thư mục là `README.md` |
+| Hình trong tài liệu | `docs/assets/figures/<tên_tài_liệu>_figure_<n>.svg` | `agent_coordination_design_figure_1.svg` | Ô chú thích màu: `docs/assets/figures/legend/legend_<nn>.svg` |
+| Bản HTML gốc | `docs/archive/html/<cùng tên tài liệu>.html` | | Chỉ để đối chiếu, có thể xoá |
 | Test | `tests/test_<mô_đun_hoặc_chủ_đề>.py` | `test_execution_loop.py` | Dùng chung: `conftest.py`, `fakes.py`, `helpers.py`, `toy_domain.py`. Hàm test `test_<hành_vi>` bằng tiếng Anh |
 | Script | `scripts/<động_từ>_<đối_tượng>.py` | `analyze_run.py`, `e2e_live.py` | Có docstring đầu file nói cách chạy. Script của bộ đánh giá cũng nằm ở đây, tiền tố `eval_` (`eval_make_manifest.py`); `eval/` chỉ chứa dữ liệu và cấu hình |
 | Dockerfile | `<tên-kebab>.Dockerfile` | `code-index-worker.Dockerfile` | Thói quen của Docker |
@@ -37,22 +37,20 @@ Quy ước này ghi lại cách đặt tên mà repo **đang dùng**, cộng và
 
 ## Cấu trúc `docs/`
 
-Tài liệu chia theo **mục đích**. Tên thư mục nhóm bằng tiếng Anh (cùng kiểu với các thư mục khác của repo), tên file bằng tiếng Việt
-không dấu. Mỗi file có tiền tố của nhóm nên tên vẫn rõ khi xuất hiện riêng lẻ (kết quả tìm kiếm, tab trình soạn thảo).
+Tài liệu chia theo **mục đích** và đánh số theo thứ tự nên đọc. Tên thư mục và tên file đều bằng tiếng Anh, `snake_case`
+(nội dung vẫn bằng tiếng Việt). Riêng checklist deliverable có tiền tố `checklist_` để nhận ra ngay trong thư mục.
 
-| Nhóm | Dùng cho | Tiền tố file | Ví dụ |
-|---|---|---|---|
-| `overview/` | Giới thiệu cho người mới đọc | `tong_quan_` | `tong_quan_he_thong.md` |
-| `design/` | Thiết kế hệ thống và thành phần | `thiet_ke_` | `thiet_ke_phoi_hop_agent.md` |
-| `evaluation/` | Thiết kế đánh giá, kết quả thực nghiệm | `thiet_ke_`, `danh_gia_` | `danh_gia_kha_thi_thuc_nghiem.md` |
-| `deliverables/` | Checklist các sản phẩm bàn giao | `checklist_` | `checklist_he_thong.md` |
-| `quality/` | Tiêu chuẩn chất lượng: hệ thống cần đạt gì, từng phần cần làm được gì | `tieu_chuan_` | `tieu_chuan_agent.md` |
-| `management/` | Quản lý công việc: vấn đề, số đo, hạn chế | `theo_doi_` | `theo_doi_cai_thien.md` |
-| `conventions/` | Quy ước làm việc | `quy_uoc_` | `quy_uoc_dat_ten.md` |
-| `figures/`, `html/` | Tài nguyên: sơ đồ SVG, bản HTML gốc | theo bảng ở trên | |
+| Nhóm | Dùng cho | Ví dụ |
+|---|---|---|
+| `01_overview/` | Giới thiệu cho người mới đọc; quy ước làm việc | `system_overview.md`, `naming_conventions.md` |
+| `02_design/` | Thiết kế hệ thống và từng thành phần | `agent_coordination_design.md` |
+| `03_quality/` | Tiêu chuẩn chất lượng: hệ thống cần đạt gì, từng phần cần làm được gì | `agent_standards.md` |
+| `04_evaluation/` | Thiết kế đánh giá, kết quả thực nghiệm | `feasibility_assessment.md` |
+| `05_project/` | Quản lý dự án: backlog, sổ theo dõi cải thiện, checklist deliverable | `backlog.md`, `improvement_log.md`, `checklist_system.md` |
+| `assets/figures/`, `archive/html/` | Tài nguyên: sơ đồ SVG (`<tên_tài_liệu>_figure_<n>.svg`), bản HTML gốc | |
 
 Quy tắc: không đặt file `.md` trực tiếp ở gốc `docs/` (trừ `README.md`), không lồng thêm thư mục trong một nhóm, không có nhóm rỗng.
-Cần loại tài liệu mới thì thêm nhóm hoặc tiền tố vào bảng này **và** vào `DOC_FOLDERS` trong [test_naming.py](../../backend/tests/test_naming.py),
+Cần loại tài liệu mới thì thêm nhóm vào bảng này **và** vào `DOC_FOLDERS` trong [test_naming.py](../../backend/tests/test_naming.py),
 rồi thêm vào mục lục [docs/README.md](../README.md).
 
 ## Định danh bên trong mã và dữ liệu

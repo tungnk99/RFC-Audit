@@ -1,4 +1,4 @@
-"""Tóm tắt số đo của một hay nhiều lần chạy từ trace, để điền vào bảng "Nhật ký đo" ở docs/management/theo_doi_cai_thien.md.
+"""Tóm tắt số đo của một hay nhiều lần chạy từ trace, để điền vào bảng "Nhật ký đo" ở docs/05_project/improvement_log.md.
 
     uv run python scripts/analyze_run.py runs/e2e-faulty runs/e2e-correct
     uv run python scripts/analyze_run.py runs/e2e-faulty --json     # mỗi lần chạy một dòng JSON

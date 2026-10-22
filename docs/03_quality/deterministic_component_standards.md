@@ -2,7 +2,7 @@
 
 Các thành phần không dùng LLM là **nền để tin vào kết luận**: agent chỉ đề xuất, chính các thành phần này kiểm chứng, ghi bằng chứng và
 gán nhãn. Vì vậy tiêu chuẩn ở đây **cứng hơn** của agent: gần như mọi mục là bất biến (0 ngoại lệ) và đều có kiểm thử tự động. Tiêu chuẩn
-toàn hệ thống ở [tieu_chuan_he_thong.md](tieu_chuan_he_thong.md), của các agent ở [tieu_chuan_agent.md](tieu_chuan_agent.md).
+toàn hệ thống ở [system_standards.md](system_standards.md), của các agent ở [agent_standards.md](agent_standards.md).
 
 Cột "Hiện tại": *Đạt (test)* là kiểm thử tự động đang pass (toàn bộ bộ kiểm thử pass ở lần chạy gần nhất). *Chưa kiểm* là chưa có kiểm thử
 hoặc phép đo. Bảng bất biến đầy đủ và nơi ép từng bất biến nằm ở [README](../../README.md).
@@ -30,7 +30,7 @@ Mã: [context_builder.py](../../backend/src/rfcv/core/context_builder.py), [ifc.
 | CB-1 | Mỗi agent chỉ nhận trường ngữ cảnh khai báo trong `role.yaml` (ví dụ Test không nhận T1, Code Reader không nhận nhãn tạm) | 0 trường thừa | Đạt (test) |
 | CB-2 | Chuỗi UNTRUSTED tự do không vào ngữ cảnh agent đặc quyền | 0 | Đạt (test) |
 | CB-3 | Bản tóm tắt bằng chứng cho agent đặc quyền chỉ có giá trị miền hữu hạn hoặc đã đối chiếu (`VerifiedRef`) | 100% | Đạt (test) |
-| CB-4 | Bản tóm tắt không phình theo số bằng chứng (giữ chi phí token có giới hạn) | Token đầu vào của Verifier giảm so với mốc 55k | **Chưa đạt** ([CT-03](../management/theo_doi_cai_thien.md#ct-03--p2--evidencesummary-phình-theo-số-bằng-chứng-t3)) |
+| CB-4 | Bản tóm tắt không phình theo số bằng chứng (giữ chi phí token có giới hạn) | Token đầu vào của Verifier giảm so với mốc 55k | **Chưa đạt** ([CT-03](../05_project/improvement_log.md#ct-03--p2--evidencesummary-phình-theo-số-bằng-chứng-t3)) |
 
 ## Tool gateway
 
@@ -42,7 +42,7 @@ Mã: [tool_gateway.py](../../backend/src/rfcv/gates/tool_gateway.py). Test: [tes
 | TG-2 | Kiểm miền tham số; `explore` chỉ chạy lệnh đọc trong danh sách, không qua shell | 0 lệnh ngoài danh sách chạy được | Đạt (test) |
 | TG-3 | Công cụ nguy hiểm (ghi tệp, gọi mạng, chạy lệnh trên máy chủ) không đăng ký được, kể cả từ plugin | 0 | Đạt (test, [test_plugins.py](../../backend/tests/test_plugins.py)) |
 | TG-4 | Mã lỗi từ chối chỉ là mã liệt kê, không kèm chi tiết chính sách | 100% | Đạt (test) cho mã liệt kê và việc không lộ chi tiết chính sách ([test_invariants.py](../../backend/tests/test_invariants.py)) |
-| TG-5 | Chống đối thủ thật: dẫn dắt agent gọi công cụ ngoài quyền | 0 lọt qua | Chưa thử với LLM thật (A3, [CT-08](../management/theo_doi_cai_thien.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
+| TG-5 | Chống đối thủ thật: dẫn dắt agent gọi công cụ ngoài quyền | 0 lọt qua | Chưa thử với LLM thật (A3, [CT-08](../05_project/improvement_log.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
 
 ## Schema gate (T1)
 
@@ -66,8 +66,8 @@ Mã: [code_gate.py](../../backend/src/rfcv/gates/code_gate.py), [agents/locator/
 | CG-1 | Công cụ đọc mã chỉ đọc, không ghi tệp, không gọi mạng, không chạy mã của kho mã, không đọc ngoài phạm vi (C2) | 0 vi phạm | Đạt (test) |
 | CG-2 | Mọi vị trí trả về đối chiếu được với kho mã tại commit cố định (C3) | 100% | Đạt (test) |
 | CG-3 | `locator.suggest` đưa vị trí đúng vào top 5 gợi ý | ≥ 80% (ĐX) | Chưa đo |
-| CG-4 | Chạy được trên C, Rust, Go, kể cả mã nhiều macro và con trỏ hàm (C4) | Báo cáo theo ngôn ngữ | Chưa chạy trên mã thật ([CT-13](../management/theo_doi_cai_thien.md#ct-13--p3--skill-chỉ-có-cho-c-và-tls)) |
-| CG-5 | `STATIC_QUERY` chạy truy vấn tĩnh đã kiểm định đột biến (loại D) | 100% truy vấn qua kiểm định | Chưa nối ([CT-10](../management/theo_doi_cai_thien.md#ct-10--p2--static_query-loại-d-chưa-nối)) |
+| CG-4 | Chạy được trên C, Rust, Go, kể cả mã nhiều macro và con trỏ hàm (C4) | Báo cáo theo ngôn ngữ | Chưa chạy trên mã thật ([CT-13](../05_project/improvement_log.md#ct-13--p3--skill-chỉ-có-cho-c-và-tls)) |
+| CG-5 | `STATIC_QUERY` chạy truy vấn tĩnh đã kiểm định đột biến (loại D) | 100% truy vấn qua kiểm định | Chưa nối ([CT-10](../05_project/improvement_log.md#ct-10--p2--static_query-loại-d-chưa-nối)) |
 | CG-6 | Bộ quét nhánh nghi vấn (T2) tạo bằng chứng `suspicious_branch` | Phát hiện mã mức 1, 2 | Đạt (test, [suspicious.py](../../backend/src/rfcv/domains/rfc_protocol/suspicious.py), [test_suspicious.py](../../backend/tests/test_suspicious.py)): bộ quét chạy sau mỗi T1 được nhận, trên hàm chứa vị trí và hàm trong call_path, ghi T2 suspicious_branch; quy tắc V4 chuyển nhãn sang NEEDS_REVIEW |
 
 ## Test driver và oracle
@@ -82,7 +82,7 @@ Mã: [driver.py](../../backend/src/rfcv/domains/rfc_protocol/sandbox/driver.py),
 | TD-4 | Có nhân chứng dương (bản tham chiếu) trước khi kết quả được dùng (BR6) | 100% | Đạt (test) |
 | TD-5 | Mỗi ca chạy để lại sự kiện truy vết; thông điệp lỗi môi trường chỉ vào trace, không vào kho bằng chứng | 100% | Đạt (test) |
 | TD-6 | Nhật ký thô của SUT chỉ vào Artifact store, agent không thấy | 0 rò | Đạt (test) |
-| TD-7 | Chạy trên backend và SUT thật | Chạy hết một yêu cầu trên wolfSSL | **Chưa có** ([CT-09](../management/theo_doi_cai_thien.md#ct-09--p0--chưa-có-backend-kiểm-thử-thật-và-bộ-chạy-sut-thật)) |
+| TD-7 | Chạy trên backend và SUT thật | Chạy hết một yêu cầu trên wolfSSL | **Chưa có** ([CT-09](../05_project/improvement_log.md#ct-09--p0--chưa-có-backend-kiểm-thử-thật-và-bộ-chạy-sut-thật)) |
 
 ## Coverage linker
 
@@ -92,7 +92,7 @@ Mã: [coverage_linker.py](../../backend/src/rfcv/domains/rfc_protocol/coverage_l
 |---|---|---|---|
 | CL-1 | Liên kết T3 với T1 khi dòng của T1 được thực thi trong lúc chạy T3 | 100% liên kết đúng | Đạt (test) |
 | CL-2 | Không ghi liên kết trùng | 0 | Đạt (test) |
-| CL-3 | Chạy với dữ liệu độ phủ thật từ bản đo độ phủ | Có | Chưa (cần bản đo độ phủ, [CT-09](../management/theo_doi_cai_thien.md#ct-09--p0--chưa-có-backend-kiểm-thử-thật-và-bộ-chạy-sut-thật)) |
+| CL-3 | Chạy với dữ liệu độ phủ thật từ bản đo độ phủ | Có | Chưa (cần bản đo độ phủ, [CT-09](../05_project/improvement_log.md#ct-09--p0--chưa-có-backend-kiểm-thử-thật-và-bộ-chạy-sut-thật)) |
 
 ## Verdict engine
 
@@ -124,7 +124,7 @@ Mã: [llm_gateway.py](../../backend/src/rfcv/core/llm_gateway.py), [runner.py](.
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
-| LG-1 | Khoá API chỉ đọc từ biến môi trường và chỉ trong gateway; không có trong hash cấu hình | 0 rò | Đạt (test); quét trace, bằng chứng và artifacts tự động sau mỗi lần chạy ([test_leak_scan.py](../../backend/tests/test_leak_scan.py); [QS-07](tieu_chuan_he_thong.md#tầng-a-an-toàn-bất-biến-0-vi-phạm)) |
+| LG-1 | Khoá API chỉ đọc từ biến môi trường và chỉ trong gateway; không có trong hash cấu hình | 0 rò | Đạt (test); quét trace, bằng chứng và artifacts tự động sau mỗi lần chạy ([test_leak_scan.py](../../backend/tests/test_leak_scan.py); [QS-07](system_standards.md#tầng-a-an-toàn-bất-biến-0-vi-phạm)) |
 | LG-2 | Khai báo mô hình một lần, gán cho agent ở mục riêng; agent chưa được gán bị từ chối lúc khởi động | 100% | Đạt (test) |
 | LG-3 | Lỗi nhà cung cấp (hết hạn mức, lỗi HTTP, sai định dạng) thành lỗi vai trò có trace, không làm sập lượt chạy | 100% | Đạt (test) |
 | LG-4 | Token đã tiêu trước khi hỏng vẫn tính vào ngân sách | 100% | Đạt (test) |
@@ -132,7 +132,7 @@ Mã: [llm_gateway.py](../../backend/src/rfcv/core/llm_gateway.py), [runner.py](.
 
 ## Adapter checker
 
-Mã: [checker.py](../../backend/src/rfcv/adapters/checker.py). Tài liệu: [mục 12 của thiết kế adapter](../design/thiet_ke_adapter_kiem_thu.md#12-adapter-checker).
+Mã: [checker.py](../../backend/src/rfcv/adapters/checker.py). Tài liệu: [mục 12 của thiết kế adapter](../02_design/adapter_and_testing_design.md#12-adapter-checker).
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
@@ -147,6 +147,6 @@ Mã: [checker.py](../../backend/src/rfcv/adapters/checker.py). Tài liệu: [m�
 |---|---|---|---|
 | SK-1 | Skill chỉ là văn bản: cấm `scripts/`, `allowed-tools`, symlink; workspace chỉ đọc, không chạy lệnh | 0 vi phạm | Đạt (test, [test_skills.py](../../backend/tests/test_skills.py) và [test_invariants.py](../../backend/tests/test_invariants.py)) cho `scripts/`, `allowed-tools`, symlink, workspace chỉ đọc |
 | SK-2 | Mỗi agent chỉ thấy skill nó khai báo, lọc tất định theo kiểu nhiệm vụ | 100% | Đạt (test) |
-| SK-3 | Skill thực sự giúp ích (so có và không có skill) | Có số đo A/B | Chưa đo ([CT-06](../management/theo_doi_cai_thien.md#ct-06--p2--chưa-biết-skill-có-giúp-ích-không)) |
+| SK-3 | Skill thực sự giúp ích (so có và không có skill) | Có số đo A/B | Chưa đo ([CT-06](../05_project/improvement_log.md#ct-06--p2--chưa-biết-skill-có-giúp-ích-không)) |
 | TR-1 | Mọi kết luận truy được về lý do dừng, kế hoạch, đầu ra agent và hội thoại khi hỏng, bằng `rfcv trace` | 100% | Đạt (test) |
-| TR-2 | Chỉ số đo lấy từ trace phải đúng (không ghi sai số liệu) | Đối chiếu với hội thoại thô | Đã sửa một lỗi (`skills_loaded` luôn rỗng, [R-11](../management/theo_doi_cai_thien.md#đã-xử-lý)); cần kiểm lại các chỉ số khác khi có số lạ |
+| TR-2 | Chỉ số đo lấy từ trace phải đúng (không ghi sai số liệu) | Đối chiếu với hội thoại thô | Đã sửa một lỗi (`skills_loaded` luôn rỗng, [R-11](../05_project/improvement_log.md#đã-xử-lý)); cần kiểm lại các chỉ số khác khi có số lạ |

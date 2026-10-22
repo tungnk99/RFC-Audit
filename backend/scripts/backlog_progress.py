@@ -1,4 +1,4 @@
-"""Tiến độ backlog công việc (docs/management/theo_doi_backlog.md): đếm việc theo trạng thái, giai đoạn và nhóm.
+"""Tiến độ backlog công việc (docs/05_project/backlog.md): đếm việc theo trạng thái, giai đoạn và nhóm.
 
     uv run python scripts/backlog_progress.py              # bảng tổng hợp
     uv run python scripts/backlog_progress.py --next       # các việc nên làm kế tiếp: chưa làm, mọi phụ thuộc đã Xong, giai đoạn sớm nhất
@@ -14,7 +14,7 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BACKLOG = ROOT.parent / "docs" / "management" / "theo_doi_backlog.md"
+BACKLOG = ROOT.parent / "docs" / "05_project" / "backlog.md"
 PHASE_ORDER = ["Ngay", "G1", "G2", "DNS", "G3", "LV", "T2"]
 STATUS_ORDER = ["Xong", "Đang làm", "Chặn", "Chưa làm"]
 PIPE = re.compile(r"(?<!\\)\|")

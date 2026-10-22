@@ -1,18 +1,18 @@
 # Backlog công việc
 
-Danh sách việc cần làm để hệ thống đạt các [yêu cầu đầu ra](../quality/tieu_chuan_dau_ra.md) (`YD-nn`) và sửa các vấn đề đang mở trong
-[sổ theo dõi](theo_doi_cai_thien.md) (`CT-nn`). Mỗi việc (`BL-nn`) trỏ về yêu cầu nó phục vụ và có tiêu chí "Xong khi" lấy từ chính
+Danh sách việc cần làm để hệ thống đạt các [yêu cầu đầu ra](../03_quality/output_requirements.md) (`YD-nn`) và sửa các vấn đề đang mở trong
+[sổ theo dõi](improvement_log.md) (`CT-nn`). Mỗi việc (`BL-nn`) trỏ về yêu cầu nó phục vụ và có tiêu chí "Xong khi" lấy từ chính
 yêu cầu đó, nên làm xong việc là đo được yêu cầu đã đạt. Test [test_backlog.py](../../backend/tests/test_backlog.py) bảo đảm **mọi `YD` và mọi
 `CT` đang mở đều có ít nhất một việc**.
 
 Mối quan hệ giữa các tài liệu quản lý: yêu cầu (`YD`, `QS`, `AG`) nói **cần đạt gì**; sổ theo dõi (`CT`) nói **đang vướng gì**; backlog (`BL`) nói
-**làm việc gì để gỡ**; [checklist deliverable](../deliverables/README.md) nói **đã giao chưa**.
+**làm việc gì để gỡ**; [checklist deliverable](../05_project/README.md) nói **đã giao chưa**.
 
 ## Cách dùng
 
 - **Cỡ** là ước lượng của tài liệu này (ĐX), không phải của thiết kế: **S** ≤ 1 ngày, **M** 2–3 ngày, **L** khoảng 1 tuần, **XL** từ 2 tuần trở lên. Tổng công sức theo
-  tầng của thiết kế (19 tuần công cho tầng 1) nằm ở [Bảng 26](../design/thiet_ke_chi_tiet_he_thong.md#51-phạm-vi-và-công-sức) và vẫn là căn cứ chính.
-- **Giai đoạn** bám lịch của [Bảng 27](../design/thiet_ke_chi_tiet_he_thong.md#52-tiến-độ-và-mốc-kiểm-tra):
+  tầng của thiết kế (19 tuần công cho tầng 1) nằm ở [Bảng 26](../02_design/system_design.md#51-phạm-vi-và-công-sức) và vẫn là căn cứ chính.
+- **Giai đoạn** bám lịch của [Bảng 27](../02_design/system_design.md#52-tiến-độ-và-mốc-kiểm-tra):
 
   | Mã | Thời gian | Nội dung chính |
   |---|---|---|
