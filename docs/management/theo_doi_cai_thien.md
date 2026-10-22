@@ -140,6 +140,9 @@ Mức: **P0** chặn đánh giá thật, **P1** ảnh hưởng độ tin cậy h
 - **Bằng chứng:** phải đặt biến vào môi trường trước khi chạy; `rfcv models` báo "CHƯA đặt" dù khoá có trong `.env`.
   `scripts/e2e_live.py` đã tự nạp.
 - **Đóng khi:** quyết định có thêm `python-dotenv` cho CLI hay giữ như hiện tại (và ghi rõ trong README).
+- **Quyết định (BL-92):** giữ như hiện tại, không thêm `python-dotenv`: khoá chỉ đi qua biến môi trường, đúng nguyên tắc "chỉ đọc trong
+  LLM gateway". README ghi cách đặt biến; `rfcv models` báo "CHƯA đặt trong môi trường" kèm lời nhắc CLI không tự nạp `.env`
+  (có test `tests/test_cli_models.py`). Đã đóng.
 
 ### CT-16 · P1 · Chưa có số đo thống kê
 - **Bằng chứng:** mỗi ca mới chạy một lần, một yêu cầu. Chưa có các chỉ số ở Bảng 13 của tài liệu phối hợp agent (độ chính xác

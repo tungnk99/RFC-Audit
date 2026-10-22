@@ -229,9 +229,14 @@ def models_cmd(
         typer.echo(f"LỖI: {exc}", err=True)
         raise typer.Exit(1) from exc
     typer.echo("Mô hình hỗ trợ:")
+    missing = False
     for name, spec in cfg.models.items():
-        state = "đã đặt" if os.environ.get(spec.api_key_env) else "CHƯA đặt"
+        is_set = bool(os.environ.get(spec.api_key_env))
+        missing = missing or not is_set
+        state = "đã đặt" if is_set else "CHƯA đặt trong môi trường"
         typer.echo(f"  {name:<18} {spec.provider}:{spec.model}  khoá {spec.api_key_env} ({state})")
+    if missing:
+        typer.echo("  (rfcv không tự nạp .env: hãy đặt biến vào môi trường trước khi chạy, xem README)")
     typer.echo("Agent → mô hình:")
     for agent, model in cfg.agents.items():
         typer.echo(f"  {agent:<16} {model}")
