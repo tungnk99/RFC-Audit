@@ -231,3 +231,28 @@ async def test_task_history_tells_what_each_dispatch_produced_or_why_it_failed(
     rows = {r["task_type"]: r for r in second_planner_context["tasks.history"]["value"]}
     assert rows["SELECT_TESTS"]["new_evidence"] > 0 and rows["SELECT_TESTS"]["failure"] is None
     assert rows["LOCATE"]["new_evidence"] == 0  # LOCATE không cho ra bằng chứng nào: Planner phải thấy điều đó
+
+
+async def test_a_recheck_names_the_location_to_look_at_again_and_the_verifier_sees_the_history(
+    store: EvidenceStore, trace: TraceLog, policy: PolicyStore
+) -> None:
+    """RECHECK theo phản biện mang `evidence_id`; Code Reader phải nhận bản tóm tắt của đúng bằng chứng đó (trước đây trường
+    `task.recheck_location` được khai báo mà không ai cấp). Verifier phải thấy lịch sử để biết vấn đề nào đã được xử lý."""
+    from rfcv.agents.schemas import TaskSpec
+    from rfcv.domains.rfc_protocol.schemas import TargetRole, TaskParams, TaskType
+    from test_execution_loop import CRITIQUE, OUTPUTS, FakeRunner, Noop, inv, make_loop, plan
+
+    located = store.append(t1())
+    recheck = TaskSpec(
+        task_type=TaskType.RECHECK,
+        target_role=TargetRole.CODE_READER,
+        params=TaskParams(evidence_id=located.evidence_id, aspect="REACTION"),  # type: ignore[arg-type]
+    )
+    runner = FakeRunner(lambda n: plan(recheck) if n == 1 else plan(CRITIQUE), OUTPUTS)
+    handlers = {TaskType.RECHECK: Noop(), TaskType.CRITIQUE: Noop()}
+    await make_loop(store, trace, policy, runner, handlers).investigate(inv())
+    reader = next(c for env, c in zip(runner.calls, runner.contexts, strict=True) if env.to_role == "code_reader")
+    location = reader["task.recheck_location"]["value"]
+    assert location["evidence_id"] == located.evidence_id and location["symbol"] == "GetRecordHeader"
+    verifier = next(c for env, c in zip(runner.calls, runner.contexts, strict=True) if env.to_role == "verifier")
+    assert [h["task_type"] for h in verifier["tasks.history"]["value"]][:1] == ["RECHECK"]
