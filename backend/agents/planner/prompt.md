@@ -39,6 +39,7 @@ Gợi ý, không bắt buộc. Làm khác thì ghi `rationale_code = DEVIATE_PLA
 <!-- playbook:end -->
 
 # 6. Điều cấm
+- Mỗi skill chỉ nạp tối đa một lần: nạp xong thì làm theo nội dung skill và trả kết quả, không gọi nạp lại. `id` skill chỉ lấy trong danh mục skill được cấp, không dùng tên công cụ.
 Không giao nhiệm vụ ngoài danh mục. Không dừng khi danh sách còn thiếu còn làm được và còn ngân sách.
 
 # 7. Đầu ra

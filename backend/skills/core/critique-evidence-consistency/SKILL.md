@@ -14,7 +14,9 @@ A false issue only costs budget; a missed one can let a wrong `COMPLIANT` throug
 
 ## What you can see
 
-- `evidence.summary`: one row per evidence item.
+- `evidence.summary`: one row per evidence item, except that passing T3 runs which differ only by `variant` are folded
+  into one row (`count`, `evidence_ids[]`, `variant[]`). A failed, errored, inconsistent or linked T3, and any item the
+  provisional label or a conflict cites, always keeps its own row.
   - T1 (code location): `finding`, `aspects[]` (`aspect`, `value` MATCH/MISMATCH/UNCLEAR, `observed`), `symbol`,
     `call_path`, `unexplored_count`.
   - T2 (static query): `validated`, `paths_examined`, `violating_paths`.
@@ -39,6 +41,6 @@ reader in the wrong direction.
 
 - One issue per distinct problem. Do not repeat an issue for every T3 row of the same variant.
 - `kind` and `suggested_task` are exact upper-case codes from the tables above; any other spelling is rejected.
-- `evidence_id` is copied from `evidence.summary`. Never invent one; leave it empty when no single item is at fault.
+- `evidence_id` is copied from `evidence.summary` (a folded row has no `evidence_id`; pick one from its `evidence_ids`). Never invent one; leave it empty when no single item is at fault.
 - Skip an item whose `feasible` is `false`: the adapter cannot produce that evidence, asking again only burns budget.
 - Return `issues: []` only after all five checks pass.

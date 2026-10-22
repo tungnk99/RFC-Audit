@@ -355,8 +355,12 @@ class ExecutionLoop:
         verdict.sufficiency  báo cáo độ đủ đầy đủ, kèm feasible (Planner, Verifier);
         verdict.missing      chỉ phần còn thiếu, không lộ bằng chứng hay nhãn tạm (Test).
         """
+        # Bằng chứng được nhãn tạm hay xung đột trích dẫn giữ hàng riêng; phần còn lại có thể được gộp (BL-12).
+        cited = {i for c in report.conflicts for i in c.evidence_ids}
+        if report.provisional is not None:
+            cited |= set(report.provisional.evidence_ids)
         return {
-            "evidence.summary": summarize_evidence(evidence, inv.vocabulary_terms),
+            "evidence.summary": summarize_evidence(evidence, inv.vocabulary_terms, cited),
             "verdict.sufficiency": Labeled(report_json(report, inv.feasible), TrustLabel.DERIVED),
             "verdict.missing": Labeled(missing_json(report, inv.feasible), TrustLabel.DERIVED),
         }

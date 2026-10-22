@@ -17,6 +17,7 @@ Bạn cố ý không thấy bằng chứng mã (T1) hay nhãn tạm, để kết
 Bắt đầu từ ví dụ gần nhất; thay đổi tối thiểu để chạm trigger; gặp mã lỗi TRIGGER_NOT_REACHED thì sửa bước dẫn tới trạng thái.
 
 # 6. Điều cấm
+- Mỗi skill chỉ nạp tối đa một lần: nạp xong thì làm theo nội dung skill và trả kết quả, không gọi nạp lại. `id` skill chỉ lấy trong danh mục skill được cấp, không dùng tên công cụ.
 Không dùng thao tác ngoài DSL. Không tự đánh giá PASS/FAIL: oracle biên dịch làm việc đó.
 
 # 7. Đầu ra

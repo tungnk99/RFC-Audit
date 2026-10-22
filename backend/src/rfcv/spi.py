@@ -57,6 +57,11 @@ class EvidenceKind:
     producers: frozenset[str]
     polarity: Callable[[Any], Polarity]
     summarize: Callable[[Any, frozenset[str]], dict[str, Any]]
+    # Bản tóm tắt phình theo số bằng chứng (BL-12): hàng "thường" (không có gì đáng chú ý) chỉ khác nhau ở `fold_fields`
+    # được gộp thành một hàng kèm `count` và danh sách giá trị. Hàng khác thường, hay được nhãn và xung đột trích dẫn,
+    # vẫn đứng riêng.
+    is_routine: Callable[[Any], bool] | None = None
+    fold_fields: tuple[str, ...] = ()
     version: int = 1
     # upgrades[n] nâng payload (dict) từ phiên bản n lên n + 1 khi đọc dữ liệu cũ.
     upgrades: Mapping[int, Callable[[dict[str, Any]], dict[str, Any]]] = field(

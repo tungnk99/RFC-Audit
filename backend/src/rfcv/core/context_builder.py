@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from enum import Enum
 from typing import Any
 
@@ -20,6 +20,7 @@ from rfcv.core.ifc import IFCViolation, Labeled, TrustLabel, VerifiedRef, admiss
 from rfcv.core.policy import PolicyStore, Zone
 from rfcv.evidence.models import Evidence
 from rfcv.plugins import current_registry
+from rfcv.spi import EvidenceKind
 
 
 def to_jsonable(value: Any) -> Any:
@@ -70,18 +71,56 @@ class ContextBuilder:
         )
 
 
-def summarize_evidence(evidence: Sequence[Evidence], vocabulary_terms: Iterable[str]) -> Labeled[list[dict[str, Any]]]:
+def summarize_evidence(
+    evidence: Sequence[Evidence], vocabulary_terms: Iterable[str], keep: Collection[str] = ()
+) -> Labeled[list[dict[str, Any]]]:
     """Bản tóm tắt bằng chứng cho agent đặc quyền: chỉ giá trị miền hữu hạn hoặc đã đối chiếu.
 
     Cách tóm tắt từng loại bằng chứng do chính loại đó khai báo (`EvidenceKind.summarize`), nên lõi không
     biết trường nào của miền là an toàn. Giá trị chuỗi chỉ qua được khi đã thành `VerifiedRef`
     (đối chiếu với chỉ mục hoặc từ vựng adapter); phần còn lại bị IFC chặn ở Context builder.
+
+    Hàng "thường" của loại có khai báo `is_routine` được gộp (xem `EvidenceKind.fold_fields`) để bản tóm tắt không
+    tăng tuyến tính theo số biến thể thử. Bằng chứng trong `keep` (được nhãn tạm hay xung đột trích dẫn) không bị gộp.
     """
     kinds = current_registry().kinds
     terms = frozenset(vocabulary_terms)
-    rows = [
-        {"evidence_id": VerifiedRef(e.evidence_id), "tier": VerifiedRef(str(e.tier)), "polarity": e.polarity}
-        | kinds[str(getattr(e.payload, "kind", ""))].summarize(e, terms)
-        for e in evidence
-    ]
-    return Labeled(rows, TrustLabel.UNTRUSTED)
+    pinned = frozenset(keep)
+    entries: list[tuple[dict[str, Any], EvidenceKind, str | None]] = []  # (hàng, loại, khoá nhóm; None = không gộp)
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for e in evidence:
+        kind = kinds[str(getattr(e.payload, "kind", ""))]
+        row = {
+            "evidence_id": VerifiedRef(e.evidence_id),
+            "tier": VerifiedRef(str(e.tier)),
+            "polarity": e.polarity,
+        } | kind.summarize(e, terms)
+        key: str | None = None
+        if kind.is_routine is not None and kind.is_routine(e) and e.evidence_id not in pinned:
+            shared = sorted((k, v) for k, v in row.items() if k != "evidence_id" and k not in kind.fold_fields)
+            key = f"{kind.name}|{shared!r}"
+            groups.setdefault(key, []).append(row)
+        entries.append((row, kind, key))
+    out: list[dict[str, Any]] = []
+    emitted: set[str] = set()
+    for row, kind, key in entries:
+        if key is None:
+            out.append(row)
+        elif key not in emitted:
+            emitted.add(key)
+            members = groups[key]
+            out.append(row if len(members) == 1 else _fold(members, kind.fold_fields))
+    return Labeled(out, TrustLabel.UNTRUSTED)
+
+
+def _fold(members: Sequence[dict[str, Any]], fold_fields: Sequence[str]) -> dict[str, Any]:
+    """Một hàng thay cho nhiều hàng giống nhau trừ `fold_fields`: giữ phần chung, thêm `count`, `evidence_ids` và danh
+    sách giá trị của từng trường gộp (vẫn trích dẫn được từng bằng chứng)."""
+    first = members[0]
+    folded = {k: v for k, v in first.items() if k != "evidence_id" and k not in fold_fields}
+    folded["count"] = len(members)
+    folded["evidence_ids"] = [m["evidence_id"] for m in members]
+    for name in fold_fields:
+        if name in first:
+            folded[name] = [m[name] for m in members]
+    return folded

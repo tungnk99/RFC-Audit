@@ -5,4 +5,4 @@ tools: [locator.suggest, code.list_dir, code.file_outline, code.search_text, cod
 skills: [resolve-c-macro-thresholds, check-ifdef-compiled-lines, trace-all-entry-paths, tls-record-length-bounds]
 output_schema: LocationClaim@1
 prompt: prompt.md
-budget_per_task: {llm_calls: 12, tool_calls: 30, tokens: 250000, seconds: 900}
+budget_per_task: {llm_calls: 20, tool_calls: 30, tokens: 250000, seconds: 900}
