@@ -2,7 +2,7 @@ role: verifier
 zone: privileged
 context_fields: [requirement.structured, rfc.sentence, rfc.paragraph, evidence.summary, verdict.sufficiency, tasks.history]
 tools: [evidence.read_summary, verdict.read, rfc.read_section]
-skills: [critique-evidence-consistency, tls-record-length-bounds]
+skills: [critique-evidence-consistency, "@adapter"]
 output_schema: Critique@1
 prompt: prompt.md
-budget_per_task: {tool_calls: 6, tokens: 80000, seconds: 180}
+budget_per_task: {tool_calls: 6, tokens: 200000, seconds: 180}

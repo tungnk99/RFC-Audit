@@ -46,8 +46,11 @@ def test_a_prompt_names_only_context_fields_its_role_receives(role: str) -> None
 
 def test_a_skill_names_only_tools_of_the_roles_that_load_it() -> None:
     users: dict[str, set[str]] = {}
+    adapter_skills = {p.parent.name for p in (ROOT / "skills").glob("*/*/SKILL.md") if p.parent.parent.name != "core"}
     for role in ROLES:
-        for skill in profile(role).get("skills", []):
+        declared = set(profile(role).get("skills", []))
+        reached = (declared - {"@adapter"}) | (adapter_skills if "@adapter" in declared else set())
+        for skill in reached:
             users.setdefault(skill, set()).update(t.replace(".", "__") for t in profile(role)["tools"])
     for skill_md in sorted((ROOT / "skills").rglob("SKILL.md")):
         name = skill_md.parent.name

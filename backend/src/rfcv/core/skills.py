@@ -32,6 +32,9 @@ _NAME = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 _FRONTMATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n?(.*)\Z", re.S)
 ALLOWED_TOP_LEVEL = {"SKILL.md", "references", "assets", "LICENSE.txt"}
 MAX_BODY_LINES = 500
+# Khai báo trong `skills:` của role.yaml: nhận mọi skill trong thư viện của adapter đang chạy (lọc theo kiểu nhiệm vụ). Nhờ vậy
+# hồ sơ agent không phải gọi tên skill của từng giao thức; thêm giao thức là thêm thư mục skills/<adapter>/.
+ADAPTER_SKILLS = "@adapter"
 
 
 # ---------------------------------------------------------------- kiểm định theo chuẩn
@@ -154,14 +157,16 @@ class SkillRegistry:
         tasks = list(known_task_types)
         self._libraries = dict(libraries)
         self.skills: dict[str, SkillInfo] = {}
+        self._library_of: dict[str, str] = {}
         errors: list[str] = []
-        for lib in self._libraries.values():
+        for lib_name, lib in self._libraries.items():
             v = validate_library(lib, tasks)
             errors += v.errors
             for s in v.skills:
                 if s.name in self.skills:
                     errors.append(f"skill trùng tên: {s.name}")
                 self.skills[s.name] = s
+                self._library_of[s.name] = lib_name
         if errors:
             raise ValueError("; ".join(errors))
 
@@ -179,9 +184,13 @@ class SkillRegistry:
         Skill khai báo mà không có trong lần chạy (ví dụ skill của adapter khác) bị bỏ qua; tên sai đã bị
         `undeclared_skills` chặn lúc lắp runtime.
         """
+        names = set(declared)
+        if ADAPTER_SKILLS in names:
+            names.discard(ADAPTER_SKILLS)
+            names |= {n for n, lib in self._library_of.items() if lib != "core"}
         return sorted(
             s.name
-            for name in set(declared)
+            for name in names
             if (s := self.skills.get(name)) is not None
             and (not s.task_types or task_type is None or task_type in s.task_types)
         )
@@ -223,4 +232,9 @@ def undeclared_skills(declared: Mapping[str, Iterable[str]], skills_root: Path) 
     Xét mọi thư viện chứ không chỉ thư viện của lần chạy, để skill của adapter khác không bị coi là lỗi.
     """
     existing = {p.parent.name for p in skills_root.glob("*/*/SKILL.md")} if skills_root.is_dir() else set[str]()
-    return [f"{role}: {name}" for role, names in sorted(declared.items()) for name in names if name not in existing]
+    return [
+        f"{role}: {name}"
+        for role, names in sorted(declared.items())
+        for name in names
+        if name not in existing and name != ADAPTER_SKILLS
+    ]

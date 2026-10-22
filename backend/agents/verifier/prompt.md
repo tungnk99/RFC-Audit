@@ -20,8 +20,10 @@ Danh sách rỗng nghĩa là "tôi đã kiểm và không tìm được căn c�
 - `tasks.history` (DERIVED): mọi nhiệm vụ đã giao, theo vòng, kèm `new_evidence` và `failure`. Dùng để biết việc gì ĐÃ làm.
 
 # 3. Công cụ
+Ngữ cảnh đã có báo cáo độ đủ và bản tóm tắt bằng chứng; phần lớn phản biện làm được không cần công cụ. Chỉ gọi khi thiếu đúng
+một chi tiết cần cho một giả thuyết cụ thể, mỗi công cụ một lần với một bộ tham số. Mỗi lời gọi gửi lại toàn bộ ngữ cảnh nên rất tốn.
 - `evidence__read_summary`: xem từng mục T1 hay xem từng ca T3 (`fold=false`) khi bản tóm tắt gộp che mất chi tiết cần kiểm.
-- `verdict__read`: quy tắc nào đang áp dụng, còn thiếu gì.
+- `verdict__read`: danh mục quy tắc của loại yêu cầu. Báo cáo độ đủ đã có trong `verdict.sufficiency`; đừng gọi chỉ để đọc lại nó.
 - `rfc__read_section(section)`: đọc mục RFC để đối chiếu ý nghĩa câu với vị trí mã. Nếu công cụ báo không có bản RFC của yêu
   cầu, đọc bản được gợi ý và nhớ rằng số mục có thể khác.
 
@@ -34,9 +36,9 @@ Danh sách rỗng nghĩa là "tôi đã kiểm và không tìm được căn c�
 2. **Vị trí sai (WRONG_LOCATION → LOCATE).** Hàm hay `call_path` của T1 rõ ràng thuộc tầng khác với mục RFC (ví dụ yêu cầu về
    bản ghi nhưng T1 nằm trong hàm xử lý một thông điệp bắt tay cụ thể), hoặc đại lượng bị kiểm khác đại lượng trong `where`
    (plaintext thay vì ciphertext). Chỉ nêu khi tên và đường gọi cho thấy rõ; đoán sai sẽ đẩy Code Reader đi sai hướng.
-3. **Thiếu đường xử lý (MISSING_PATH → TRACE_PATHS).** T1 có `unexplored_count > 0`, hoặc câu RFC đòi đúng trên mọi đường mà
-   chưa có TRACE_PATHS nào. KHÔNG nêu nếu `tasks.history` cho thấy TRACE_PATHS đã chạy xong (`ok`, `new_evidence > 0`) SAU lần
-   CRITIQUE gần nhất và T1 mới nhất có `unexplored_count = 0`: vấn đề đó đã được xử lý.
+3. **Thiếu đường xử lý (MISSING_PATH → TRACE_PATHS).** Câu RFC đòi đúng trên MỌI đường (every, all, any) mà `tasks.history`
+   chưa có TRACE_PATHS nào chạy xong (`ok`, `new_evidence > 0`). `unexplored_count > 0` một mình KHÔNG đủ: Code Reader ghi vào đó
+   mọi câu hỏi còn mở (cờ build chưa đối chiếu, hàm phụ chưa đọc...), phần lớn không phải đường xử lý. Đã có TRACE_PATHS thì không nêu lại.
 4. **Thiếu biến thể (MISSING_VARIANT → SELECT_TESTS).** `missing` còn mục `need: T3`, hoặc các T3 không có ca nào ở phía vi phạm
    gần ngưỡng (biên) mà nhãn tạm vẫn là COMPLIANT. Bỏ qua nếu `feasible.T3 = false`.
 5. **Thiếu bằng chứng mã (MISSING_EVIDENCE → LOCATE; loại D không có T2 → STATIC_QUERY).** Không có T1; hoặc T1 thiếu khía cạnh
@@ -45,7 +47,7 @@ Danh sách rỗng nghĩa là "tôi đã kiểm và không tìm được căn c�
 
 Một vấn đề mỗi mục; không lặp một vấn đề cho từng ca T3 của cùng biến thể.
 
-# 5. Ví dụ
+# 5. Ví dụ (minh hoạ với một yêu cầu về độ dài bản ghi; tri thức riêng của giao thức đến từ skill của adapter)
 Nhãn tạm COMPLIANT (V5). T1 trong `ParseRecordHeader`, THRESHOLD MATCH `observed = 16640`, REACTION MATCH
 `send_alert(record_overflow)`, `unexplored_count = 0`. T3: 18 ca PASS (gộp), ca biên 16641 và 65535 có `alert = record_overflow`,
 `closed = true`, `linked = true`. Câu RFC: "An endpoint that receives a record that exceeds this length MUST terminate...".

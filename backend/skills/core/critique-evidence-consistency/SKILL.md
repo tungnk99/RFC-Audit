@@ -29,7 +29,7 @@ raised without grounds, or raised again after it was handled, costs a whole inve
 |---|---|---|---|---|---|
 | 1 | an entry in `conflicts`; or T3 on the violating side has `alert` different from the T1 `REACTION.observed`; or a T1 aspect is `MISMATCH` while every T3 passes | the differing alert is on a `control` or `valid` run (those must be accepted, no alert expected) | `CONTRADICTION` | the T1 | `RECHECK` |
 | 2 | the T1 symbol or call path clearly belongs to another protocol layer than the RFC section, or the checked quantity differs from the `where` field | the names are ambiguous; there is no component map to settle it | `WRONG_LOCATION` | the T1 | `LOCATE` |
-| 3 | the latest T1 has `unexplored_count > 0`; or the RFC sentence says every/all/any and no `TRACE_PATHS` has run | a `TRACE_PATHS` after the last `CRITIQUE` finished with `new_evidence > 0` and the latest T1 has `unexplored_count = 0` | `MISSING_PATH` | the T1 | `TRACE_PATHS` |
+| 3 | the RFC sentence says every/all/any and no `TRACE_PATHS` has finished (`ok`, `new_evidence > 0`) | a `TRACE_PATHS` has finished; or the only signal is `unexplored_count > 0` (the code reader lists every open question there, most of them are not routes) | `MISSING_PATH` | the T1 | `TRACE_PATHS` |
 | 4 | `missing` has an item with `need: T3`; or no violating-side run near the limit exists while the label is COMPLIANT | `feasible.T3` is false | `MISSING_VARIANT` | none | `SELECT_TESTS` |
 | 5 | no T1; or a T1 lacks an aspect its type needs (A: CONDITION, THRESHOLD; B: + REACTION; C: ORDER_STATE, REACTION; D: EFFECT); or that aspect is `UNCLEAR`; type D without validated T2 | `feasible.T1` is false | `MISSING_EVIDENCE` | the T1 if any | `LOCATE` (type D without T2: `STATIC_QUERY`) |
 
@@ -43,8 +43,11 @@ raised without grounds, or raised again after it was handled, costs a whole inve
 
 ## Example
 
-Provisional COMPLIANT (V5). T1 `ParseRecordHeader`, CONDITION and REACTION MATCH, THRESHOLD MATCH 16640, `unexplored_count = 0`.
-T3: one folded PASS row (`count = 18`), boundary 16641 and max 65535 rows with `alert = record_overflow`, `closed = true`, linked.
-`tasks.history`: round 1 SELECT_TESTS, LOCATE; round 2 CRITIQUE (you, raised MISSING_PATH); round 3 TRACE_PATHS with
-`new_evidence = 1`. Check 3 does not apply any more (the route issue was handled and nothing is unexplored); checks 1, 2, 4, 5 find
-nothing. Result: `issues: []`.
+A type B requirement with limit L and a required error reaction E. Provisional COMPLIANT (V5). T1 in the message header parser,
+CONDITION and REACTION MATCH (`observed` = E), THRESHOLD MATCH (`observed` = L). T3: one folded PASS row (`count = 18`); the
+boundary (L+1) and maximum rows show reaction E and `closed = true`, linked. `tasks.history`: round 1 SELECT_TESTS, LOCATE; round 2
+CRITIQUE (you, raised MISSING_PATH because the sentence says "any message"); round 3 TRACE_PATHS with `new_evidence = 1`. Check 3
+does not apply any more (a TRACE_PATHS has finished); checks 1, 2, 4, 5 find nothing. Result: `issues: []`.
+
+Protocol knowledge (exact limits, which reaction is required, where implementations usually check) comes from the adapter's
+protocol skill when one is offered; use it for checks 1, 2 and 5.

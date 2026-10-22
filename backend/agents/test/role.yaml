@@ -2,7 +2,7 @@ role: test
 zone: privileged
 context_fields: [requirement.rbs, rfc.definitions, adapter.vocabulary, task.focus, verdict.missing]
 tools: [test.list_examples, test.run_scenario, rfc.get_definition]
-skills: [write-tlsfuzzer-scenarios]
+skills: ["@adapter"]
 output_schema: ScenarioProposal@1
 prompt: prompt.md
 budget_per_task: {tool_calls: 12, tokens: 150000, seconds: 600}

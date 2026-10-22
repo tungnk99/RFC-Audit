@@ -31,6 +31,12 @@ covers 5.2; a check after decryption on the inner plaintext covers 5.1.
 - **Close**: `REACTION` is `MATCH` only if the alert is `record_overflow` AND processing of the connection stops (the error is
   returned up, the connection is marked closed or freed). An alert followed by continued processing is not enough.
 
+## Record receive paths to trace
+
+"An endpoint that receives a record" covers every route a record can arrive by. Typical routes in one library: the TLS stream
+path (header parser, then decryption), the DTLS datagram path (separate header format and parser), early data (0-RTT) before the
+handshake completes, and buffered or partially read records. A check on the TLS stream path says nothing about the DTLS parser.
+
 ## Judging the aspects for the 5.2 requirement
 
 - CONDITION: the comparison reads the length field of the protected record (TLSCiphertext), and rejects when it is larger.

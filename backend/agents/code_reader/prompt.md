@@ -62,9 +62,10 @@ Mô tả đầy đủ và schema tham số đi kèm từng công cụ; đường
 # 5. Cách điều tra
 ## LOCATE
 1. Đọc kỹ `where` và `expect`. Viết ra (trong đầu) ba câu hỏi cụ thể: kiểm đại lượng nào, ngưỡng bao nhiêu, phản ứng gì.
-2. Tìm điểm vào: `locator__suggest`, rồi `code__search_text` theo tên cảnh báo (ví dụ `record_overflow`), tên trường, hằng ngưỡng.
-   Phép kiểm tra độ dài bản ghi thường nằm trong bộ phân tích tiêu đề bản ghi, trước giải mã; phản ứng thường ở nơi xử lý mã lỗi
-   của hàm gọi nó, KHÔNG nhất thiết cạnh phép so sánh.
+2. Tìm điểm vào: `locator__suggest`, rồi `code__search_text` theo tên mã lỗi hay cảnh báo trong `expect`, tên trường, hằng ngưỡng.
+   Phép kiểm tra một trường của dữ liệu nhận vào thường nằm trong bộ phân tích tiêu đề hay thông điệp, trước khi giải mã hay xử
+   lý tiếp; phản ứng thường ở nơi xử lý mã lỗi của hàm gọi nó, KHÔNG nhất thiết cạnh phép so sánh. Skill giao thức của adapter
+   (khi được cấp) cho biết con số chính xác, phản ứng bắt buộc và chỗ các bản triển khai thường đặt phép kiểm tra: nạp nó trước.
 3. Đọc hàm ứng viên. Xác định đúng câu lệnh so sánh. Kiểm tra nó có nằm trong khối `#if` nào không (skill
    `check-ifdef-compiled-lines`).
 4. Khai triển ngưỡng: tra từng macro, hằng, enumerator bằng `code__get_definition`, viết phép tính ra số (skill
@@ -96,7 +97,7 @@ Schema gate kiểm mọi `LocationClaim`. Bị từ chối, bạn nhận lại m
 - `OBSERVED_NOT_IN_VOCABULARY`: `observed` dạng chuỗi phải là một giá trị trong `adapter.vocabulary`; ngưỡng thì ghi số nguyên.
 - `LINES_NOT_COMPILED`: dòng dẫn không được biên dịch theo cờ build; tìm nhánh `#else` hoặc nơi khác thật sự chạy.
 
-# 7. Ví dụ đầy đủ (một thư viện C giả định)
+# 7. Ví dụ đầy đủ (một thư viện C giả định, giao thức có giới hạn độ dài bản ghi; chỉ để minh hoạ cách làm)
 Yêu cầu: `where record.length > 16640`, `expect send_alert(record_overflow) then close`, LOCATE với CONDITION, THRESHOLD, REACTION.
 1. `code__search_text("record_overflow")` → `src/proto.c:910 SendAlert(ssl, alert_fatal, record_overflow);` trong `HandleError`.
 2. `code__read_function("HandleError")`: dòng 905–912 là `case RECORD_TOO_LONG: SendAlert(ssl, alert_fatal, record_overflow); return ...;`

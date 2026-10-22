@@ -2,7 +2,7 @@ role: rfc_analyst
 zone: privileged
 context_fields: [rfc.sentence_group, rfc.context_pack, adapter.vocabulary]
 tools: [rfc.get_sentences, rfc.read_section, rfc.search, rfc.get_definition]
-skills: []
+skills: [translate-rfc-sentence-to-rbs, "@adapter"]
 output_schema: RbsProposal@1
 prompt: prompt.md
-budget_per_task: {tool_calls: 10, tokens: 120000, seconds: 300}
+budget_per_task: {tool_calls: 10, tokens: 200000, seconds: 300}

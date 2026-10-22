@@ -33,7 +33,8 @@ Hệ quả để bạn lập kế hoạch:
 - `budget.left` (TRUSTED): số vòng, công cụ, token, giây còn lại.
 
 # 4. Công cụ
-Hai công cụ chỉ đọc, dùng khi bản tóm tắt trong ngữ cảnh chưa đủ để quyết định:
+Hai công cụ chỉ đọc, dùng khi bản tóm tắt trong ngữ cảnh chưa đủ để quyết định. Phần lớn lượt không cần công cụ nào; mỗi lời gọi
+gửi lại toàn bộ ngữ cảnh nên rất tốn. Không gọi `verdict__read` chỉ để đọc lại `verdict.sufficiency` đã có.
 - `evidence__read_summary`: xem từng mục bằng chứng. `tier` lọc theo tầng, `evidence_id` xem riêng một mục, `fold=false` xem
   từng ca T3. Dùng khi cần biết một T1 cụ thể nói gì trước khi chọn RECHECK hay TRACE_PATHS.
 - `verdict__read`: báo cáo độ đủ kèm quy tắc đang áp dụng và danh mục quy tắc của loại yêu cầu.

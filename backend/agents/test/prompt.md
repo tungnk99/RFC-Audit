@@ -17,7 +17,8 @@ Bạn cố ý KHÔNG được thấy bằng chứng mã (T1) hay nhãn tạm, đ
 - `verdict.missing` (DERIVED): biến thể còn thiếu (`need: T3`, `variant`); `task.focus.missing_variants` nếu Planner chỉ rõ.
 
 # 3. DSL kịch bản (`ScenarioProposal@1`)
-Thao tác và tham số hợp lệ (ngoài danh sách này bị từ chối):
+Thao tác là chung; tham số hợp lệ do backend kiểm thử của adapter quy định và bị kiểm khi chạy thử. Skill của adapter cho biết
+cách dựng kịch bản cho giao thức đó. Với backend hiện có (tlsfuzzer, cho TLS), tham số hợp lệ là:
 | Thao tác | Tham số | Ý nghĩa |
 |---|---|---|
 | `connect` | | mở kết nối tới SUT |

@@ -3,14 +3,14 @@ name: check-ifdef-compiled-lines
 description: Decides whether a line of C code is part of the binary under the build flags of the system under test, so that dead code is never cited as a MATCH. Use before citing any check or reaction that sits inside #if, #ifdef, #ifndef or #elif blocks, and when a definition has alternatives under different flags.
 metadata:
   rfcv-task-types: LOCATE RECHECK TRACE_PATHS
-  version: "2"
+  version: "3"
 ---
 
 # Check that a cited line is compiled
 
-`SendAlert(ssl, alert_fatal, record_overflow);` can sit in the source and be absent from the binary. A real wolfSSL bug was
-exactly this: the alert for an over-long record was inside `#ifdef HAVE_MAX_FRAGMENT`, so default builds sent nothing.
-Reading code without the build flags turns that into a false `MATCH`.
+A reaction such as `send_error(conn, ERR_TOO_LONG)` can sit in the source and be absent from the binary. Feature flags guard
+whole branches of protocol code, and a reaction compiled out by a flag the build does not set means the binary does not react
+at all. Reading code without the build flags turns that into a false `MATCH`.
 
 ## Procedure
 
@@ -20,7 +20,8 @@ Reading code without the build flags turns that into a false `MATCH`.
    Track nesting: each `#endif` closes the most recent open `#if`; an `#else` flips the branch you are in.
 2. **List the conditions innermost first**, as they apply to your line (inside an `#else`, the condition is the negation).
 3. **Evaluate each one against `adapter.build_flags`**:
-   - `-DNAME` or `--enable-x` that the project maps to `NAME` defines it; `--disable-x` undefines it.
+   - `-DNAME` defines `NAME`; a configure option such as `--enable-x` or `--disable-x` defines or undefines the macro the project
+     maps it to (check the project's configure or CMake mapping when it matters).
    - `defined(A) && !defined(B)`, `#if A >= 3`: evaluate with the same rules; a macro set by a `#define` you displayed counts.
    - A macro not set by any flag and not defined in a displayed file is **unknown**, not "probably on".
 4. **Decide:**
@@ -35,17 +36,18 @@ Reading code without the build flags turns that into a false `MATCH`.
 
 ```c
 switch (ret) {
-#ifdef HAVE_MAX_FRAGMENT
-    case LENGTH_ERROR:
-        SendAlert(ssl, alert_fatal, record_overflow);
+#ifdef HAVE_LARGE_MESSAGES
+    case ERR_TOO_LONG:
+        send_error(conn, ERR_CODE_TOO_LONG);
         break;
 #endif
     default:
         break;
 }
+return ret;
 ```
-Build flags `--enable-tls13 --disable-shared` do not define `HAVE_MAX_FRAGMENT`, and no displayed file defines it. The
-`case LENGTH_ERROR` branch is not compiled; `LENGTH_ERROR` falls into `default`, which sends nothing. `REACTION` is `MISMATCH`, cite the
-`switch` and `default` lines, and note the dead branch.
+The build flags do not define `HAVE_LARGE_MESSAGES` and no displayed file defines it. The `case ERR_TOO_LONG` branch is not
+compiled; the error falls into `default`, which sends nothing. The reaction aspect is `MISMATCH`: cite the `switch` and `default`
+lines and name the dead branch in `note`.
 
 Do not assume a flag is enabled because the feature name sounds standard.

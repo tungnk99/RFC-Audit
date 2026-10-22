@@ -52,8 +52,9 @@ def test_project_skills_are_valid_and_each_agent_sees_only_what_it_declares(poli
     assert reg.select(declared("planner")) == ["summarize-evidence-for-planner"]
     assert "resolve-c-macro-thresholds" not in reg.select(declared("verifier"))  # Verifier không khai báo
     assert "write-tlsfuzzer-scenarios" in reg.select(declared("test"))
-    for role in ("rfc_analyst", "report", "code_indexer"):  # không khai báo thì không có skill
+    for role in ("report", "code_indexer"):  # không khai báo thì không có skill
         assert reg.select(declared(role)) == []
+    assert "translate-rfc-sentence-to-rbs" in reg.select(declared("rfc_analyst"))
     # Trong số đã khai báo, lọc tiếp theo kiểu nhiệm vụ
     reader = declared("code_reader")
     assert "trace-all-entry-paths" in reg.select(reader, "TRACE_PATHS")
