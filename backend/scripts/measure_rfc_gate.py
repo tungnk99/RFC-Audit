@@ -20,7 +20,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 
-from rfcv.domains.rfc_protocol.rfc_gate import _KEYWORD_RE, extract_requirements  # noqa: E402
+from rfcv.domains.rfc_protocol.rfc_gate import (  # noqa: E402
+    _KEYWORD_RE,
+    _txt_pages,
+    extract_requirements,
+    extract_requirements_text,
+)
 
 MAX_SENTENCE_CHARS = 600
 _INNER_BREAK = re.compile(r"[.!?]\s+[A-Z]")
@@ -71,7 +76,18 @@ def main() -> None:
     ap.add_argument("--suspects", action="store_true", help="in các câu có dấu hiệu tách sai")
     args = ap.parse_args()
 
-    xml_text = args.xml.read_text(encoding="utf-8")
+    xml_text = args.xml.read_text(encoding="utf-8", errors="replace")
+    if args.xml.suffix == ".txt":
+        # Bản TXT: không có <bcp14>; đếm độc lập là số từ khoá viết hoa trên các dòng nội dung (thụt lề), sau khi bỏ đầu và
+        # chân trang. Hàng của bảng (ví dụ cột REQUIRED/OPTIONAL) được tính ở đây nhưng gate để chúng ở khối định nghĩa.
+        reqs = extract_requirements_text(xml_text, args.rfc)
+        body = [ln for ln in _txt_pages(xml_text) if ln.startswith(" ")]
+        kw = sum(len(_KEYWORD_RE.findall(r.text)) for r in reqs)
+        raw = sum(len(_KEYWORD_RE.findall(ln)) for ln in body)
+        print(f"RFC {args.rfc} (TXT): {len(reqs)} câu quy phạm; từ khoá trong câu {kw} / trên dòng nội dung {raw}")
+        pairs = [(r.sentence_id, r.text) for r in reqs]
+        print(f"  câu có dấu hiệu nghi ngờ: {len({s[0] for s in suspects(pairs)})}/{len(reqs)}")
+        return
     root = ET.fromstring(xml_text)
     reqs = extract_requirements(xml_text, args.rfc)
     ind = independent_counts(root)

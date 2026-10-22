@@ -72,6 +72,22 @@ def loaded_skills(messages: list[dict[str, Any]]) -> list[str]:
     )
 
 
+LOW_BUDGET_SHARE = 0.2
+
+
+def budget_note(session: ToolSession) -> str:
+    """Dòng ngân sách gắn sau mỗi kết quả công cụ (chỉ agent thấy, không vào trace): agent biết mình đã tiêu bao nhiêu để tự
+    dừng đúng lúc, thay vì chạm giới hạn rồi hỏng mà không trả được gì."""
+    used, limit = session.tool_calls, session.max_tool_calls
+    if limit <= 0:
+        return ""
+    left = max(0, limit - used)
+    note = f"\n[ngân sách công cụ: đã dùng {used}/{limit}, còn {left}]"
+    if left <= max(1, int(limit * LOW_BUDGET_SHARE)):
+        note += " Sắp hết: trả kết quả tốt nhất ngay, ghi phần chưa kiểm vào chỗ dành cho nó."
+    return note
+
+
 class PydanticAIRoleRunner:
     def __init__(
         self,
@@ -93,10 +109,11 @@ class PydanticAIRoleRunner:
 
         async def call(ctx: RunContext[ToolSession], **kwargs: Any) -> str:
             try:
-                return (await gateway.call(ctx.deps, spec.name, kwargs)).text
+                text = (await gateway.call(ctx.deps, spec.name, kwargs)).text
             except ToolDenied as denied:
                 # Mã lỗi liệt kê, không kèm chi tiết chính sách.
-                return f"DENIED: {denied.code.value}"
+                text = f"DENIED: {denied.code.value}"
+            return text + budget_note(ctx.deps)
 
         return Tool[ToolSession].from_schema(
             call,

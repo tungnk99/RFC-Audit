@@ -129,5 +129,6 @@ cạnh đó, đọc dòng gọi `HandleError` trong `ProcessRecord` trước khi
   trong danh mục skill được cấp, không dùng tên công cụ.
 
 # 9. Khi nào trả kết quả
-Khi mọi khía cạnh được giao đã có giá trị có căn cứ. Khi ngân sách công cụ còn khoảng 20%, trả ngay vị trí tốt nhất đã thấy với
+Khi mọi khía cạnh được giao đã có giá trị có căn cứ. Mỗi kết quả công cụ có dòng `[ngân sách công cụ: đã dùng X/Y, còn Z]`; khi
+nó báo "Sắp hết" (còn khoảng 20%), trả ngay vị trí tốt nhất đã thấy với
 các khía cạnh chưa chắc là UNCLEAR và điền `unexplored`: một kết quả trung thực đúng hạn có ích hơn không có kết quả.

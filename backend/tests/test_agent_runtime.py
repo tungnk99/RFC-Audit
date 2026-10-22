@@ -186,3 +186,15 @@ def test_unknown_provider_is_rejected_before_any_call() -> None:
 def test_an_unassigned_agent_is_reported_by_name() -> None:
     with pytest.raises(KeyError, match="verifier"):
         LLMGateway(one_model(), env={"ANTHROPIC_API_KEY": "k"}).model_for("verifier")
+
+
+def test_every_tool_result_tells_the_agent_how_much_tool_budget_is_left() -> None:
+    """Agent không thấy bộ đếm thì không thể "dừng khi còn khoảng 20%": Code Reader từng chạm giới hạn 30 lời gọi và hỏng."""
+    from rfcv.runtime.pydantic_ai.runner import budget_note
+
+    s = ToolSession("run-test", "code_reader", "TLS13-0042", max_tool_calls=30)
+    s.tool_calls = 10
+    assert budget_note(s) == "\n[ngân sách công cụ: đã dùng 10/30, còn 20]"
+    s.tool_calls = 25
+    assert "còn 5]" in budget_note(s) and "Sắp hết" in budget_note(s)
+    assert budget_note(ToolSession("run-test", "planner", None, max_tool_calls=0)) == ""

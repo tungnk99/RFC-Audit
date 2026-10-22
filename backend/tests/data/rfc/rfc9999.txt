@@ -1,0 +1,66 @@
+
+
+
+
+
+Internet Engineering Task Force (IETF)                         A. Author
+Request for Comments: 9999                                       Example
+Category: Standards Track                                   October 2026
+
+
+                   An Example Protocol for Parser Tests
+
+Status of This Memo
+
+   This is an Internet Standards Track document.
+
+Table of Contents
+
+   1.  Introduction . . . . . . . . . . . . . . . . . . . . . . . . . 2
+   2.  Message Format . . . . . . . . . . . . . . . . . . . . . . . . 2
+
+1.  Introduction
+
+   This document defines an example protocol.  Implementations MUST
+   follow it.
+
+2.  Message Format
+
+   A message has the following layout:
+
+      +--------+--------+-----------------+
+      | Type   | Length | Payload         |
+      +--------+--------+-----------------+
+
+   The Length field MUST NOT exceed 512.  A receiver that gets a
+   message whose Length exceeds 512 MUST respond with FORMERR (see
+   Section 2.1) and MUST NOT process the payload.
+
+
+
+Author                       Standards Track                    [Page 1]
+
+RFC 9999                    Example Protocol                October 2026
+
+
+      padding
+         Arbitrary padding, such that the total length of (Type ||
+         Length || padding) is a multiple of 8.  There MUST be at least
+         four bytes of padding.
+
+      Name       Value    Meaning
+      FORMERR    1        Format error
+      NOTIMP     4        Not implemented
+
+2.1.  Errors
+
+   An implementation SHOULD log the error.  It MAY continue
+   processing other messages.
+
+Appendix A.  Implementation Notes
+
+   Senders SHOULD pad to 16 bytes.
+
+
+
+Author                       Standards Track                    [Page 2]

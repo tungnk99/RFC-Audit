@@ -4,7 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from rfcv.domains.rfc_protocol.rfc_gate import RfcDocument, extract_requirements, primary_modal, split_sentences
+from rfcv.domains.rfc_protocol.rfc_gate import (
+    RfcDocument,
+    extract_requirements,
+    extract_requirements_text,
+    primary_modal,
+    split_sentences,
+)
 
 XML = """<?xml version="1.0" encoding="UTF-8"?>
 <rfc number="8446"><front/><middle>
@@ -189,3 +195,70 @@ def test_render_text_covers_the_reference_forms() -> None:
     assert r('<t><xref section="3" sectionFormat="parens" derivedContent="RFC7250"/></t>') == "[RFC7250] (Section 3)"
     assert r("<t>2<sup>32</sup> and x<sub>i</sub></t>") == "2^32 and x_i"
     assert r("<t>  a\n   b <bcp14>MUST</bcp14>  c </t>") == "a b MUST c"
+
+
+# ---- bản TXT (BL-22): RFC cũ không có RFCXML v3, ví dụ DNS và SSH --------------------------------------------------------
+
+RFC_TXT = Path(__file__).parent / "data" / "rfc" / "rfc9999.txt"
+
+
+def txt_doc() -> RfcDocument:
+    return RfcDocument.from_text(RFC_TXT.read_text(encoding="utf-8"), 9999)
+
+
+def test_txt_sections_skip_front_matter_toc_headers_and_footers() -> None:
+    doc = txt_doc()
+    assert [s for s in ("1", "2", "2.1", "appendix.a") if doc.has_section(s)] == ["1", "2", "2.1", "appendix.a"]
+    path, paragraphs = doc.section("2")  # type: ignore[misc]
+    assert path == ("2. Message Format",)
+    assert not any("[Page" in t or t.startswith("RFC 9999") for _, t in paragraphs)
+    assert doc.section("2.1")[0] == ("2. Message Format", "2.1. Errors")  # type: ignore[index]
+
+
+def test_txt_normative_sentences_have_the_same_id_scheme_as_xml() -> None:
+    by_id = {r.sentence_id: r for r in extract_requirements_text(RFC_TXT.read_text(encoding="utf-8"), 9999)}
+    assert by_id["RFC9999§2#p2s1"].text == "The Length field MUST NOT exceed 512."
+    assert by_id["RFC9999§2#p2s2"].modal == "MUST" and "(see Section 2.1)" in by_id["RFC9999§2#p2s2"].text
+    assert by_id["RFC9999§1#p1s2"].text == "Implementations MUST follow it."
+    assert "RFC9999§appendix.a#p1s1" in by_id
+
+
+def test_txt_indented_definition_lists_are_prose_but_figures_and_tables_are_blocks() -> None:
+    """Danh sách định nghĩa thụt sâu vẫn là văn xuôi quy phạm (từng bị tính nhầm là hình); `||` giữa câu không phải nét vẽ."""
+    doc = txt_doc()
+    texts = [t for _, t in doc.section("2")[1]]  # type: ignore[index]
+    assert any("There MUST be at least four bytes of padding." in t for t in texts)
+    blocks = doc._sections["2"].blocks  # pyright: ignore[reportPrivateUsage]
+    assert any("+--------+" in b for b in blocks) and any("FORMERR    1" in b for b in blocks)
+
+
+def test_txt_lookup_and_tools_work_like_xml() -> None:
+    doc = txt_doc()
+    ctx = doc.lookup("RFC9999§2#p2s1")
+    assert ctx is not None and ctx.next_sentence is not None and ctx.next_sentence.startswith("A receiver that gets")
+    assert doc.search("FORMERR") and doc.definitions("FORMERR")
+
+
+def test_old_rfcs_without_indented_body_are_read_too() -> None:
+    """RFC rất cũ (ví dụ 1035) viết thân văn bản từ cột 0."""
+    lines = []
+    for n in range(1, 25):
+        lines += [
+            f"{n}. Section {n}",
+            "",
+            f"This is section {n}. A server MUST answer within {n} seconds.",
+            "Another line here.",
+            "",
+        ]
+    doc = RfcDocument.from_text("\n".join(lines), 1)
+    assert doc.has_section("3") and doc.lookup("RFC1§3#p1s2") is not None
+
+
+def test_load_prefers_xml_and_falls_back_to_txt(tmp_path: Path) -> None:
+    from types import SimpleNamespace
+
+    from rfcv.domains.rfc_protocol.rfc_gate import load_rfc_documents
+
+    (tmp_path / "rfc9999.txt").write_text(RFC_TXT.read_text(encoding="utf-8"), encoding="utf-8")
+    manifest = SimpleNamespace(specs=[SimpleNamespace(doc="RFC9999")])
+    assert load_rfc_documents(manifest, tmp_path)[9999].has_section("2.1")
