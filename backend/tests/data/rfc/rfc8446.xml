@@ -19,7 +19,7 @@ struct {
     uint8 zeros[length_of_padding];
 } TLSInnerPlaintext;
    </sourcecode>
-   <t pn="section-5.2-4">The length (in bytes) of the following TLSCiphertext.encrypted_record, which is the sum of the lengths of the content and the padding. The length <bcp14>MUST NOT</bcp14> exceed 2^14 + 256 bytes. An endpoint that receives a record that exceeds this length <bcp14>MUST</bcp14> terminate the connection with a "record_overflow" alert.</t>
+   <t pn="section-5.2-4">The length (in bytes) of the following TLSCiphertext.encrypted_record, which is the sum of the lengths of the content and the padding. The length <bcp14>MUST NOT</bcp14> exceed 2<sup>14</sup> + 256 bytes (see <xref target="record-padding" format="default" sectionFormat="of" derivedContent="Section 5.4"/> and <xref section="3.2" sectionFormat="comma" target="RFC5280" format="default" derivedContent="RFC5280"/>). An endpoint that receives a record that exceeds this length <bcp14>MUST</bcp14> terminate the connection with a "record_overflow" alert.</t>
   </section>
  </section>
 </middle></rfc>

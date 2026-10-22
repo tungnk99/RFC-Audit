@@ -212,6 +212,16 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
   có bản XML. Đưa bảng phạm vi vào báo cáo.
 - **Đóng khi:** bảng phạm vi được chốt và có trong báo cáo; RFC gate tách đúng câu trên mọi RFC trong phạm vi (đo trên 30 câu mỗi giao thức).
 
+### CT-23 · P1 · RFC 8446 không có bản XML chính thức; RBS mẫu trỏ vào câu của RFC 8446
+- **Bằng chứng:** `https://www.rfc-editor.org/rfc/rfc8446.xml` trả 404; RFC Editor chỉ có `.txt` và `.html` cho RFC 8446, còn RFC 9846 có `.xml`
+  (RFCXML v3). Thiết kế ([thiết kế cung cấp RFC](../design/thiet_ke_cung_cap_rfc.md), mục 2.2) coi XML là nguồn ưu tiên và adapter TLS 1.3 chọn RFC 8446 làm
+  đặc tả chính. Ngoài ra, định danh trong RBS mẫu (`RFC8446§5.2#p4s3`, TLS13-0042) không có nghĩa trên RFC 9846: câu tương ứng nằm ở `RFC9846§5.2#p3.12.1s2`.
+- **Hướng sửa:** quyết định cùng thầy (BL-25, BL-26): (a) dùng RFC 9846 làm đặc tả chính và đối chiếu ngược về 8446; (b) viết bộ phân tích
+  bản HTML hay TXT của RFC 8446; (c) giữ 8446 với bản XML của draft cuối (không phải bản chính thức). Dù chọn gì, phải ánh xạ lại `sentence_id` của các RBS.
+- **Đóng khi:** adapter TLS 1.3 chỉ định một nguồn RFC có XML (hay bộ phân tích tương ứng) và mọi `sentence_id` trong ví dụ RBS tra được ra câu (`RfcDocument.lookup`).
+- **Đã xử lý trong BL-21:** RFC gate từng bỏ sót đoạn lồng trong danh sách (66/243 đoạn quy phạm ở thân văn bản) và toàn bộ phụ lục (53/511 từ khoá), và làm
+  mất chữ của `<xref>` ("see ." thay vì "see Section 4.7.1") cùng lũy thừa (`2^14` thành `214`, đúng ngưỡng của TLS13-0042). Đã sửa: định danh đoạn lồng dạng
+  `#p3.12.1s2`, đọc cả `<back>`, và `render_text` hiển thị đúng xref và lũy thừa.
 ## Đã xử lý
 
 | ID | Vấn đề | Nguyên nhân gốc | Đã sửa ở | Bài học |
