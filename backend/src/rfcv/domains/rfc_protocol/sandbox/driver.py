@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 from rfcv.common.hashing import content_hash
 from rfcv.core.trace import TraceLog
@@ -134,6 +135,35 @@ class TestDriver:
         valid_side = self._side(oracle, variant, params) == "valid"
         evaluate = oracle.evaluate_control if valid_side else oracle.evaluate
         return CaseResult(evaluate(trace.events), trace)
+
+    async def probe(
+        self, *, oracle: CompiledOracle, scenario: ScenarioProposal, variant_name: str | None, seed: int
+    ) -> dict[str, Any]:
+        """Chạy THỬ một biến thể trên bản tham chiếu (không ghi bằng chứng): để Test agent biết kịch bản có chạm trigger
+        không và quan sát ra sao trước khi nộp. Kết quả chỉ gồm giá trị miền hữu hạn."""
+        check = self._backend.validate(scenario)
+        if not check.ok:
+            return {"ok": False, "stage": "validate", "errors": list(check.errors)[:5] or ["SCENARIO_INVALID"]}
+        instances = [(v, n, p, s) for v in oracle.variants for n, p, s in self._instances(v, seed)]
+        names = [n for _, n, _, _ in instances]
+        chosen = next((i for i in instances if i[1] == variant_name), instances[0] if variant_name is None else None)
+        if chosen is None:
+            return {"ok": False, "stage": "variant", "errors": ["UNKNOWN_VARIANT"], "available": names[:12]}
+        variant, name, params, vseed = chosen
+        impl = self._refs[0] if self._refs else self._sut
+        result = await self._case(impl, oracle, variant, scenario, params, vseed or seed, 0, False)
+        trace = result.trace
+        return {
+            "ok": True,
+            "variant": name,
+            "impl": impl,
+            "outcome": result.outcome.value,
+            "reason": result.reason,
+            "trigger_reached": trace.trigger_reached if trace else None,
+            "sut_alive_after": trace.sut_alive_after if trace else None,
+            "observed": dict(trace.observation) if trace else {},
+            "available_variants": names[:12],
+        }
 
     async def _traced_case(
         self,

@@ -8,7 +8,7 @@ Giải thích vì sao nhãn được gán, theo quy tắc nào, dựa trên bằ
 Bản ghi kết luận, các bằng chứng được trích dẫn, câu RFC, errata, cờ đối chiếu phiên bản mới.
 
 # 4. Công cụ
-`registry__read`, `evidence__read_summary`, `verdict__read`.
+`evidence__read_summary` (xem từng mục bằng chứng được trích, theo `evidence_id`) và `verdict__read` (quy tắc và bằng chứng của nhãn đã có). Chỉ trích những gì hai công cụ này trả về.
 
 # 5. Chiến lược gợi ý
 Nêu câu RFC, hành vi mong đợi, hành vi quan sát, vị trí mã (nếu có), mức assurance.

@@ -159,7 +159,10 @@ def _all_sections(root: ET.Element) -> Iterator[tuple[str, tuple[str, ...], ET.E
 def extract_requirements(
     xml_text: str, rfc_number: int, sections_in_scope: Iterable[str] | None = None
 ) -> list[RfcSentence]:
-    root = ET.fromstring(xml_text)
+    return _requirements(ET.fromstring(xml_text), rfc_number, sections_in_scope)
+
+
+def _requirements(root: ET.Element, rfc_number: int, sections_in_scope: Iterable[str] | None) -> list[RfcSentence]:
     scope = list(sections_in_scope) if sections_in_scope is not None else None
     out: list[RfcSentence] = []
     for section, sec_path, sec in _all_sections(root):
@@ -243,6 +246,7 @@ class RfcDocument:
     def __init__(self, xml_text: str, rfc_number: int) -> None:
         root = ET.fromstring(xml_text)
         self.rfc = rfc_number
+        self._root = root
         self._sections = {sec: (path, elem) for sec, path, elem in _all_sections(root)}
 
     def lookup(self, sentence_id: str) -> RfcContext | None:
@@ -275,6 +279,56 @@ class RfcDocument:
             next_sentence=sentences[idx] if idx < len(sentences) else None,
             definitions=self._definitions(elem, sentence + " " + text),
         )
+
+    # ---- tra cứu cho công cụ `rfc.*` của agent -------------------------------------------------------------------
+
+    def has_section(self, section: str) -> bool:
+        return section in self._sections
+
+    def sentences(self, section: str) -> list[RfcSentence]:
+        """Câu quy phạm (BCP 14) của một mục và các mục con, kèm định danh ổn định."""
+        return _requirements(self._root, self.rfc, [section])
+
+    def section(self, section: str) -> tuple[tuple[str, ...], list[tuple[str, str]]] | None:
+        """Đường dẫn mục và các đoạn thuộc riêng mục (id đoạn, văn bản), theo thứ tự trong tài liệu; None nếu không có mục."""
+        found = self._sections.get(section)
+        if found is None:
+            return None
+        path, elem = found
+        out: list[tuple[str, str]] = []
+        for t in _own(elem, ("t",)):
+            m = _PN_PARA.match(t.get("pn", ""))
+            if m and m.group(1) == section:
+                out.append((f"RFC{self.rfc}§{section}#p{m.group(2)}", render_text(t)))
+        return path, out
+
+    def search(self, term: str, limit: int = 30) -> list[tuple[str, str]]:
+        """Các đoạn có chứa `term` (không phân biệt hoa thường): (id đoạn, đoạn trích quanh chỗ khớp)."""
+        needle = term.lower()
+        hits: list[tuple[str, str]] = []
+        for sec in self._sections:
+            found = self.section(sec)
+            if found is None:
+                continue
+            for pid, text in found[1]:
+                i = text.lower().find(needle)
+                if i >= 0:
+                    hits.append((pid, text[max(0, i - 80) : i + len(term) + 120]))
+                    if len(hits) >= limit:
+                        return hits
+        return hits
+
+    def definitions(self, name: str, limit: int = MAX_DEFINITIONS) -> list[tuple[str, str]]:
+        """Khối `sourcecode` hay `artwork` nhắc tới `name` (đúng nguyên từ): (số mục, nội dung, cắt ở MAX_DEFINITION_CHARS)."""
+        out: list[tuple[str, str]] = []
+        for sec, (_, elem) in self._sections.items():
+            for block in _own(elem, ("sourcecode", "artwork")):
+                body = "".join(block.itertext()).strip("\n")
+                if name in _IDENT.findall(body):
+                    out.append((sec, body[:MAX_DEFINITION_CHARS]))
+                    if len(out) >= limit:
+                        return out
+        return out
 
     @staticmethod
     def _definitions(section: ET.Element, text: str) -> tuple[str, ...]:

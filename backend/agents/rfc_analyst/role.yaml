@@ -1,7 +1,7 @@
 role: rfc_analyst
 zone: privileged
 context_fields: [rfc.sentence_group, rfc.context_pack, adapter.vocabulary, adapter.rbs_grammar_ref]
-tools: [rfc.get_sentences, rfc.read_section, rfc.search, rfc.get_definition, rfc.get_errata]
+tools: [rfc.get_sentences, rfc.read_section, rfc.search, rfc.get_definition]
 skills: []
 output_schema: RbsProposal@1
 prompt: prompt.md

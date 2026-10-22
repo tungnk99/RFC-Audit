@@ -222,13 +222,17 @@ class ExecutionLoop:
 
             shared = self._shared_context(report, evidence, inv)
             results = await asyncio.gather(*(self._dispatch(inv, t, tracker, shared) for t in tasks))
-            for t, (outcome, _new) in zip(tasks, results, strict=True):
+            for t, (outcome, new_evidence) in zip(tasks, results, strict=True):
                 history.append(
                     {
                         "round": tracker.rounds,
                         "task_type": t.task_type,
                         "target": t.target_role,
                         "ok": outcome is None or outcome.output is not None,
+                        # Việc đã cho ra gì: số bằng chứng mới và mã lỗi (nếu hỏng), để Planner và Verifier biết lần trước thất bại ra sao
+                        # thay vì chỉ thấy "đã giao".
+                        "new_evidence": new_evidence,
+                        "failure": outcome.failure if outcome is not None and outcome.failure else None,
                     }
                 )
                 if (

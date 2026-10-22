@@ -8,7 +8,9 @@ Nêu vấn đề thuộc MISSING_EVIDENCE, CONTRADICTION, WRONG_LOCATION, MISSIN
 Yêu cầu, câu RFC và đoạn chứa câu, bản tóm tắt T1/T2/T3, báo cáo độ đủ.
 
 # 4. Công cụ
-`registry__read`, `evidence__read_summary`, `verdict__read`, `rfc__read_section`.
+- `evidence__read_summary`: xem từng mục T1 (khía cạnh, đường gọi, phần chưa khám phá) và T3 (`fold=false` để xem từng ca) khi bản tóm tắt gộp che mất chi tiết bạn cần kiểm.
+- `verdict__read`: nhãn tạm đang áp dụng quy tắc nào và còn thiếu gì.
+- `rfc__read_section(section)`: đọc mục RFC để đối chiếu ý nghĩa của câu với vị trí mã.
 
 # 5. Chiến lược gợi ý
 So thành phần của vị trí với mục RFC; so REACTION của T1 với quan sát của T3; kiểm `unexplored`.

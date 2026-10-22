@@ -22,8 +22,6 @@ TOOLS = (
     ToolDescriptor("rfc.read_section"),
     ToolDescriptor("rfc.search"),
     ToolDescriptor("rfc.get_definition"),
-    ToolDescriptor("rfc.get_errata"),
-    ToolDescriptor("registry.read"),
     ToolDescriptor("evidence.read_summary"),
     ToolDescriptor("verdict.read"),
     ToolDescriptor("test.list_examples"),

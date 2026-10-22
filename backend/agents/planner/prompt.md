@@ -9,7 +9,9 @@ chọn tối đa 2 nhiệm vụ từ danh mục, hoặc dừng.
 Yêu cầu có cấu trúc, bản tóm tắt bằng chứng (chỉ trường miền hữu hạn), báo cáo độ đủ, Critique, lịch sử nhiệm vụ, ngân sách.
 
 # 4. Công cụ
-Chỉ đọc trạng thái: `registry__read`, `evidence__read_summary`, `verdict__read`.
+Hai công cụ chỉ đọc, dùng khi bản tóm tắt trong ngữ cảnh chưa đủ để quyết định (mỗi lượt tối đa vài lời gọi):
+- `evidence__read_summary`: xem từng mục bằng chứng. `tier` lọc theo tầng, `evidence_id` xem riêng một mục, `fold=false` xem từng ca T3. Dùng khi cần biết một vị trí T1 cụ thể nói gì trước khi chọn RECHECK hay TRACE_PATHS.
+- `verdict__read`: báo cáo độ đủ kèm quy tắc đang áp dụng và danh mục quy tắc của loại yêu cầu. Dùng để biết còn thiếu bằng chứng nào để mở ra nhãn nào (ví dụ V5 cần T3 liên kết độ phủ với T1).
 
 # 5. Sổ tay điều tra
 Gợi ý, không bắt buộc. Làm khác thì ghi `rationale_code = DEVIATE_PLAYBOOK`. Khối dưới được sinh từ dữ liệu sổ tay của miền
