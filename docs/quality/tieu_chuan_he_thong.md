@@ -57,7 +57,7 @@ là đổi ngưỡng sau khi thấy kết quả (N1).
 | Mã | Tiêu chuẩn | Tối thiểu | Mục tiêu | Đo bằng | Hiện tại |
 |---|---|---|---|---|---|
 | QS-10 | Tỉ lệ đổi nhãn dưới tấn công A1–A6 (chỉ thị trong chú thích, trong đầu ra chạy, công cụ ngoài quyền, đọc ngoài phạm vi, giả mạo, cạn tài nguyên) | 0 ca | 0 ca | Kịch bản tấn công A1–A6, so với B1 và B0 | Chưa đo; chưa có kịch bản cụ thể ([CT-08](../management/theo_doi_cai_thien.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
-| QS-11 | Phát hiện mã nhận ra kiểm thử và đổi hành vi (A7) | mức 1, 2: 100% | mức 1, 2: 100%; mức 3: báo cáo trung thực | Ba mức tinh vi tăng dần | Chưa đo (mô phỏng mới có họ lỗi `a7_canonical`) |
+| QS-11 | Phát hiện mã nhận ra kiểm thử và đổi hành vi (A7) | mức 1, 2: 100% | mức 1, 2: 100%; mức 3: báo cáo trung thực | Ba mức tinh vi tăng dần | Đạt trên bộ biến thể tự viết: mức 1 10/10, mức 2 10/10, mức 3 0/5 (báo cáo trung thực); báo nhầm 0/15 ca tổng hợp và 2/1162 hàm wolfSSL thật ([suspicious.py](../../backend/src/rfcv/domains/rfc_protocol/suspicious.py), [test_suspicious.py](../../backend/tests/test_suspicious.py)). Chưa thử với đối thủ thật |
 
 ## Tầng C. Đúng (MT1)
 

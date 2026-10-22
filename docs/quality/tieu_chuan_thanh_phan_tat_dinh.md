@@ -68,7 +68,7 @@ Mã: [code_gate.py](../../backend/src/rfcv/gates/code_gate.py), [agents/locator/
 | CG-3 | `locator.suggest` đưa vị trí đúng vào top 5 gợi ý | ≥ 80% (ĐX) | Chưa đo |
 | CG-4 | Chạy được trên C, Rust, Go, kể cả mã nhiều macro và con trỏ hàm (C4) | Báo cáo theo ngôn ngữ | Chưa chạy trên mã thật ([CT-13](../management/theo_doi_cai_thien.md#ct-13--p3--skill-chỉ-có-cho-c-và-tls)) |
 | CG-5 | `STATIC_QUERY` chạy truy vấn tĩnh đã kiểm định đột biến (loại D) | 100% truy vấn qua kiểm định | Chưa nối ([CT-10](../management/theo_doi_cai_thien.md#ct-10--p2--static_query-loại-d-chưa-nối)) |
-| CG-6 | Bộ quét nhánh nghi vấn (T2) tạo bằng chứng `suspicious_branch` | Phát hiện mã mức 1, 2 | Chưa có bộ quét |
+| CG-6 | Bộ quét nhánh nghi vấn (T2) tạo bằng chứng `suspicious_branch` | Phát hiện mã mức 1, 2 | Đạt (test, [suspicious.py](../../backend/src/rfcv/domains/rfc_protocol/suspicious.py), [test_suspicious.py](../../backend/tests/test_suspicious.py)): bộ quét chạy sau mỗi T1 được nhận, trên hàm chứa vị trí và hàm trong call_path, ghi T2 suspicious_branch; quy tắc V4 chuyển nhãn sang NEEDS_REVIEW |
 
 ## Test driver và oracle
 

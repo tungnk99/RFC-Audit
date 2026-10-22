@@ -51,7 +51,7 @@ quyết định số đo của mọi lần chạy sau.
 | BL-04 | Đăng ký bộ chạy SUT và backend vào builtin để `rfcv run --adapter adapters/tls13` chạy thật | YD-32, YD-33, CT-09 | BL-01, BL-02, BL-05 | M | G1 | `rfcv run` ra nhãn cho TLS13-0042 trên wolfSSL thật; bản gốc và bản đột biến đúng nhãn (cổng G1) | Chưa làm |
 | BL-06 | Adapter TLS 1.3: bọc 5 lỗi loại B sau 7/2026 thành mẫu, `known_bugs.yaml` đủ 5 lỗi (hiện 1), mở rộng danh mục mẫu theo các mục RFC trong phạm vi, báo cáo độ phủ mẫu | YD-21, YD-22 | BL-01 | L | G1 | Adapter checker đạt: mỗi mẫu FAIL trên ít nhất một bản lỗi, `at_limit` PASS trên bản tham chiếu; có báo cáo số yêu cầu có mẫu hợp lệ | Chưa làm |
 | BL-07 | Chạy các kiểm tra của Adapter checker cần sandbox: dựng SUT, oracle ổn định (3 lần), oracle phân biệt được, độ phủ biểu đạt được | AC-2, AC-3, AC-4 | BL-01, BL-02 | M | G1 | Bốn kiểm tra chuyển từ "bỏ qua" sang chạy và đạt | Chưa làm |
-| BL-08 | Lát cắt dọc: chạy trọn luồng với agent LLM thật cho TLS13-0042 và 5 lỗi loại B; đo độ chính xác Code Reader theo khía cạnh và chi phí | YD-20, YD-21, CR-1, CR-2 | BL-04, BL-06 | M | G1 | Có bảng số đo đầu tiên trên mã thật, ghi vào Nhật ký đo của sổ theo dõi | Chưa làm |
+| BL-08 | Lát cắt dọc: chạy trọn luồng với agent LLM thật cho TLS13-0042 và 5 lỗi loại B; đo độ chính xác Code Reader theo khía cạnh và chi phí | YD-20, YD-21, CR-1, CR-2, CT-24 | BL-04, BL-06 | M | G1 | Có bảng số đo đầu tiên trên mã thật, ghi vào Nhật ký đo của sổ theo dõi | Chưa làm |
 
 ## EP-2. Độ tin cậy và chi phí của agent (làm ngay)
 
@@ -83,7 +83,7 @@ quyết định số đo của mọi lần chạy sau.
 |---|---|---|---|---|---|---|---|
 | BL-46 | Viết test riêng cho nhánh SUT sập sau khi nhận dữ liệu kích hoạt (`sut_crashed`) | YD-27 | – | S | G1 | Test pass; ca sập có cờ và là FAIL | Xong |
 | BL-41 | Skill và prompt cho khía cạnh REACTION (lần từ mã lỗi nội bộ tới cảnh báo, kiểm có đóng kết nối) và cho tìm điểm vào, mẫu tìm theo cấu trúc | YD-22, CR-2 | BL-10 | S | G1 | Đo recall khía cạnh REACTION trước và sau, có cải thiện hoặc ghi rõ không đổi | Chưa làm |
-| BL-40 | Bộ quét nhánh nghi vấn (T2 `suspicious_branch`): so sánh với hằng khớp giá trị thử, đọc biến môi trường hay tên máy, trên đường xử lý của yêu cầu | YD-25, CG-6, QS-11 | BL-03 | L | G2 | Phát hiện kịch bản A7 mức 1 và 2: 100%; mức 3 được báo cáo trung thực | Chưa làm |
+| BL-40 | Bộ quét nhánh nghi vấn (T2 `suspicious_branch`): so sánh với hằng khớp giá trị thử, đọc biến môi trường hay tên máy, trên đường xử lý của yêu cầu | YD-25, CG-6, QS-11 | BL-03 | L | G2 | Phát hiện kịch bản A7 mức 1 và 2: 100%; mức 3 được báo cáo trung thực | Xong |
 | BL-44 | Đo `TRACE_PATHS`: ca nhiều đường xử lý, kiểm `unexplored` điền đúng khi cạn ngân sách | YD-24, CR-7 | BL-04 | M | G2 | 100% T1 có `unexplored` đúng; tỉ lệ yêu cầu loại "mọi" đủ đường được báo cáo | Chưa làm |
 | BL-45 | Bộ ca "hợp lệ nhưng làm khác" (cách làm thay thế RFC cho phép) để kiểm báo sai | YD-26, QS-21 | BL-04, BL-70 | M | DNS | Precision VIOLATION đo được; không ca hợp lệ nào bị báo VIOLATION | Chưa làm |
 | BL-42 | Nối `STATIC_QUERY` cho loại D: bộ chạy truy vấn tĩnh đã kiểm định đột biến (CodeQL hoặc Semgrep) | YD-23, CT-10, CG-5 | BL-03 | L | T2 | Một yêu cầu loại D ra nhãn quyết định qua quy tắc V8 | Chưa làm |

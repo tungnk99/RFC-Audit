@@ -248,6 +248,13 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 - **Đã xử lý trong BL-21:** RFC gate từng bỏ sót đoạn lồng trong danh sách (66/243 đoạn quy phạm ở thân văn bản) và toàn bộ phụ lục (53/511 từ khoá), và làm
   mất chữ của `<xref>` ("see ." thay vì "see Section 4.7.1") cùng lũy thừa (`2^14` thành `214`, đúng ngưỡng của TLS13-0042). Đã sửa: định danh đoạn lồng dạng
   `#p3.12.1s2`, đọc cả `<back>`, và `render_text` hiển thị đúng xref và lũy thừa.
+### CT-24 · P2 · Ngưỡng độ dài thật của wolfSSL có thể khác 16640 của RFC, và bản lỗi dùng `#ifdef`
+- **Bằng chứng (đọc mã, chưa chạy SUT):** tại commit sửa `c18833f52` của wolfSSL, `GetRecordHeader` (`src/internal.c`) từ chối khi `*size > MAX_RECORD_SIZE + MAX_MSG_EXTRA (+ MAX_COMP_EXTRA)`; `MAX_RECORD_SIZE` = 16384 nhưng
+  `MAX_MSG_EXTRA` = `38 + WC_MAX_DIGEST_SIZE` (`wolfssl/internal.h:1547`), nên ngưỡng phụ thuộc kích thước băm lớn nhất lúc biên dịch (ví dụ 64 thì giới hạn là 16384 + 102 = 16486, không phải 2^14 + 256 = 16640 của RFC 8446).
+  Còn lỗi mà commit này sửa: trước đó nhánh gửi `record_overflow` nằm trong `#ifdef HAVE_MAX_FRAGMENT`, nên với cờ build của adapter (không bật HAVE_MAX_FRAGMENT) cảnh báo không được gửi.
+- **Hậu quả:** nhãn chuẩn của TLS13-0042 trên wolfSSL (bản lỗi, sửa, mới nhất) và kỳ vọng oracle (`at_limit` = 16640 phải PASS) cần kiểm với SUT thật, vì ngưỡng thật có thể thấp hơn 16640. Đây cũng đúng là ca để đo skill `check-ifdef-compiled-lines`.
+- **Hướng sửa:** khi có SUT thật (BL-03 trở đi), chạy oracle trên ba phiên bản và đối chiếu; ghi nhãn chuẩn cho BL-08 theo kết quả chạy chứ không theo suy luận từ mã.
+- **Đóng khi:** nhãn chuẩn TLS13-0042 cho ba phiên bản wolfSSL được xác nhận bằng kết quả chạy thật.
 ## Đã xử lý
 
 | ID | Vấn đề | Nguyên nhân gốc | Đã sửa ở | Bài học |
