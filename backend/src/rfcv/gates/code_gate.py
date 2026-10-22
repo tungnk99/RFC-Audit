@@ -190,7 +190,9 @@ _FILE_DOC = "Đường dẫn tệp tương đối từ gốc kho mã, đúng nh�
 
 
 class ListDirParams(_P):
-    path: str = Field(default=".", max_length=500, description="Thư mục tương đối từ gốc kho mã; '.' là gốc.", examples=[".", "src"])
+    path: str = Field(
+        default=".", max_length=500, description="Thư mục tương đối từ gốc kho mã; '.' là gốc.", examples=[".", "src"]
+    )
     depth: int = Field(default=1, ge=1, le=2, description="Số cấp thư mục hiển thị (1 hoặc 2).")
 
 
@@ -221,7 +223,9 @@ class ReadFunctionParams(_P):
     file: str | None = Field(
         default=None, max_length=500, description="Chọn định nghĩa khi nhiều tệp có hàm cùng tên. " + _FILE_DOC
     )
-    page: int = Field(default=1, ge=1, description="Trang 100 dòng; trang 1 của hàm dài kèm chữ ký và danh sách khối lệnh.")
+    page: int = Field(
+        default=1, ge=1, description="Trang 100 dòng; trang 1 của hàm dài kèm chữ ký và danh sách khối lệnh."
+    )
 
 
 class ReadRangeParams(_P):
@@ -253,7 +257,11 @@ class ExploreParams(_P):
         min_length=1,
         max_length=500,
         description="Một lệnh đọc, có thể nối bằng |. Không dùng ; && || > < $ ` hay biến môi trường.",
-        examples=["rg -n record_overflow src/", "sg run -p 'SendAlert($S, $L, record_overflow)' -l c src", "sed -n '9100,9140p' src/internal.c"],
+        examples=[
+            "rg -n record_overflow src/",
+            "sg run -p 'SendAlert($S, $L, record_overflow)' -l c src",
+            "sed -n '9100,9140p' src/internal.c",
+        ],
     )
 
 
@@ -332,7 +340,7 @@ TOOL_DOCS: dict[str, str] = {
         "'<tệp>:<dòng>:' của rg -n cũng tính là đã đọc. Tối đa 10 giây, 200 dòng hoặc 16 KB: quá thì bị từ chối "
         "(OUTPUT_TOO_LARGE), hãy thu hẹp lệnh.\n"
         'Ví dụ: {"command": "rg -n record_overflow src/"}, '
-        "{\"command\": \"sg run -p 'if ($S > MAX_RECORD_SIZE + $$$) { $$$ }' -l c src\"}, "
+        '{"command": "sg run -p \'if ($S > MAX_RECORD_SIZE + $$$) { $$$ }\' -l c src"}, '
         '{"command": "rg -l SendAlert src | sort"}'
     ),
 }
@@ -350,7 +358,7 @@ def build_code_tools(index: CodeIndex, executor: SandboxExecutor, scope: explore
 
     def count_lines(file: str) -> int | None:
         counter: Any = getattr(index, "line_count", None)
-        return counter(file) if callable(counter) else None
+        return counter(file) if counter is not None else None
 
     def container_of(file: str, line: int) -> SymbolInfo | None:
         return index.containing_symbol(file, line)
@@ -391,7 +399,9 @@ def build_code_tools(index: CodeIndex, executor: SandboxExecutor, scope: explore
         if len(syms) > len(shown_syms):
             body += f"\n(còn {len(syms) - len(shown_syms)} ký hiệu; dùng search_symbol hoặc read_range)"
         return _untrusted(
-            f"tool=file_outline {p.file}", body or "(không có ký hiệu)", frozenset((p.file, x.line_start) for x in shown_syms)
+            f"tool=file_outline {p.file}",
+            body or "(không có ký hiệu)",
+            frozenset((p.file, x.line_start) for x in shown_syms),
         )
 
     async def search_symbol(p: BaseModel, s: ToolSession) -> ToolResult:
@@ -422,7 +432,7 @@ def build_code_tools(index: CodeIndex, executor: SandboxExecutor, scope: explore
             notes.append(f"chữ ký: {sym.signature or sym.name}")
             blocks_of: Any = getattr(index, "blocks", None)
             blocks: Sequence[tuple[int, int, str]] = (
-                blocks_of(sym.file, sym.line_start, sym.line_end) if callable(blocks_of) else ()
+                blocks_of(sym.file, sym.line_start, sym.line_end) if blocks_of is not None else ()
             )
             if blocks:
                 notes.append("khối lệnh cấp một:")
@@ -459,7 +469,9 @@ def build_code_tools(index: CodeIndex, executor: SandboxExecutor, scope: explore
         # Trùng tên (ví dụ macro định nghĩa khác nhau theo #ifdef): in tối đa 3 định nghĩa, còn lại liệt kê.
         for sym in defs[:3]:
             per = DEF_LINES if len(defs) == 1 else 15
-            body, sh, last = _numbered(index, sym.file, sym.line_start, min(sym.line_end, sym.line_start + per - 1), budget // 3)
+            body, sh, last = _numbered(
+                index, sym.file, sym.line_start, min(sym.line_end, sym.line_start + per - 1), budget // 3
+            )
             more = "" if last >= sym.line_end else f" (còn tới dòng {sym.line_end}; đọc bằng read_range)"
             parts.append(f"{sym.file} {sym.kind} {sym.name} [{sym.line_start}–{sym.line_end}]{more}\n{body}")
             shown |= sh
@@ -486,7 +498,9 @@ def build_code_tools(index: CodeIndex, executor: SandboxExecutor, scope: explore
     async def callees(p: BaseModel, s: ToolSession) -> ToolResult:
         assert isinstance(p, SymbolParams)
         found = list(index.callees(p.name))[:MAX_CALLEES]
-        body = "\n".join(f"{line:>6} {name}" for name, line in found) or "(không gọi hàm nào, hoặc không có trong chỉ mục)"
+        body = (
+            "\n".join(f"{line:>6} {name}" for name, line in found) or "(không gọi hàm nào, hoặc không có trong chỉ mục)"
+        )
         return _untrusted(f"tool=callees {p.name}", body, edges=frozenset((p.name, n) for n, _ in found))
 
     async def search_text(p: BaseModel, s: ToolSession) -> ToolResult:

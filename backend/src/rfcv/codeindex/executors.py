@@ -199,6 +199,10 @@ class LocalExecutor:
 
 def image_id(image: str, docker: str = "docker") -> str:
     res = subprocess.run(
-        [docker, "image", "inspect", "--format", "{{.Id}}", image], capture_output=True, text=True, timeout=60, check=False
+        [docker, "image", "inspect", "--format", "{{.Id}}", image],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
     )
     return res.stdout.strip() if res.returncode == 0 else f"unknown:{image}"

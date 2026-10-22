@@ -53,7 +53,7 @@ class ProtocolRuntime:
         gate = SchemaGate(
             index,
             vocabulary_terms(manifest),
-            (lambda f: compiled(f, flags)) if callable(compiled) else None,
+            (lambda f: compiled(f, flags)) if compiled is not None else None,
         )
         driver = TestDriver(
             rt.providers.backend,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import shutil
 from pathlib import Path
@@ -67,7 +68,9 @@ def scope(tmp_path: Path) -> CodeScope:
     return CodeScope(root=tmp_path, include=("src/**",), exclude=("**/*.key",))
 
 
-def gateway(policy: PolicyStore, trace: TraceLog, index: InMemoryCodeIndex, scope: CodeScope, out: str = "") -> ToolGateway:
+def gateway(
+    policy: PolicyStore, trace: TraceLog, index: InMemoryCodeIndex, scope: CodeScope, out: str = ""
+) -> ToolGateway:
     gw = ToolGateway(policy, trace)
     for spec in build_code_tools(index, EchoExecutor(out), scope):
         gw.register(spec)
@@ -81,7 +84,9 @@ def session() -> ToolSession:
 # ---------------------------------------------------------------- mô tả công cụ kiểu MCP
 
 
-def test_tools_are_described_like_mcp(policy: PolicyStore, trace: TraceLog, index: InMemoryCodeIndex, scope: CodeScope) -> None:
+def test_tools_are_described_like_mcp(
+    policy: PolicyStore, trace: TraceLog, index: InMemoryCodeIndex, scope: CodeScope
+) -> None:
     listing = gateway(policy, trace, index, scope).tools_list("code_reader")["tools"]
     names = {t["name"] for t in listing}
     assert {
@@ -107,7 +112,11 @@ def test_explore_scope_allows_parent_dir_of_included_files(scope: CodeScope) -> 
 
 @pytest.mark.parametrize(
     "cmd",
-    ["rg -n 'record_overflow$' src", "sg run -p 'SendAlert($S, $L, record_overflow)' -l c src", "grep -n -e 'x$' -r src"],
+    [
+        "rg -n 'record_overflow$' src",
+        "sg run -p 'SendAlert($S, $L, record_overflow)' -l c src",
+        "grep -n -e 'x$' -r src",
+    ],
 )
 def test_explore_allows_dollar_only_inside_patterns(cmd: str, scope: CodeScope) -> None:
     assert explore_policy.validate(cmd, scope)
@@ -217,7 +226,9 @@ def test_textual_edge_through_function_pointer_table(index: InMemoryCodeIndex) -
     # chưa đọc dòng trong bảng thì cạnh không có căn cứ
     s2 = session()
     s2.shown_lines |= {("src/internal.c", n) for n in (*range(150, 153), 122)}
-    bad = gate.check_location(_claim(["Dispatch", "handlers", "ProcessHandshake"]), s2, run_id="r", requirement_id="R", msg_id="m")
+    bad = gate.check_location(
+        _claim(["Dispatch", "handlers", "ProcessHandshake"]), s2, run_id="r", requirement_id="R", msg_id="m"
+    )
     assert "CALL_EDGE_UNKNOWN" in bad.errors
 
 
@@ -233,7 +244,12 @@ def test_build_flag_evaluation_is_three_valued() -> None:
     assert eval_cond({"op": "defined", "name": "HAVE_UNKNOWN"}, defines, undefs) is None
     assert eval_cond({"op": "and", "a": d, "b": {"op": "defined", "name": "HAVE_UNKNOWN"}}, defines, undefs) is None
     assert eval_cond({"op": "or", "a": d, "b": {"op": "defined", "name": "HAVE_UNKNOWN"}}, defines, undefs) is True
-    assert eval_cond({"op": "cmp", "o": ">=", "a": {"op": "ident", "name": "LEVEL"}, "b": {"op": "num", "v": 2}}, defines, undefs) is True
+    assert (
+        eval_cond(
+            {"op": "cmp", "o": ">=", "a": {"op": "ident", "name": "LEVEL"}, "b": {"op": "num", "v": 2}}, defines, undefs
+        )
+        is True
+    )
     assert eval_cond({"op": "num", "v": 0}, defines, undefs) == 0
 
 
@@ -269,12 +285,12 @@ def test_git_head_reads_refs_without_running_git(tmp_path: Path) -> None:
 def test_stage_scope_copies_only_scope_files(tmp_path: Path) -> None:
     repo = _repo(tmp_path)
     if hasattr(os, "symlink"):
-        try:
+        with contextlib.suppress(OSError):  # Windows không có quyền tạo symlink
             (repo / "src" / "escape.c").symlink_to(tmp_path / "outside.c")
-        except OSError:
-            pass  # Windows không có quyền tạo symlink
     digest, files, _skipped = stage_scope(repo, ("src/**",), ("**/*.pem", "**/*.key"), tmp_path / "stage")
-    staged = sorted(p.relative_to(tmp_path / "stage").as_posix() for p in (tmp_path / "stage").rglob("*") if p.is_file())
+    staged = sorted(
+        p.relative_to(tmp_path / "stage").as_posix() for p in (tmp_path / "stage").rglob("*") if p.is_file()
+    )
     assert staged == ["src/internal.c"] and files == 1 and digest.startswith("sha256:")
 
 

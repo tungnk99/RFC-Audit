@@ -204,8 +204,15 @@ def test_stratified_samples_cover_the_range_and_are_reproducible(seed: int) -> N
     from rfcv.domains.rfc_protocol.spec.oracle_compiler import ConcreteVariant, instantiate_samples
 
     v = ConcreteVariant(
-        name="random:f", variant_class="random", field="f", k=8, lo=100, hi=60000, strategy="stratified",
-        special=(100, 255, 256, 60000), exclude=(16641, 65535, 300),
+        name="random:f",
+        variant_class="random",
+        field="f",
+        k=8,
+        lo=100,
+        hi=60000,
+        strategy="stratified",
+        special=(100, 255, 256, 60000),
+        exclude=(16641, 65535, 300),
     )
     samples = instantiate_samples(v, seed)
     assert samples == instantiate_samples(v, seed)  # tái lập

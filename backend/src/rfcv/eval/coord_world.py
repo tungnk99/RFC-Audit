@@ -173,9 +173,7 @@ class CoordRunner:
         if role == "code_reader":
             return RoleOutcome(self._claim(envelope, session, n), 1)
         if role == "verifier":
-            false_issue = prof.verifier_false_issue_p > 0 and self._drop(
-                "verifier", prof.verifier_false_issue_p, n
-            )
+            false_issue = prof.verifier_false_issue_p > 0 and self._drop("verifier", prof.verifier_false_issue_p, n)
             issues = [CritiqueIssue(kind="MISSING_PATH", evidence_id=None, suggested_task="TRACE_PATHS")]
             if _compliant_without_code_evidence(context):
                 issues = [CritiqueIssue(kind="MISSING_EVIDENCE", evidence_id=None, suggested_task="LOCATE")]
@@ -206,7 +204,15 @@ class CoordRunner:
                 "line_end": lines[1],
                 "check_kind": "LENGTH_BOUND",
                 "finding": "PRESENT",
-                "aspects": [{"aspect": "CONDITION", "value": "MISMATCH" if deviates else "MATCH", "observed": None, "lines": [812, 812]}, reaction],
+                "aspects": [
+                    {
+                        "aspect": "CONDITION",
+                        "value": "MISMATCH" if deviates else "MATCH",
+                        "observed": None,
+                        "lines": [812, 812],
+                    },
+                    reaction,
+                ],
             }
         )
 
@@ -336,7 +342,9 @@ async def run_cell(
                 role_failures=kinds.count("role_failure"),
                 gate_rejects=kinds.count("gate_reject"),
                 chain_ok=store.verify_chain().ok,
-                tags=tuple(sorted(classify_trace(trace.events(), unavailable_tasks=("MAP_COMPONENTS", "STATIC_QUERY")))),
+                tags=tuple(
+                    sorted(classify_trace(trace.events(), unavailable_tasks=("MAP_COMPONENTS", "STATIC_QUERY")))
+                ),
             )
     finally:
         store.close()

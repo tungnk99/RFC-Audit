@@ -128,7 +128,7 @@ class Locator:
     def _all_functions(self) -> list[SymbolInfo]:
         if self._functions is None:
             listing: Any = getattr(self._index, "functions", None)
-            if callable(listing):
+            if listing is not None:
                 self._functions = list(listing())
             else:
                 self._functions = [
@@ -167,7 +167,9 @@ class Locator:
 
         out: list[Candidate] = []
         for sym in self._all_functions():
-            body = "\n".join(self._index.lines(sym.file, sym.line_start, min(sym.line_end, sym.line_start + BODY_SCAN_LINES)))
+            body = "\n".join(
+                self._index.lines(sym.file, sym.line_start, min(sym.line_end, sym.line_start + BODY_SCAN_LINES))
+            )
             hay = (sym.name + "\n" + body).lower()
             kw = sum(1 for k in keywords if k in hay)
             comp = int(component is not None and self.component_of(sym) == component)

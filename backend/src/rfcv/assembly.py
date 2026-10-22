@@ -225,8 +225,8 @@ def build_runtime(
         }
         # Commit, digest bản sao, phiên bản tree-sitter, image sandbox: mọi vị trí T1 phải đối chiếu được (C3).
         for prov in (resolved.code_index, resolved.executor):
-            entries = getattr(prov, "manifest_entries", None)
-            if callable(entries):
+            entries: Any = getattr(prov, "manifest_entries", None)
+            if entries is not None:
                 digests.update(entries())
         run_manifest = RunManifest(
             run_id=run_id,
@@ -262,8 +262,8 @@ def build_runtime(
         )
         # Công cụ của miền cần runtime đã lắp (ví dụ locator.suggest cần chỉ mục và adapter). Agent được dựng lười ở lần
         # gọi đầu, nên đăng ký ở đây vẫn kịp.
-        domain_tools = getattr(pack.runtime, "tools", None)
-        if callable(domain_tools):
+        domain_tools: Any = getattr(pack.runtime, "tools", None)
+        if domain_tools is not None:
             for spec in domain_tools(rt):
                 gateway.register(spec)
         handlers: Mapping[str, Any] = pack.runtime.handlers(rt) if pack.runtime else {}
