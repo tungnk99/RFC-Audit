@@ -51,9 +51,9 @@ Mỗi mục là một nhóm câu hỏi đang để ngỏ trong tài liệu thi�
 - [x] README hướng dẫn cài đặt và chạy: [README.md](../../README.md)
 - [x] Giấy phép: [LICENSE](../../LICENSE)
 - [x] Không đưa khoá API vào repo: khoá chỉ đọc từ biến môi trường, `.env` nằm trong `.gitignore`
-- [x] Bản kê lần chạy ghi hash của lời nhắc, skill, mô hình, quy tắc, adapter: [manifest.py](../../src/rfcv/manifest.py)
-- [ ] CI xanh: [ci.yml](../../.github/workflows/ci.yml) chạy `ruff`, `pyright`, `lint-imports`, `pytest`. Cục bộ `pytest` và `lint-imports` đạt; `ruff` còn 2 lỗi, khoảng 10 file chưa định dạng, `pyright` còn 16 lỗi ([CT-14](../management/theo_doi_cai_thien.md#ct-14--p3--nợ-kiểm-tra-tĩnh))
+- [x] Bản kê lần chạy ghi hash của lời nhắc, skill, mô hình, quy tắc, adapter: [manifest.py](../../backend/src/rfcv/manifest.py)
+- [ ] CI xanh: [ci.yml](../../.github/workflows/ci.yml) chạy `ruff`, `pyright`, `lint-imports`, `pytest`. Cục bộ `pytest`, `lint-imports`, `ruff check`, `ruff format --check` và `pyright` đều sạch (BL-90); **chưa xác nhận trên GitHub**: workflow chỉ chạy với push lên `main` và pull request, các lần chạy trên `main` đến nay đều đỏ (commit cũ) ([CT-14](../management/theo_doi_cai_thien.md#ct-14--p3--nợ-kiểm-tra-tĩnh))
 - [ ] Hướng dẫn tái lập thực nghiệm từng bước, từ commit kho mã tới bảng kết quả
 - [ ] Gói tái lập cho lần chạy chính thức, lưu riêng ngoài git: `manifest.json`, `evidence.db`, `trace.db`, artifacts, cấu hình mô hình
-- [ ] Digest các image Docker ghi vào bản kê ([docker/](../../docker/))
+- [ ] Digest các image Docker ghi vào bản kê ([docker/](../../backend/docker/))
 - [ ] Gắn thẻ git cho phiên bản nộp luận văn

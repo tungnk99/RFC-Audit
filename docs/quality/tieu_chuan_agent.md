@@ -6,7 +6,7 @@ toàn hệ thống ở [tieu_chuan_he_thong.md](tieu_chuan_he_thong.md); các th
 [thiết kế phối hợp agent](../design/thiet_ke_phoi_hop_agent.md).
 
 Cách đọc cột: **TK** là ngưỡng lấy từ thiết kế, **ĐX** là ngưỡng do tài liệu này đề xuất (cần thầy chốt). "Hiện tại" ghi trạng thái thật;
-số "mô phỏng" lấy từ phép thử đầu-cuối trên SUT và mã giả ([e2e_live.py](../../scripts/e2e_live.py)) và **không phải số liệu thực nghiệm**.
+số "mô phỏng" lấy từ phép thử đầu-cuối trên SUT và mã giả ([e2e_live.py](../../backend/scripts/e2e_live.py)) và **không phải số liệu thực nghiệm**.
 Quan sát gồm hai ca (một ca bản lỗi, một ca bản đúng), mỗi ca một lần chạy.
 
 ## Tiêu chuẩn chung cho mọi agent
@@ -14,7 +14,7 @@ Quan sát gồm hai ca (một ca bản lỗi, một ca bản đúng), mỗi ca m
 | Mã | Tiêu chuẩn | Ngưỡng | Đo bằng | Hiện tại |
 |---|---|---|---|---|
 | AG-01 | Đầu ra đúng schema của vai trò | 100% (ép bằng schema đóng) | schema, sự kiện `output_retry`, `role_failure` | Đạt (test) |
-| AG-02 | Chỉ dùng công cụ và đọc trường ngữ cảnh đã khai báo; vùng cách ly và đặc quyền tách bạch | 0 vi phạm | [test_policy_ifc.py](../../tests/test_policy_ifc.py), `PolicyStore` | Đạt (test) |
+| AG-02 | Chỉ dùng công cụ và đọc trường ngữ cảnh đã khai báo; vùng cách ly và đặc quyền tách bạch | 0 vi phạm | [test_policy_ifc.py](../../backend/tests/test_policy_ifc.py), `PolicyStore` | Đạt (test) |
 | AG-03 | Không làm theo chỉ thị nằm trong dữ liệu không tin cậy (mã, chú thích, nhật ký) | 0 ca | kịch bản tấn công A1, A2 | Chưa thử với LLM thật ([CT-08](../management/theo_doi_cai_thien.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
 | AG-04 | Hoàn thành ngay lần chạy đầu, không hỏng vì lỗi của chính agent | ≥ 95% lần chạy (ĐX) | `analyze_run.py`: `worker_first_failures` | **Chưa đạt: 3/7 lần chạy worker hỏng lần đầu** (mô phỏng) |
 | AG-05 | Trong ngân sách của vai trò (`budget_per_task` trong `role.yaml`): không `UsageLimitExceeded` | ≥ 95% (ĐX) | sự kiện `llm_failure` | **Chưa đạt:** Code Reader hết hạn mức 1/3 lần ([CT-02](../management/theo_doi_cai_thien.md#ct-02--p1--hạn-mức-llm_calls-của-code-reader-quá-chặt)) |
@@ -50,7 +50,7 @@ Nó nằm vùng đặc quyền, không đọc mã, không thấy chuỗi tự do
 
 | Mã | Tiêu chuẩn | Ngưỡng | Đo bằng | Hiện tại |
 |---|---|---|---|---|
-| VF-1 | Đầu ra `Critique@1` hợp lệ | 100% | schema, [test_coordination_contracts.py](../../tests/test_coordination_contracts.py) | Đạt (test) |
+| VF-1 | Đầu ra `Critique@1` hợp lệ | 100% | schema, [test_coordination_contracts.py](../../backend/tests/test_coordination_contracts.py) | Đạt (test) |
 | VF-2 | **Phát hiện vấn đề thật** (recall) trên bộ ca gieo sẵn, theo từng loại `kind` | ≥ 90% mỗi loại có dấu hiệu tất định: CONTRADICTION, MISSING\_VARIANT, MISSING\_EVIDENCE, MISSING\_PATH (ĐX); WRONG\_LOCATION: báo cáo | mở rộng `verifier_smoke.py` thành bộ ca | Chưa đo. Mô phỏng: 2/2 ca nêu đúng loại và đề xuất đúng |
 | VF-3 | **Không nêu vấn đề không có thật** (precision của vấn đề) | ≥ 80% vấn đề nêu là thật (ĐX); hậu quả của vấn đề giả chỉ là tốn ngân sách, không đổi nhãn | như trên | Chưa đo. Mô phỏng: 3/3 vấn đề đúng |
 | VF-4 | Không để lọt COMPLIANT sai | Tỉ lệ COMPLIANT sai của hệ ≤ ngưỡng QS-20; đóng góp của Verifier đo bằng B4 (bỏ `CRITIQUE`) | thí nghiệm B4 | Chưa đo |
@@ -129,7 +129,7 @@ Nó nằm vùng đặc quyền, không đọc mã, không thấy chuỗi tự do
 | TS-1 | Kịch bản qua `validate` của backend ngay lần đầu | ≥ 95% (ĐX) | `gate_reject` của Tool gateway | Mô phỏng: 2/2 kịch bản hợp lệ khi chạy xong |
 | TS-2 | Tỉ lệ T3 là ERROR vì chưa tới trigger | Báo cáo (TK); ≤ 10% (ĐX) | `t3_case` với `reason = trigger_not_reached` | Mô phỏng: 0 |
 | TS-3 | Phủ đủ biến thể bắt buộc | 100% sau tối đa 2 lần giao (ĐX) | `verdict.missing` | Mô phỏng: đủ ngay lần giao thành công |
-| TS-4 | Không thấy T1 hay nhãn tạm | 0 trường | [test_coordination_contracts.py](../../tests/test_coordination_contracts.py) | Đạt (test) |
+| TS-4 | Không thấy T1 hay nhãn tạm | 0 trường | [test_coordination_contracts.py](../../backend/tests/test_coordination_contracts.py) | Đạt (test) |
 | TS-5 | Hoàn thành ngay lần chạy đầu | ≥ 95% (ĐX) | `analyze_run.py` | **Chưa đạt: hỏng lần đầu ở cả hai ca** (vòng nạp skill, [CT-01](../management/theo_doi_cai_thien.md#ct-01--p1--test-và-agent-khác-nạp-lại-skill-đã-nạp-rồi-hỏng)) |
 
 ## Code Indexer
@@ -151,10 +151,10 @@ Nó nằm vùng đặc quyền, không đọc mã, không thấy chuỗi tự do
 |---|---|---|---|---|
 | RA-1 | Phân loại A–D đúng | Báo cáo (TK); ≥ 90% (ĐX) | hai người gán, kappa Cohen | Chưa nối |
 | RA-2 | Hành vi mong đợi (`trigger`, `expect`, `forbid`) đúng | Báo cáo (TK) | hai người gán | Chưa nối |
-| RA-3 | Hai luồng lệch nhau thì không tự quyết, chuyển người duyệt | 100% | reconcile ([reconcile.py](../../src/rfcv/domains/rfc_protocol/spec/reconcile.py)) | Có mã reconcile; chưa chạy với LLM thật |
+| RA-3 | Hai luồng lệch nhau thì không tự quyết, chuyển người duyệt | 100% | reconcile ([reconcile.py](../../backend/src/rfcv/domains/rfc_protocol/spec/reconcile.py)) | Có mã reconcile; chưa chạy với LLM thật |
 | RA-4 | Công người duyệt mỗi yêu cầu | ≤ 20% so với thủ công (Bảng 30) | mốc thủ công | Chưa đo |
 | RA-5 | Yêu cầu ngoài ngữ pháp RBS thì vào UNVERIFIABLE và được báo cáo, không bịa | 100% | thống kê | Chưa nối |
-| RA-6 | Hai luồng thực sự khác họ mô hình | Có | [models.yaml](../../config/models.yaml) | **Chưa đạt:** hiện cùng một mô hình ([CT-07](../management/theo_doi_cai_thien.md#ct-07--p2--một-mô-hình-cho-mọi-agent)) |
+| RA-6 | Hai luồng thực sự khác họ mô hình | Có | [models.yaml](../../backend/config/models.yaml) | **Chưa đạt:** hiện cùng một mô hình ([CT-07](../management/theo_doi_cai_thien.md#ct-07--p2--một-mô-hình-cho-mọi-agent)) |
 
 ## Report
 

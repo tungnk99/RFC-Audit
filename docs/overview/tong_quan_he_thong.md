@@ -59,20 +59,20 @@ hết ngân sách hoặc phát hiện lặp. Chi tiết: [phối hợp agent](..
 
 Agent đọc mã nằm trong **vùng cách ly** vì mã nguồn là dữ liệu không tin cậy. Agent đặc quyền (Planner, Verifier…) không bao giờ
 thấy chuỗi tự do từ vùng cách ly, chỉ thấy các giá trị miền hữu hạn hoặc đã đối chiếu với chỉ mục. Mô hình và skill của từng agent
-khai báo ở [config/models.yaml](../../config/models.yaml) và `skills:` trong `role.yaml`. Xem bản đồ hiện tại bằng `uv run rfcv agents`.
+khai báo ở [config/models.yaml](../../backend/config/models.yaml) và `skills:` trong `role.yaml`. Xem bản đồ hiện tại bằng `uv run rfcv agents`.
 
 ## Bản đồ thư mục
 
 | Thư mục | Chứa |
 |---|---|
-| [src/rfcv/](../../src/rfcv/) | Lõi không biết miền (`core/`, `gates/`, `evidence/`), miền RFC giao thức (`domains/rfc_protocol/`), chỉ mục mã, giao diện dòng lệnh |
-| [agents/](../../agents/) | Mỗi agent một thư mục: `role.yaml`, `prompt.md`, mã (schema, handler, `SPEC`) |
-| [skills/](../../skills/) | Kho skill chung (`core/` và theo adapter); agent chỉ dùng skill nó khai báo |
-| [adapters/](../../adapters/) | Adapter cho từng giao thức (hiện có `tls13`): ví dụ RBS, mẫu kịch bản, công thức SUT |
-| [config/](../../config/) | Cấu hình mô hình |
-| [eval/](../../eval/) | Dữ liệu và môi trường đánh giá |
-| [scripts/](../../scripts/) | Phép đo hệ thống với LLM thật |
-| [tests/](../../tests/) | Kiểm thử (không gọi LLM thật) |
+| [src/rfcv/](../../backend/src/rfcv/) | Lõi không biết miền (`core/`, `gates/`, `evidence/`), miền RFC giao thức (`domains/rfc_protocol/`), chỉ mục mã, giao diện dòng lệnh |
+| [agents/](../../backend/agents/) | Mỗi agent một thư mục: `role.yaml`, `prompt.md`, mã (schema, handler, `SPEC`) |
+| [skills/](../../backend/skills/) | Kho skill chung (`core/` và theo adapter); agent chỉ dùng skill nó khai báo |
+| [adapters/](../../backend/adapters/) | Adapter cho từng giao thức (hiện có `tls13`): ví dụ RBS, mẫu kịch bản, công thức SUT |
+| [config/](../../backend/config/) | Cấu hình mô hình |
+| [eval/](../../backend/eval/) | Dữ liệu và môi trường đánh giá |
+| [scripts/](../../backend/scripts/) | Phép đo hệ thống với LLM thật |
+| [tests/](../../backend/tests/) | Kiểm thử (không gọi LLM thật) |
 | [docs/](../README.md) | Tài liệu này |
 
 Quy ước đặt tên: [quy_uoc_dat_ten.md](../conventions/quy_uoc_dat_ten.md).

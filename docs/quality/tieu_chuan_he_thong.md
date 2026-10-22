@@ -43,14 +43,14 @@ là đổi ngưỡng sau khi thấy kết quả (N1).
 
 | Mã | Tiêu chuẩn | Ngưỡng | Đo bằng | Nguồn | Hiện tại |
 |---|---|---|---|---|---|
-| QS-01 | Không agent nào tự gán nhãn; nhãn chỉ do Verdict engine theo V0–V9, cùng bằng chứng cho cùng nhãn | 0 ngoại lệ | [test_verdict_engine.py](../../tests/test_verdict_engine.py), [test_contracts.py](../../tests/test_contracts.py), import-linter | BR3, F1 | Đạt (test) |
-| QS-02 | Chuỗi tự do từ vùng cách ly không tới agent đặc quyền | 0 | [test_policy_ifc.py](../../tests/test_policy_ifc.py); ca A1, A2 với LLM thật | A1, A2, P7 | Đạt (test); chưa thử với LLM thật ([CT-08](../management/theo_doi_cai_thien.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
-| QS-03 | Lời gọi công cụ ngoài quyền bị từ chối mặc định | 0 lọt qua | [test_gates.py](../../tests/test_gates.py); ca A3 | A3, P8 | Đạt (test); chưa thử đối kháng thật |
-| QS-04 | Bằng chứng bị sửa thì bị phát hiện | 100% | `rfcv verify`, [test_evidence_store.py](../../tests/test_evidence_store.py) | A5 | Đạt (test) |
-| QS-05 | Hết ngân sách hoặc lặp thì dừng với nhãn an toàn (UNVERIFIABLE), không kết luận sai | 100% | [test_execution_loop.py](../../tests/test_execution_loop.py) | A6 | Đạt (test). Quan sát thật: Planner hỏng cả 8 vòng do lỗi cấu hình, hệ ra UNVERIFIABLE (V9), không ra nhãn sai |
-| QS-06 | Lỗi môi trường (SUT không khởi động, sanity hỏng) không bị tính thành FAIL | 0 | [test_driver_and_coverage.py](../../tests/test_driver_and_coverage.py) | BR6 | Đạt (test) |
+| QS-01 | Không agent nào tự gán nhãn; nhãn chỉ do Verdict engine theo V0–V9, cùng bằng chứng cho cùng nhãn | 0 ngoại lệ | [test_verdict_engine.py](../../backend/tests/test_verdict_engine.py), [test_contracts.py](../../backend/tests/test_contracts.py), import-linter | BR3, F1 | Đạt (test) |
+| QS-02 | Chuỗi tự do từ vùng cách ly không tới agent đặc quyền | 0 | [test_policy_ifc.py](../../backend/tests/test_policy_ifc.py); ca A1, A2 với LLM thật | A1, A2, P7 | Đạt (test); chưa thử với LLM thật ([CT-08](../management/theo_doi_cai_thien.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
+| QS-03 | Lời gọi công cụ ngoài quyền bị từ chối mặc định | 0 lọt qua | [test_gates.py](../../backend/tests/test_gates.py); ca A3 | A3, P8 | Đạt (test); chưa thử đối kháng thật |
+| QS-04 | Bằng chứng bị sửa thì bị phát hiện | 100% | `rfcv verify`, [test_evidence_store.py](../../backend/tests/test_evidence_store.py) | A5 | Đạt (test) |
+| QS-05 | Hết ngân sách hoặc lặp thì dừng với nhãn an toàn (UNVERIFIABLE), không kết luận sai | 100% | [test_execution_loop.py](../../backend/tests/test_execution_loop.py) | A6 | Đạt (test). Quan sát thật: Planner hỏng cả 8 vòng do lỗi cấu hình, hệ ra UNVERIFIABLE (V9), không ra nhãn sai |
+| QS-06 | Lỗi môi trường (SUT không khởi động, sanity hỏng) không bị tính thành FAIL | 0 | [test_driver_and_coverage.py](../../backend/tests/test_driver_and_coverage.py) | BR6 | Đạt (test) |
 | QS-07 | Khoá API không xuất hiện trong trace, bằng chứng hay báo cáo | 0 lần xuất hiện | quét `trace.db`, `evidence.db`, artifacts sau mỗi lần chạy | A4 | Đạt (test) trên lần chạy giả: hash cấu hình, `trace.db`, `evidence.db` không chứa khoá ([test_invariants.py](../../backend/tests/test_invariants.py)); quét tự động sau mỗi lần chạy thật: BL-62 |
-| QS-08 | Tính lại nhãn từ Evidence store luôn trùng nhãn đã ghi | 100% | `rfcv verify`, replay ([replay.py](../../src/rfcv/eval/replay.py)) | Bảng 8 "Tái lập" | Đạt (test); chưa với lần chạy thật |
+| QS-08 | Tính lại nhãn từ Evidence store luôn trùng nhãn đã ghi | 100% | `rfcv verify`, replay ([replay.py](../../backend/src/rfcv/eval/replay.py)) | Bảng 8 "Tái lập" | Đạt (test); chưa với lần chạy thật |
 
 ## Tầng B. Chống đối thủ (MT3)
 
@@ -93,7 +93,7 @@ sai trong precision và recall; chúng được báo cáo riêng qua tỉ lệ k
 
 | Mã | Tiêu chuẩn | Ngưỡng | Đo bằng | Hiện tại |
 |---|---|---|---|---|
-| QS-40 | Thêm giao thức mới không sửa lõi: số dòng đổi trong `core/`, `gates/`, `agents/`, quy tắc | 0 | `git diff --stat` trước và sau khi thêm adapter | Đạt với miền giả ([test_generality.py](../../tests/test_generality.py)); DNS chưa làm |
+| QS-40 | Thêm giao thức mới không sửa lõi: số dòng đổi trong `core/`, `gates/`, `agents/`, quy tắc | 0 | `git diff --stat` trước và sau khi thêm adapter | Đạt với miền giả ([test_generality.py](../../backend/tests/test_generality.py)); DNS chưa làm |
 | QS-41 | Hoạt động đúng trên giao thức thứ hai thật | Báo cáo so với TLS | chỉ số tầng C trên tập nhỏ | Chưa đo ([CT-09](../management/theo_doi_cai_thien.md#ct-09--p0--chưa-có-backend-kiểm-thử-thật-và-bộ-chạy-sut-thật)) |
 | QS-42 | Kích thước và công sức của một adapter: số tệp, số dòng khai báo, số mẫu, tuần công | Báo cáo | thống kê adapter | Chưa đo |
 

@@ -1,7 +1,7 @@
 # Quy ước đặt tên file và thư mục
 
 Quy ước này ghi lại cách đặt tên mà repo **đang dùng**, cộng vài điều chỉnh nhỏ cho nhất quán. Phần kiểm được bằng máy nằm ở
-[tests/test_naming.py](../../tests/test_naming.py); đổi quy ước thì sửa cả hai nơi. Những chỗ còn lệch chưa sửa được ghi ở
+[tests/test_naming.py](../../backend/tests/test_naming.py); đổi quy ước thì sửa cả hai nơi. Những chỗ còn lệch chưa sửa được ghi ở
 [CT-19](../management/theo_doi_cai_thien.md#ct-19--p3--tên-chưa-thống-nhất-ở-vài-chỗ).
 
 ## Nguyên tắc chung
@@ -52,7 +52,7 @@ không dấu. Mỗi file có tiền tố của nhóm nên tên vẫn rõ khi xu�
 | `figures/`, `html/` | Tài nguyên: sơ đồ SVG, bản HTML gốc | theo bảng ở trên | |
 
 Quy tắc: không đặt file `.md` trực tiếp ở gốc `docs/` (trừ `README.md`), không lồng thêm thư mục trong một nhóm, không có nhóm rỗng.
-Cần loại tài liệu mới thì thêm nhóm hoặc tiền tố vào bảng này **và** vào `DOC_FOLDERS` trong [test_naming.py](../../tests/test_naming.py),
+Cần loại tài liệu mới thì thêm nhóm hoặc tiền tố vào bảng này **và** vào `DOC_FOLDERS` trong [test_naming.py](../../backend/tests/test_naming.py),
 rồi thêm vào mục lục [docs/README.md](../README.md).
 
 ## Định danh bên trong mã và dữ liệu

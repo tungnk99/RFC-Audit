@@ -2,7 +2,7 @@
 
 Danh sách việc cần làm để hệ thống đạt các [yêu cầu đầu ra](../quality/tieu_chuan_dau_ra.md) (`YD-nn`) và sửa các vấn đề đang mở trong
 [sổ theo dõi](theo_doi_cai_thien.md) (`CT-nn`). Mỗi việc (`BL-nn`) trỏ về yêu cầu nó phục vụ và có tiêu chí "Xong khi" lấy từ chính
-yêu cầu đó, nên làm xong việc là đo được yêu cầu đã đạt. Test [test_backlog.py](../../tests/test_backlog.py) bảo đảm **mọi `YD` và mọi
+yêu cầu đó, nên làm xong việc là đo được yêu cầu đã đạt. Test [test_backlog.py](../../backend/tests/test_backlog.py) bảo đảm **mọi `YD` và mọi
 `CT` đang mở đều có ít nhất một việc**.
 
 Mối quan hệ giữa các tài liệu quản lý: yêu cầu (`YD`, `QS`, `AG`) nói **cần đạt gì**; sổ theo dõi (`CT`) nói **đang vướng gì**; backlog (`BL`) nói
@@ -94,7 +94,7 @@ quyết định số đo của mọi lần chạy sau.
 | ID | Việc cần làm | Đáp ứng | Phụ thuộc | Cỡ | Giai đoạn | Xong khi | Trạng thái |
 |---|---|---|---|---|---|---|---|
 | BL-30 | Nối Report agent và Output gate: giải thích chỉ trích bằng chứng có thật, nhãn không đổi | YD-40, CT-11, RP-1, RP-2, RP-3, RP-4 | BL-04 | M | G2 | 100% `evidence_id` trích có trong kho; 0 thay đổi nhãn; mỗi VIOLATION nêu T3 và vị trí T1 | Chưa làm |
-| BL-31 | Lệnh `rfcv report --format html\|json\|sarif` (Jinja2, nối [sarif.py](../../src/rfcv/ui/sarif.py)) với bản tổng hợp độ phủ: số yêu cầu theo nhãn và assurance, tách MUST, SHOULD, MAY, loại D, UNVERIFIABLE theo lý do | YD-31, YD-42 | BL-30 | L | G2 | Báo cáo sinh ra có đủ các phần; SARIF hợp lệ theo schema; tổng các nhóm bằng tổng số yêu cầu | Chưa làm |
+| BL-31 | Lệnh `rfcv report --format html\|json\|sarif` (Jinja2, nối [sarif.py](../../backend/src/rfcv/ui/sarif.py)) với bản tổng hợp độ phủ: số yêu cầu theo nhãn và assurance, tách MUST, SHOULD, MAY, loại D, UNVERIFIABLE theo lý do | YD-31, YD-42 | BL-30 | L | G2 | Báo cáo sinh ra có đủ các phần; SARIF hợp lệ theo schema; tổng các nhóm bằng tổng số yêu cầu | Chưa làm |
 | BL-33 | Lệnh `rfcv specs`: duyệt RBS bất đồng và mẫu 10% | YD-03, RA-4 | BL-23 | M | G2 | Người duyệt chấp nhận, sửa hoặc loại được; công người đo được | Chưa làm |
 | BL-32 | Lệnh `rfcv review`: bảng duyệt NEEDS\_REVIEW (quy tắc gây nhãn, bằng chứng đặt cạnh nhau, nhân chứng, mã dạng văn bản không tin cậy), bản ghi Review riêng | YD-41 | BL-31 | M | DNS | 100% mục NEEDS\_REVIEW có đủ các phần; nhãn máy không bị sửa | Chưa làm |
 | BL-34 | Lệnh `rfcv status`: tiến độ theo trạng thái và chi phí đã dùng | YD-60 | BL-04 | S | DNS | Hiển thị tiến độ và token, USD của một lần chạy | Chưa làm |
