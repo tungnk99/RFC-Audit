@@ -177,10 +177,11 @@ def adherence(
     if advice is None:
         return "no_advice"
     same_stop = advice.stop and action == "stop"
+    # Kế hoạch chứa đủ nhiệm vụ được gợi ý là bám sổ tay, kể cả khi Planner giao thêm việc (CT-04).
     same_tasks = (
         not advice.stop
         and action == "dispatch"
-        and {t.task_type for t in planned} == {t.task_type for t in advice.tasks}
+        and {t.task_type for t in advice.tasks} <= {t.task_type for t in planned}
     )
     if same_stop or same_tasks:
         return "followed"

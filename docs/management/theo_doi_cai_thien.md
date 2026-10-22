@@ -75,6 +75,7 @@ Mức: **P0** chặn đánh giá thật, **P1** ảnh hưởng độ tin cậy h
 - **Hướng sửa:** trong `adherence` ([advisor.py](../../src/rfcv/core/advisor.py)) coi kế hoạch chứa đủ nhiệm vụ được gợi ý là `followed`,
   và ghi riêng `followed_plus` nếu muốn phân biệt.
 - **Đóng khi:** test cho ca tập cha; ca faulty hiện tại không còn bị tính là chệch.
+- **Kết quả (BL-13):** dherence coi kế hoạch chứa đủ nhiệm vụ được gợi ý là ollowed (có test ca tập cha và hai ca đối chứng). Ca faulty thật chỉ xác nhận lại khi đo ở đợt BL-10/11/12.
 
 ### CT-05 · P1 · Agent không thấy câu RFC
 - **Bằng chứng:** `rfc.sentence`, `rfc.paragraph`, `rfc.context_pack` nằm trong `KNOWN_UNSUPPLIED`
