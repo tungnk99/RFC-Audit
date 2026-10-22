@@ -58,7 +58,7 @@ quyết định số đo của mọi lần chạy sau.
 | ID | Việc cần làm | Đáp ứng | Phụ thuộc | Cỡ | Giai đoạn | Xong khi | Trạng thái |
 |---|---|---|---|---|---|---|---|
 | BL-10 | Chặn vòng lặp nạp skill: thêm vào prompt "nạp mỗi skill một lần, rồi làm theo"; nếu chưa đủ thì nhúng thẳng skill ngắn vào prompt | CT-01, AG-04, AG-06 | – | S | Ngay | `skill_reloads` = 0 và `worker_first_failures` = 0 trên cả hai ca, mỗi ca ít nhất 3 lần | Đang làm |
-| BL-11 | Nâng `llm_calls` của Code Reader (thử 20) và đo lại | CT-02, AG-05, CR-4 | – | S | Ngay | Không còn `UsageLimitExceeded` qua 3 lần mỗi ca; token mỗi ca không tăng | Đang làm |
+| BL-11 | Bỏ giới hạn `llm_calls` của mọi agent (quyết định 2026-10-22, thay cho nâng lên 20) và đo lại; token, công cụ và thời gian vẫn bị chặn | CT-02, AG-05, CR-4 | – | S | Ngay | Không còn `UsageLimitExceeded` qua 3 lần mỗi ca; token mỗi ca không tăng | Đang làm |
 | BL-12 | Rút gọn `evidence.summary`: gộp T3 theo biến thể và kết quả, giữ chi tiết cho ca FAIL, mâu thuẫn, ca được trích | CT-03, VF-7 | – | M | Ngay | Token đầu vào của Verifier giảm so với mốc 55k; `verifier_smoke` vẫn nêu đúng hai tình huống | Xong |
 | BL-13 | Sửa chỉ số bám sổ tay: kế hoạch chứa đủ nhiệm vụ được gợi ý tính là `followed` | CT-04, PL-6 | – | S | Ngay | Có test; ca bản lỗi không còn bị ghi `deviated_unannounced` | Xong |
 | BL-14 | Giảm chi phí Code Reader: rút gọn đầu ra công cụ đọc mã, dừng sớm khi các khía cạnh đã đủ | CT-17, CR-5 | BL-10, BL-11 | M | G1 | Token Code Reader mỗi ca giảm có số đo mà độ chính xác T1 không đổi | Chưa làm |

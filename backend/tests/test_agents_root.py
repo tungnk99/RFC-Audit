@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from conftest import ROOT
+from conftest import AGENTS_DIR, ROOT
 from rfcv.core.policy import AGENTS_ENV, PolicyError, PolicyStore, find_agents_root
 from rfcv.core.prompts import prompts_digest, role_prompt
 from rfcv.plugins import current_registry
@@ -127,3 +127,21 @@ def test_python_files_in_the_data_directory_are_never_loaded(root: Path) -> None
         (root / "planner" / name).write_text(f"open(r'{marker}', 'w').write('x')\n", encoding="utf-8")
     load(root)
     assert not marker.exists()
+
+
+def test_no_agent_limits_the_number_of_llm_calls_but_every_other_budget_stays() -> None:
+    """Không giới hạn lượt gọi LLM (`llm_calls` bỏ trống = None): một lần Code Reader dính giới hạn 20 lượt làm mất vị trí mã
+    và hạ mức bảo đảm. Token, công cụ và thời gian vẫn chặn chạy lan man, nên mọi vai trò vẫn có ba giới hạn đó."""
+    from rfcv.core.policy import TaskBudget
+
+    assert TaskBudget(tool_calls=1, tokens=1, seconds=1).llm_calls is None
+    profiles = {
+        d.name: yaml.safe_load((d / "role.yaml").read_text(encoding="utf-8"))
+        for d in AGENTS_DIR.iterdir()
+        if (d / "role.yaml").is_file()
+    }
+    assert len(profiles) == 7
+    for role, profile in profiles.items():
+        budget = profile["budget_per_task"]
+        assert "llm_calls" not in budget, role
+        assert all(isinstance(budget[k], int) and budget[k] > 0 for k in ("tool_calls", "tokens", "seconds")), role

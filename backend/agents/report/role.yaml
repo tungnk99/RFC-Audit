@@ -5,4 +5,4 @@ tools: [registry.read, evidence.read_summary, verdict.read]
 skills: []
 output_schema: Explanation@1
 prompt: prompt.md
-budget_per_task: {llm_calls: 3, tool_calls: 6, tokens: 60000, seconds: 120}
+budget_per_task: {tool_calls: 6, tokens: 60000, seconds: 120}

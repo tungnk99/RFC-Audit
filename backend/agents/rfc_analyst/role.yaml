@@ -5,4 +5,4 @@ tools: [rfc.get_sentences, rfc.read_section, rfc.search, rfc.get_definition, rfc
 skills: []
 output_schema: RbsProposal@1
 prompt: prompt.md
-budget_per_task: {llm_calls: 6, tool_calls: 10, tokens: 120000, seconds: 300}
+budget_per_task: {tool_calls: 10, tokens: 120000, seconds: 300}

@@ -51,7 +51,7 @@ class Zone(StrEnum):
 class TaskBudget(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    llm_calls: int
+    llm_calls: int | None = None  # None: không giới hạn số lượt gọi LLM; token, công cụ và thời gian vẫn bị chặn
     tool_calls: int
     tokens: int
     seconds: int
