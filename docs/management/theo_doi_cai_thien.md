@@ -40,6 +40,10 @@ Mỗi cấu hình nên chạy mỗi ca **ít nhất 3 lần** vì kết quả c�
 | 3 | 2026-10-22 | #2 + sổ tay phản biện lại sau khi vấn đề được xử lý (R2/R3-recritique-after-fix); 5 lần | correct | COMPLIANT (5/5: V5 x4, V6 x1) | 2 (5/5) | 22-33 | 182.218 / 196.336 / 253.887 / 291.734 / 303.415 | 0-1 lần hỏng | 0/3 x4, **1/3** | 0 nạp lại |
 | 4 | 2026-10-22 | #3 + bỏ giới hạn `llm_calls` mọi agent; 3 lần faulty, 5 lần correct | faulty | VIOLATION V2 (3/3) | 1 | 11-14 | 64.938 / 97.146 / 97.825 | 0% | 0/2 (3 lần) | 0 nạp lại |
 | 4 | 2026-10-22 | như trên | correct | COMPLIANT V5 (4/5), **NEEDS_REVIEW V7 (1/5)** | 2, 2, 3, 2, 2 | 26-55 | 239.886 / 240.727 / 291.220 / 304.593 / **467.265** | 0-1 lần hỏng | 0/3 x4, **1/4** | 0 nạp lại |
+| 5 | 2026-10-22 | #4 + viết lại prompt và skill (công cụ agent thật, quy trình theo loại nhiệm vụ), ngân sách `tool_calls` Code Reader 30; 3 lần mỗi ca | faulty | VIOLATION V2 (3/3) | 1 | 23-26 | 262.849 / 252.447 / 320.250 | **79%, 0%, 83%** | 1/2, 0/2, 1/2 (`tool_calls_limit`) | 0 nạp lại |
+| 5 | 2026-10-22 | như trên | correct | COMPLIANT V5 (3/3) | 4 | 60-66 | 926.789 / 772.441 / 729.933 | 26%, 0%, 0% | 1/6, 0/5, 0/5 | 0 nạp lại |
+| 6 | 2026-10-22 | #5 + sau mỗi lời gọi công cụ agent thấy ngân sách còn lại, còn 20% thì được nhắc trả kết quả | faulty | VIOLATION V2 (3/3) | 1 | 20-25 | 208.562 / 240.332 / 283.420 | 0% | 0/2 (3 lần) | 0 nạp lại |
+| 6 | 2026-10-22 | như trên | correct | COMPLIANT V5 (3/3) | 4, 5, 4 | 68-91 | 800.557 / 1.144.621 / 925.966 | 0% | 0/5, 0/6, 0/5 | 0 nạp lại |
 
 \* Lãng phí = token tiêu trong các lần chạy agent bị hỏng, chia tổng token. Mỗi ca mới chạy **một lần**, chưa đủ để nói về
 độ ổn định. Khi thêm dòng, ghi thêm thay đổi so với lần trước vào cột Cấu hình.
@@ -255,6 +259,13 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 - **Hậu quả:** nhãn chuẩn của TLS13-0042 trên wolfSSL (bản lỗi, sửa, mới nhất) và kỳ vọng oracle (`at_limit` = 16640 phải PASS) cần kiểm với SUT thật, vì ngưỡng thật có thể thấp hơn 16640. Đây cũng đúng là ca để đo skill `check-ifdef-compiled-lines`.
 - **Hướng sửa:** khi có SUT thật (BL-03 trở đi), chạy oracle trên ba phiên bản và đối chiếu; ghi nhãn chuẩn cho BL-08 theo kết quả chạy chứ không theo suy luận từ mã.
 - **Đóng khi:** nhãn chuẩn TLS13-0042 cho ba phiên bản wolfSSL được xác nhận bằng kết quả chạy thật.
+
+### CT-25 · P2 · Ca bản đúng tốn 0,8-1,1 triệu token, phần lớn ở Code Reader
+- **Bằng chứng (Nhật ký đo #6):** ca correct 800.557-1.144.621 token, gấp khoảng 3 lần #4; ở lần 1.144.621, Code Reader dùng 671.346 token qua 3 lần chạy với 71 lời gọi công cụ (LOCATE, TRACE_PATHS, RECHECK). Không còn lần chạy hỏng nào, nên đây là chi phí đọc mã thật chứ không phải lãng phí.
+- **Hậu quả:** chi phí mỗi yêu cầu loại B có bản đúng cao; với 20-60 yêu cầu mỗi giao thức là đáng kể.
+- **Hướng sửa:** đo trên mã thật (wolfSSL) trước khi tối ưu, vì mã giả nhỏ không đại diện; ứng viên: tóm tắt lịch sử hội thoại giữa các lời gọi công cụ, cho TRACE_PATHS dùng lại vị trí T1 đã có thay vì tìm lại từ đầu.
+- **Đóng khi:** có số đo trên wolfSSL thật và quyết định ngưỡng chi phí chấp nhận.
+
 ## Đã xử lý
 
 | ID | Vấn đề | Nguyên nhân gốc | Đã sửa ở | Bài học |
@@ -277,4 +288,4 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 - Phép thử đầu-cuối dùng SUT, backend kiểm thử và mã nguồn **giả**; chưa có kết quả trên wolfSSL thật (CT-09).
 - Mọi agent dùng một mô hình (DeepSeek, quyết định tạm thời 2026-10-22), nên Verifier và luồng dịch thứ hai chưa độc lập về họ mô hình (CT-07).
 - Chưa kiểm tra đối kháng bằng mô hình thật (CT-08); chưa có số đo thống kê (CT-16).
-- Agent thấy câu RFC gốc khi có bản RFCXML trong `inputs/rfc/` (BL-20), nhưng RFC 8446 không có XML chính thức (CT-23, CT-05); loại C và D, Report và RFC Analyst chưa nối đầy đủ (CT-10, CT-11, CT-12).
+- Agent thấy câu RFC gốc khi có bản RFCXML hoặc TXT trong `inputs/rfc/` (BL-20, BL-22); bản TXT bỏ sót câu quy phạm nằm trong bảng (ví dụ RFC 4253 có 31 dòng bảng, RFC 9113 có 19 câu trong bảng); RFC 8446 không có XML chính thức (CT-23, CT-05); loại C và D, Report và RFC Analyst chưa nối đầy đủ (CT-10, CT-11, CT-12).
