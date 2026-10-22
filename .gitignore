@@ -1,4 +1,4 @@
-# Byte-compiled / optimized / DLL files
+﻿# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
@@ -232,3 +232,5 @@ index/
 # đánh giá: bản clone SUT/bộ công cụ và image dựng, tái tạo được từ eval/config/eval.yaml
 eval/work/
 eval/out/
+backend/eval/work/
+backend/eval/out/

@@ -8,6 +8,7 @@ import pytest
 from pydantic_ai import models
 
 ROOT = Path(__file__).resolve().parents[1]
+DOCS = ROOT.parent / "docs"  # tài liệu dùng chung nằm ở gốc repo, ngoài backend/
 sys.path.insert(0, str(Path(__file__).parent))
 
 # Kiểm thử không bao giờ gọi LLM thật.

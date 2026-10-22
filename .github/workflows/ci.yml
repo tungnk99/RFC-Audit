@@ -11,11 +11,15 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+          cache-dependency-glob: backend/uv.lock
       - run: uv python install 3.12
       - run: uv sync --locked
       - name: Ruff

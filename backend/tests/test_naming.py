@@ -9,7 +9,7 @@ import re
 from collections.abc import Iterator
 from pathlib import Path
 
-from conftest import ROOT
+from conftest import DOCS, ROOT
 
 SNAKE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")
 KEBAB = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
@@ -64,11 +64,11 @@ def test_test_files_are_named_after_what_they_test() -> None:
 
 def doc_files() -> list[Path]:
     """Mọi tài liệu Markdown trong các nhóm của docs/, trừ README.md của từng thư mục."""
-    return [p for folder in DOC_FOLDERS for p in sorted((ROOT / "docs" / folder).glob("*.md")) if p.stem != "README"]
+    return [p for folder in DOC_FOLDERS for p in sorted((DOCS / folder).glob("*.md")) if p.stem != "README"]
 
 
 def test_docs_are_organised_into_the_known_folders() -> None:
-    docs = ROOT / "docs"
+    docs = DOCS
     stray_files = [p.name for p in docs.iterdir() if p.is_file() and p.name != "README.md"]
     known = set(DOC_FOLDERS) | DOC_ASSET_DIRS
     unknown_dirs = [p.name for p in docs.iterdir() if p.is_dir() and p.name not in known]
@@ -86,7 +86,7 @@ def test_docs_are_snake_case_with_the_prefix_of_their_folder_and_no_version_word
     ]
     assert not bad, bad
     html = [
-        p for p in (ROOT / "docs" / "html").glob("*.html") if not SNAKE.match(p.stem) or VERSION_WORDS.search(p.stem)
+        p for p in (DOCS / "html").glob("*.html") if not SNAKE.match(p.stem) or VERSION_WORDS.search(p.stem)
     ]
     assert not html, [p.name for p in html]
 
@@ -98,16 +98,16 @@ def test_every_document_folder_has_at_least_one_document() -> None:
 
 def test_every_html_original_has_a_markdown_document() -> None:
     markdown = {p.stem for p in doc_files()}
-    orphans = [p.name for p in (ROOT / "docs" / "html").glob("*.html") if p.stem not in markdown]
+    orphans = [p.name for p in (DOCS / "html").glob("*.html") if p.stem not in markdown]
     assert not orphans, orphans
 
 
 def test_figure_files_follow_the_pattern_and_belong_to_a_document() -> None:
     markdown = {p.stem for p in doc_files()}
-    for p in (ROOT / "docs" / "figures").glob("*.svg"):
+    for p in (DOCS / "figures").glob("*.svg"):
         m = re.fullmatch(r"([a-z0-9_]+)_hinh_(\d+)\.svg", p.name)
         assert m and m.group(1) in markdown, p.name
-    for p in (ROOT / "docs" / "figures" / "legend").glob("*.svg"):
+    for p in (DOCS / "figures" / "legend").glob("*.svg"):
         assert re.fullmatch(r"legend_\d{2}\.svg", p.name), p.name
 
 

@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import re
 
-from conftest import ROOT
+from conftest import DOCS
 
-BACKLOG = ROOT / "docs" / "management" / "theo_doi_backlog.md"
-OUTPUT_REQUIREMENTS = ROOT / "docs" / "quality" / "tieu_chuan_dau_ra.md"
-TRACKER = ROOT / "docs" / "management" / "theo_doi_cai_thien.md"
+BACKLOG = DOCS / "management" / "theo_doi_backlog.md"
+OUTPUT_REQUIREMENTS = DOCS / "quality" / "tieu_chuan_dau_ra.md"
+TRACKER = DOCS / "management" / "theo_doi_cai_thien.md"
 
 COLUMNS = 8  # ID, Việc, Đáp ứng, Phụ thuộc, Cỡ, Giai đoạn, Xong khi, Trạng thái
 SIZES = {"S", "M", "L", "XL"}

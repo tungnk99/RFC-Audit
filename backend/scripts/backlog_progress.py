@@ -14,7 +14,7 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BACKLOG = ROOT / "docs" / "management" / "theo_doi_backlog.md"
+BACKLOG = ROOT.parent / "docs" / "management" / "theo_doi_backlog.md"
 PHASE_ORDER = ["Ngay", "G1", "G2", "DNS", "G3", "LV", "T2"]
 STATUS_ORDER = ["Xong", "Đang làm", "Chặn", "Chưa làm"]
 PIPE = re.compile(r"(?<!\\)\|")

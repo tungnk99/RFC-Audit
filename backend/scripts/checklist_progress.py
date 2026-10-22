@@ -20,7 +20,7 @@ def main() -> None:
     show_open = "--open" in sys.argv
     rows: list[tuple[str, int, int]] = []
     pending: list[tuple[str, str]] = []
-    for md in sorted((ROOT / "docs" / "deliverables").glob("checklist_*.md")):
+    for md in sorted((ROOT.parent / "docs" / "deliverables").glob("checklist_*.md")):
         done = total = 0
         in_code = False
         for line in md.read_text(encoding="utf-8").splitlines():
