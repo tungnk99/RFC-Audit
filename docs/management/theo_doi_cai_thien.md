@@ -35,9 +35,17 @@ Mỗi cấu hình nên chạy mỗi ca **ít nhất 3 lần** vì kết quả c�
 |---|---|---|---|---|---|---|---|---|---|---|
 | 1 | 2026-10-22 | deepseek-flash cho mọi agent, thinking tắt, mọi vấn đề đang mở | faulty | VIOLATION V2 | 2 | 30 | 252.611 | 53% | 2/4 | 12 (4) |
 | 1 | 2026-10-22 | như trên | correct | COMPLIANT V5 LINKED | 3 | 26 | 209.715 | 6% | 1/4 | 12 (3) |
+| 2 | 2026-10-22 | #1 + prompt "nạp skill một lần" (BL-10), `llm_calls` Code Reader 20 (BL-11), gộp T3 thường trong `evidence.summary` (BL-12); 3 lần mỗi ca | faulty | VIOLATION V2 (3/3) | 1 | 9-13 | 75.679 / 95.007 / 96.553 | 0% | 0/2 (3 lần) | 3 (0) |
+| 2 | 2026-10-22 | như trên | correct | COMPLIANT V5 (3/3) | 2 / 2 / 7 | 18 / 26 / 128 | 170.996 / 270.201 / 1.184.441 | 0% / 0% / 14% | 0/3, 0/3, **1/8** | 5 (0) mỗi lần |
 
 \* Lãng phí = token tiêu trong các lần chạy agent bị hỏng, chia tổng token. Mỗi ca mới chạy **một lần**, chưa đủ để nói về
 độ ổn định. Khi thêm dòng, ghi thêm thay đổi so với lần trước vào cột Cấu hình.
+Dòng 2 (BL-10/11/12): `skill_reloads` = 0 ở cả 6 lần (trước: 3-4 lần nạp lại mỗi ca). Faulty ổn định: 1 vòng, 76-97k token (trước 252k). Verifier nhận
+khoảng 41k token (trước 55k) ở ca correct. Lần correct thứ 3 là ngoại lệ: Code Reader chạy 6 lần, 127 lời gọi công cụ, một lần dính
+`UsageLimitExceeded` dù `llm_calls` đã 20, dừng bằng ngân sách sau 7 vòng với 1,18 triệu token. Vậy tiêu chí của BL-11 chưa đạt và
+`worker_first_failures` của BL-10 chưa về 0 ở ca correct, nhưng nguyên nhân không còn là nạp skill: Planner giao LOCATE lặp lại nhiều
+vòng. Verifier_smoke vẫn nêu đúng cả hai tình huống (MISSING_EVIDENCE, CONTRADICTION), nhưng nó dùng hàng tóm tắt dựng tay nên không kiểm phần
+gộp T3; phần gộp được kiểm bằng `tests/test_summary_fold.py`. Chưa rõ mức giảm 55k → 41k do việc gộp hay do ca có ít T3 hơn.
 
 ## Vấn đề đang mở
 
