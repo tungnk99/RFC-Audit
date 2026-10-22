@@ -66,6 +66,7 @@ class RuntimeConfig:
     agents_root: Path | None = None  # tầng ghi đè agent ngoài mã nguồn (dữ liệu: role.yaml, prompt.md)
     models_path: Path | None = None
     code_root: Path | None = None
+    rfc_dir: Path | None = None  # Input store của RFC: rfc<số>.xml (RFCXML v3) cho các văn bản trong phạm vi adapter
     run_id: str | None = None
     tenant: str = "default"
     seed: int = 0

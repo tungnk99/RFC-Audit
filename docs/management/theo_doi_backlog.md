@@ -70,7 +70,7 @@ quyết định số đo của mọi lần chạy sau.
 | ID | Việc cần làm | Đáp ứng | Phụ thuộc | Cỡ | Giai đoạn | Xong khi | Trạng thái |
 |---|---|---|---|---|---|---|---|
 | BL-25 | Chốt phạm vi hỗ trợ RFC cùng thầy: bảng giao thức nhân mức hỗ trợ (đầy đủ, mức chứng minh, chưa hỗ trợ) và các điểm cần xác nhận ở yêu cầu đầu ra | YD-14, CT-22 | thầy | S | Ngay | Bảng phạm vi được chốt và ghi vào báo cáo | Chưa làm |
-| BL-20 | Cấp câu RFC (`rfc.sentence`, `rfc.paragraph`, `rfc.context_pack`) vào ngữ cảnh agent, lấy theo trường nguồn của RBS qua RFC gate | YD-01, CT-05 | – | M | G1 | `KNOWN_UNSUPPLIED` không còn các trường `rfc.*` đã cấp; Verifier thấy câu RFC | Chưa làm |
+| BL-20 | Cấp câu RFC (`rfc.sentence`, `rfc.paragraph`, `rfc.context_pack`) vào ngữ cảnh agent, lấy theo trường nguồn của RBS qua RFC gate | YD-01, CT-05 | – | M | G1 | `KNOWN_UNSUPPLIED` không còn các trường `rfc.*` đã cấp; Verifier thấy câu RFC | Xong |
 | BL-21 | Đo RFC gate trên toàn văn RFC 8446: số câu tách được so với đếm độc lập, ranh giới câu đúng trên 30 câu | YD-01 | – | S | G1 | Có bảng số đo; sai lệch được giải thích hoặc sửa | Chưa làm |
 | BL-26 | Ghi phiên bản RFC, errata và hash vào mọi kết luận; xử lý RFC 8446 và RFC 9846 theo quyết định của thầy | YD-05 | BL-25 | S | G1 | 100% kết luận ghi phiên bản RFC và hash | Chưa làm |
 | BL-23 | Nối RFC Analyst: hai luồng dùng hai họ mô hình khác nhau, so khớp, phân loại A–D, bất đồng chuyển người duyệt | YD-03, YD-04, CT-12, RA-1, RA-3, RA-5 | BL-16, BL-20 | L | G2 | Phân loại A–D đúng ≥ 90% (ĐX) trên 30 mục hai người gán; câu hai luồng lệch không tự quyết (100%) | Chưa làm |

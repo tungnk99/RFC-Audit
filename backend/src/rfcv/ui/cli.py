@@ -299,6 +299,9 @@ def run(
     agents_dir: Annotated[Path | None, typer.Option("--agents", help="Thư mục hồ sơ và lời nhắc agent")] = None,
     models: Annotated[Path, typer.Option(help="Cấu hình mô hình theo vai trò")] = Path("config/models.yaml"),
     code_root: Annotated[Path | None, typer.Option(help="Nơi kho mã tại commit cố định")] = None,
+    rfc_dir: Annotated[
+        Path, typer.Option(help="Input store của RFC: rfc<số>.xml (RFCXML v3); thiếu thì agent chỉ thấy RBS")
+    ] = Path("inputs/rfc"),
     code_index: Annotated[
         str | None, typer.Option(help="Tên chỉ mục mã trong registry (treesitter | treesitter-local)")
     ] = None,
@@ -318,6 +321,7 @@ def run(
         agents_root=agents_dir,
         models_path=models if models.is_file() else None,
         code_root=code_root,
+        rfc_dir=rfc_dir if rfc_dir.is_dir() else None,
         tenant=tenant,
         code_index=code_index,
         executor=executor,

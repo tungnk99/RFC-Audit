@@ -83,7 +83,7 @@ Mức: **P0** chặn đánh giá thật, **P1** ảnh hưởng độ tin cậy h
 - **Hướng sửa:** trong `adherence` ([advisor.py](../../backend/src/rfcv/core/advisor.py)) coi kế hoạch chứa đủ nhiệm vụ được gợi ý là `followed`,
   và ghi riêng `followed_plus` nếu muốn phân biệt.
 - **Đóng khi:** test cho ca tập cha; ca faulty hiện tại không còn bị tính là chệch.
-- **Kết quả (BL-13):** dherence coi kế hoạch chứa đủ nhiệm vụ được gợi ý là ollowed (có test ca tập cha và hai ca đối chứng). Ca faulty thật chỉ xác nhận lại khi đo ở đợt BL-10/11/12.
+- **Kết quả (BL-13):** `adherence` coi kế hoạch chứa đủ nhiệm vụ được gợi ý là `followed` (có test ca tập cha và hai ca đối chứng). Ca faulty thật chỉ xác nhận lại khi đo ở đợt BL-10/11/12.
 
 ### CT-05 · P1 · Agent không thấy câu RFC
 - **Bằng chứng:** `rfc.sentence`, `rfc.paragraph`, `rfc.context_pack` nằm trong `KNOWN_UNSUPPLIED`
@@ -92,6 +92,7 @@ Mức: **P0** chặn đánh giá thật, **P1** ảnh hưởng độ tin cậy h
 - **Hướng sửa:** tối thiểu, lấy câu RFC theo trường nguồn của RBS (`RFC8446§5.2#p4s3`) qua RFC gate và cấp vào ngữ cảnh. Đầy đủ
   là nối RFC Analyst (CT-12).
 - **Đóng khi:** `KNOWN_UNSUPPLIED` không còn các trường `rfc.*` đã cấp, và Verifier thấy câu RFC trong ngữ cảnh.
+- **Kết quả (BL-20):** đã cấp `rfc.sentence`, `rfc.paragraph`, `rfc.context_pack` theo `sentence_id` của RBS (`RfcDocument.lookup` trong `rfc_gate.py`), nhãn TRUSTED, đọc từ `inputs/rfc/rfc<số>.xml` (`--rfc-dir`). Test: `test_rfc_context.py`, `test_rfc_gate.py`. Mới chạy trên bản trích rút gọn; **chưa thử trên toàn văn RFC 8446** (BL-21), và cấu trúc thật có thể lệch (đoạn nằm trong `<dl>` có `pn` dạng `section-5.2-4.3`). Phần còn lại của CT-05 (RFC Analyst, errata, đối chiếu phiên bản) vẫn mở.
 
 ### CT-06 · P2 · Chưa biết skill có giúp ích không
 - **Bằng chứng:** skill được nạp ở hầu hết lần chạy (12 lần gọi nạp mỗi ca), nhưng chưa có so sánh có và không có skill. Ca thử hiện

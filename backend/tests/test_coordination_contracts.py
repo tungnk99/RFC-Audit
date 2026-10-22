@@ -6,6 +6,7 @@ mới vào đây nghĩa là cố ý chấp nhận một khoảng trống năng l
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -32,10 +33,8 @@ HUB_FIELDS = {
 
 # Khoảng trống năng lực đã biết: vai trò khai báo nhưng chưa có nguồn cung cấp.
 KNOWN_UNSUPPLIED = {
-    "rfc.sentence",  # chưa có nguồn RFC cho từng yêu cầu (RFC Analyst chưa cài)
-    "rfc.paragraph",
-    "rfc.context_pack",
-    "rfc.sentence_group",
+    # rfc.sentence, rfc.paragraph, rfc.context_pack đã được cấp từ Input store của RFC (BL-20, CT-05)
+    "rfc.sentence_group",  # nhóm câu cho RFC Analyst: chưa nối (CT-12)
     "rfc.definitions",
     "rfc.errata",
     "rfc.version_diff",
@@ -54,7 +53,7 @@ PINNED_RULES_VERSION = "sha256:e723d7809280ea66b9d05f4698c1f56beb78ce503bd143e87
 
 
 def _domain_fields(manifest: AdapterManifest) -> set[str]:
-    rt = SimpleNamespace(manifest=manifest)
+    rt = SimpleNamespace(manifest=manifest, config=SimpleNamespace(rfc_dir=Path(__file__).parent / "data" / "rfc"))
     invs = ProtocolRuntime().investigations(rt, ADAPTER_DIR / "examples")
     assert invs
     return set(invs[0].context)
