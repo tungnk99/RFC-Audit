@@ -5,4 +5,4 @@ tools: [code.list_dir, code.file_outline, code.search_symbol, code.read_function
 skills: []
 output_schema: ComponentMap@1
 prompt: prompt.md
-budget_per_task: {llm_calls: 12, tool_calls: 40, tokens: 200000, seconds: 600}
+budget_per_task: {tool_calls: 40, tokens: 200000, seconds: 600}

@@ -70,7 +70,8 @@ Mức: **P0** chặn đánh giá thật, **P1** ảnh hưởng độ tin cậy h
 ### CT-02 · P1 · Hạn mức `llm_calls` của Code Reader quá chặt
 - **Bằng chứng:** lần LOCATE đầu của ca faulty dừng bằng `UsageLimitExceeded` (request_limit 12) sau 15 lời gọi công cụ, tiêu
   **121.869 token** và không ra kết quả. Lần sau xong với 79.791 token và 12 lời gọi công cụ. Hai lượt gọi LLM bị tiêu vào nạp skill.
-- **Hướng sửa:** nâng `llm_calls` của `code_reader` trong `agents/code_reader/role.yaml` (thử 20). Tài liệu ghi đây là giá trị
+- **Quyết định (2026-10-22):** không giới hạn lượt gọi LLM nữa. `llm_calls` đã bỏ khỏi mọi `role.yaml` (trường tuỳ chọn, bỏ trống là không giới hạn); chạy lan man vẫn bị chặn bởi `tokens`, `tool_calls` và `seconds`. Lý do: một lần Code Reader dính giới hạn 20 lượt làm mất vị trí mã và hạ nhãn từ V5 xuống V6. Tài liệu thiết kế gốc còn ghi `llm_calls` ở ví dụ role.yaml (đó là thiết kế ban đầu).
+- **Hướng sửa (cũ):** nâng `llm_calls` của `code_reader` trong `agents/code_reader/role.yaml` (thử 20). Tài liệu ghi đây là giá trị
   khởi điểm cần hiệu chỉnh.
 - **Đóng khi:** không còn `UsageLimitExceeded` ở Code Reader qua ít nhất 3 lần chạy mỗi ca, và token mỗi ca không tăng.
 

@@ -5,4 +5,4 @@ tools: [test.list_examples, test.run_scenario, rfc.get_definition, registry.read
 skills: [write-tlsfuzzer-scenarios]
 output_schema: ScenarioProposal@1
 prompt: prompt.md
-budget_per_task: {llm_calls: 10, tool_calls: 12, tokens: 150000, seconds: 600}
+budget_per_task: {tool_calls: 12, tokens: 150000, seconds: 600}
