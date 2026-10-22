@@ -9,6 +9,7 @@ Thiếu nhà cung cấp mà miền yêu cầu thì báo rõ thiếu gì (`Missin
 
 from __future__ import annotations
 
+import os
 import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
@@ -24,6 +25,7 @@ from rfcv.core.prompts import prompts_digest
 from rfcv.core.runner import RoleRunner
 from rfcv.core.skills import SkillRegistry, default_registry, undeclared_skills
 from rfcv.core.trace import TraceLog
+from rfcv.core.trace_mirror import SupabaseMirror
 from rfcv.evidence.artifacts import ArtifactStore
 from rfcv.evidence.registry import RequirementRegistry, State
 from rfcv.evidence.store import EvidenceStore
@@ -166,7 +168,7 @@ def build_runtime(
         # 2. policy, kho, nhật ký (SQLite mặc định; thay bằng cài đặt khác của các Protocol repository)
         policy = PolicyStore.load(None, reg, pack.name, config.agents_root)
         store = EvidenceStore(run_dir / "evidence.db", tenant=config.tenant)
-        trace = TraceLog(run_dir / "trace.db")
+        trace = TraceLog(run_dir / "trace.db", SupabaseMirror.from_env(os.environ))
         requirements = RequirementRegistry(run_dir / "registry.db")
         artifacts = ArtifactStore(run_dir / "artifacts")
 

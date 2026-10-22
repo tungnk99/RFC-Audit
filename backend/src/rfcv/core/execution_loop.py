@@ -239,10 +239,19 @@ class ExecutionLoop:
                     critique = outcome.output
                     if needs_critique and not critique.issues:
                         critiqued_clean = True
+                    # Verifier chỉ được dẫn bằng chứng có thật (VF-6): mã không có trong kho là bịa, ghi lại để đo.
+                    known_ids = {e.evidence_id for e in evidence}
                     self._log(
                         "critique_result",
                         {
                             "issues": [i.model_dump(mode="json") for i in critique.issues],
+                            "unknown_evidence_ids": sorted(
+                                {
+                                    i.evidence_id
+                                    for i in critique.issues
+                                    if i.evidence_id and i.evidence_id not in known_ids
+                                }
+                            ),
                             "clean": not critique.issues,
                             "gating": needs_critique,
                             "accepted_as_clean": critiqued_clean,

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from rfcv.common.hashing import canonical_json
+from rfcv.core.trace_mirror import SupabaseMirror
 
 
 def _rows(value: Any) -> list[Mapping[str, Any]]:
@@ -92,7 +93,8 @@ def describe(event: Mapping[str, Any]) -> str:
 
 
 class TraceLog:
-    def __init__(self, path: Path | str) -> None:
+    def __init__(self, path: Path | str, mirror: SupabaseMirror | None = None) -> None:
+        self._mirror = mirror
         self._conn = sqlite3.connect(str(path), check_same_thread=False, isolation_level=None)
         self._lock = threading.Lock()
         self._conn.executescript(
@@ -122,12 +124,26 @@ class TraceLog:
         role: str | None = None,
         requirement_id: str | None = None,
     ) -> int:
+        ts_ns = time.time_ns()
         with self._lock:
             cur = self._conn.execute(
                 "INSERT INTO events(ts_ns, run_id, kind, role, requirement_id, payload) VALUES (?,?,?,?,?,?)",
-                (time.time_ns(), run_id, kind, role, requirement_id, canonical_json(payload).decode()),
+                (ts_ns, run_id, kind, role, requirement_id, canonical_json(payload).decode()),
             )
-            return int(cur.lastrowid or 0)
+            seq = int(cur.lastrowid or 0)
+        if self._mirror is not None:
+            self._mirror.push(
+                {
+                    "run_id": run_id,
+                    "seq": seq,
+                    "ts_ns": ts_ns,
+                    "kind": kind,
+                    "role": role,
+                    "requirement_id": requirement_id,
+                    "payload": json.loads(canonical_json(payload)),
+                }
+            )
+        return seq
 
     def events(self, kind: str | None = None) -> Iterator[dict[str, Any]]:
         sql = "SELECT seq, ts_ns, run_id, kind, role, requirement_id, payload FROM events"
