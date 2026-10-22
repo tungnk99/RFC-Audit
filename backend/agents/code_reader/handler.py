@@ -19,6 +19,14 @@ from rfcv.evidence.models import EvidenceDraft
 from rfcv.gates.tool_gateway import ToolSession
 
 
+def _threshold_of(inv: Investigation) -> int | None:
+    """Giá trị số trong `where` của RBS (ví dụ 16640 của `record.length > 16640`), nếu yêu cầu có."""
+    rbs: Any = inv.context.get("requirement.rbs")
+    where: Any = rbs.value.get("where") if rbs is not None and isinstance(rbs.value, dict) else None  # type: ignore[union-attr]
+    value: Any = where.get("value") if isinstance(where, dict) else None  # type: ignore[union-attr]
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
 class LocationHandler:
     """LOCATE, TRACE_PATHS, RECHECK."""
 
@@ -32,7 +40,7 @@ class LocationHandler:
             return ()
         req_id = inv.requirement.requirement_id
         return self._gate.check_location(
-            output, session, run_id=self._rt.run_id, requirement_id=req_id, msg_id=""
+            output, session, run_id=self._rt.run_id, requirement_id=req_id, msg_id="", threshold=_threshold_of(inv)
         ).errors
 
     async def handle(
@@ -42,7 +50,7 @@ class LocationHandler:
             return 0
         req_id = inv.requirement.requirement_id
         result = self._gate.check_location(
-            output, session, run_id=self._rt.run_id, requirement_id=req_id, msg_id=msg_id
+            output, session, run_id=self._rt.run_id, requirement_id=req_id, msg_id=msg_id, threshold=_threshold_of(inv)
         )
         if not result.accepted or result.draft is None:
             self._rt.trace.append(

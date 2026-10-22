@@ -13,7 +13,7 @@ from rfcv.spi import DomainPack, Effect, LoopPolicy, ToolDescriptor
 HERE = Path(__file__).resolve().parent
 VERSION = "2.0.0"
 
-REQUIRED_ROLES = ("rfc_analyst", "planner", "test", "verifier", "report", "code_indexer", "code_reader")
+REQUIRED_ROLES = ("rfc_analyst", "planner", "tester", "verifier", "report", "code_indexer", "code_reader")
 
 # Công cụ của miền (công cụ đọc mã nằm ở code pack dùng chung). Không công cụ nào ghi tệp, gọi mạng hay chạy lệnh
 # trên máy chủ: Registry từ chối mọi tác động ngoài đọc và chạy trong sandbox.
@@ -24,8 +24,8 @@ TOOLS = (
     ToolDescriptor("rfc.get_definition"),
     ToolDescriptor("evidence.read_summary"),
     ToolDescriptor("verdict.read"),
-    ToolDescriptor("test.list_examples"),
-    ToolDescriptor("test.run_scenario", Effect.SANDBOXED_RUN),
+    ToolDescriptor("tester.list_examples"),
+    ToolDescriptor("tester.run_scenario", Effect.SANDBOXED_RUN),
     ToolDescriptor("locator.suggest", Effect.READ, reads_untrusted=True),
 )
 
@@ -48,6 +48,7 @@ def pack() -> DomainPack:
         agents=AGENTS,
         loop=LoopPolicy(
             planner_role="planner",
+            report_role="report",
             critique_task=schemas.TaskType.CRITIQUE.value,
             deviation_code=schemas.RationaleCode.DEVIATE_PLAYBOOK.value,
         ),

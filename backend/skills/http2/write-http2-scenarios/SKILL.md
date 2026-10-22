@@ -10,7 +10,7 @@ metadata:
 
 ## Build
 
-1. `test__list_examples`: prefer a wrapped h2spec case whose limit matches the requirement; otherwise start from a DSL template.
+1. `tester__list_examples`: prefer a wrapped h2spec case whose limit matches the requirement; otherwise start from a DSL template.
    Read the `DSL` block for the operations and frame type names this backend accepts.
 2. `connect` (cleartext h2c unless the SUT only serves TLS), then `complete_handshake`: the connection preface and SETTINGS
    exchange; after it the state is `connected`.

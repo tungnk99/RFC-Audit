@@ -46,7 +46,7 @@ LOCATE = TaskSpec(
     target_role=TargetRole.CODE_READER,
     params=TaskParams(aspects=[AspectName.CONDITION, AspectName.THRESHOLD, AspectName.REACTION]),
 )
-SELECT = TaskSpec(task_type=TaskType.SELECT_TESTS, target_role=TargetRole.TEST)
+SELECT = TaskSpec(task_type=TaskType.SELECT_TESTS, target_role=TargetRole.TESTER)
 CRITIQUE = TaskSpec(task_type=TaskType.CRITIQUE, target_role=TargetRole.VERIFIER)
 
 
@@ -95,7 +95,7 @@ class Noop:
 
 
 OUTPUTS: dict[str, BaseModel] = {
-    "test": ScenarioProposal(
+    "tester": ScenarioProposal(
         requirement_id=REQ, reach_state="connected", steps=[{"op": "complete_handshake"}, {"op": "expect"}]
     ),  # type: ignore[list-item]
     "code_reader": LocationClaim.model_validate(
@@ -147,7 +147,7 @@ async def test_k3_violation_in_one_round(store: EvidenceStore, trace: TraceLog, 
     }
     verdict = await make_loop(store, trace, policy, runner, handlers).investigate(inv())
     assert (verdict.label, verdict.rule, verdict.stop_reason) == (Label.VIOLATION, "V2", StopReason.SUFFICIENT)
-    assert [c.to_role for c in runner.calls] == ["planner", "test", "code_reader"]
+    assert [c.to_role for c in runner.calls] == ["planner", "tester", "code_reader"]
     # Mọi thông điệp do hub gán người gửi
     assert all(c.from_role == "execution_loop" for c in runner.calls)
     assert store.latest_verdicts()[REQ]["label"] == "VIOLATION"
@@ -214,7 +214,7 @@ async def test_budget_exhaustion(store: EvidenceStore, trace: TraceLog, policy: 
 
 
 async def test_task_with_wrong_target_is_rejected(store: EvidenceStore, trace: TraceLog, policy: PolicyStore) -> None:
-    bad = TaskSpec(task_type=TaskType.LOCATE, target_role=TargetRole.TEST)
+    bad = TaskSpec(task_type=TaskType.LOCATE, target_role=TargetRole.TESTER)
     runner = FakeRunner(lambda n: plan(bad), OUTPUTS)
     loop = make_loop(store, trace, policy, runner, {TaskType.LOCATE: Noop()}, RequirementBudget(rounds=2))
     await loop.investigate(inv())
@@ -264,7 +264,7 @@ async def test_trace_follows_one_investigation_from_start_to_stop(
     assert start["rtype"] == "B" and start["budget"]["rounds"] == 8 and "rules_version" in start
 
     runs = {p["role"]: p for p in payloads(trace, "role_run")}
-    assert set(runs) == {"planner", "test", "code_reader"}
+    assert set(runs) == {"planner", "tester", "code_reader"}
     assert all(p["ok"] and p["duration_ms"] >= 0 for p in runs.values())
     assert runs["planner"]["output"] is None  # kế hoạch đã có sự kiện `plan`
     assert runs["code_reader"]["schema"] == "LocationClaim"
@@ -334,8 +334,8 @@ async def test_workers_and_critic_receive_the_evidence_state(
     by_role = {c.to_role: ctx for c, ctx in zip(runner.calls, runner.contexts, strict=True)}
     assert {"evidence.summary", "verdict.sufficiency"} <= set(by_role["verifier"])
     assert "feasible" in by_role["verifier"]["verdict.sufficiency"]["value"]
-    assert {"task.focus", "verdict.missing"} <= set(by_role["test"])
-    assert not {"evidence.summary", "verdict.sufficiency"} & set(by_role["test"])
+    assert {"task.focus", "verdict.missing"} <= set(by_role["tester"])
+    assert not {"evidence.summary", "verdict.sufficiency"} & set(by_role["tester"])
     # Vùng cách ly chỉ nhận trường nó khai báo: code_reader không khai báo nên không được cấp thêm.
     assert "evidence.summary" not in by_role["code_reader"]
 

@@ -17,12 +17,12 @@ REG = current_registry()
 def test_real_roles_load(policy: PolicyStore) -> None:
     assert policy.allows("code_reader", "code.explore")
     assert not policy.allows("planner", "code.read_function")
-    assert not policy.allows("test", "code.read_function")
+    assert not policy.allows("tester", "code.read_function")
     assert policy.digest.startswith("sha256:")
 
 
 def _profiles(policy: PolicyStore) -> list[RoleProfile]:
-    roles = ["rfc_analyst", "planner", "test", "verifier", "report", "code_indexer", "code_reader"]
+    roles = ["rfc_analyst", "planner", "tester", "verifier", "report", "code_indexer", "code_reader"]
     return [policy.profile(r) for r in roles]
 
 
@@ -35,7 +35,7 @@ def test_privileged_role_with_code_tool_is_rejected(policy: PolicyStore) -> None
 
 def test_quarantine_role_with_test_tool_is_rejected(policy: PolicyStore) -> None:
     profiles = _profiles(policy)
-    profiles[-1] = profiles[-1].model_copy(update={"tools": (*profiles[-1].tools, "test.run_scenario")})
+    profiles[-1] = profiles[-1].model_copy(update={"tools": (*profiles[-1].tools, "tester.run_scenario")})
     with pytest.raises(PolicyError, match="cách ly"):
         PolicyStore(profiles, REG.schemas, REG.tools, REG.domain().required_roles)
 

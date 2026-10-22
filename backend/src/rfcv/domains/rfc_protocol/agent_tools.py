@@ -1,6 +1,6 @@
 """Công cụ thật cho các agent đặc quyền (Planner, Verifier, Test, RFC Analyst, Report).
 
-Trước đây lời nhắc của các agent này hứa những công cụ (`evidence__read_summary`, `rfc__*`, `test__run_scenario`...) mà không
+Trước đây lời nhắc của các agent này hứa những công cụ (`evidence__read_summary`, `rfc__*`, `tester__run_scenario`...) mà không
 có mã cài đặt, nên agent chạy với 0 công cụ. Ở đây mỗi công cụ là một `ToolSpec` thật, chỉ đọc, đi qua Tool gateway như
 mọi công cụ khác. Kết quả chỉ chứa giá trị miền hữu hạn hoặc văn bản RFC (đầu vào TRUSTED), không bao giờ có chuỗi tự do từ
 mã nguồn không tin cậy, nên giữ nguyên ranh giới vùng cách ly.
@@ -10,8 +10,8 @@ mã nguồn không tin cậy, nên giữ nguyên ranh giới vùng cách ly.
 | evidence.read_summary | Planner, Verifier, Report | tóm tắt bằng chứng của yêu cầu, lọc theo tầng hay mã, có thể xem từng mục chưa gộp |
 | verdict.read | Planner, Verifier, Report | báo cáo độ đủ hiện tại, quy tắc nào đang áp dụng, danh mục quy tắc và việc nào mở khoá nhãn nào |
 | rfc.get_sentences, read_section, search, get_definition | RFC Analyst, Verifier, Test | văn bản RFC theo mục, tìm kiếm, khối định nghĩa |
-| test.list_examples | Test | các mẫu kịch bản của adapter |
-| test.run_scenario | Test | chạy thử một biến thể trên bản tham chiếu, không ghi bằng chứng |
+| tester.list_examples | Test | các mẫu kịch bản của adapter |
+| tester.run_scenario | Test | chạy thử một biến thể trên bản tham chiếu, không ghi bằng chứng |
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
 from agents.common import ORACLE_KEY
-from agents.test.schema import ScenarioProposal
+from agents.tester.schema import ScenarioProposal
 from rfcv.core.context_builder import summarize_evidence, to_jsonable
 from rfcv.core.execution_loop import Investigation, report_json
 from rfcv.core.ifc import TrustLabel
@@ -320,10 +320,10 @@ class AgentTools:
             if dsl is not None:
                 text += "\n\nDSL của backend (thao tác → tham số; giá trị được phép; ý nghĩa):\n"
                 text += json.dumps(dsl.describe(), ensure_ascii=False)
-            return _text("test.list_examples", text, TrustLabel.TRUSTED)
+            return _text("tester.list_examples", text, TrustLabel.TRUSTED)
 
         return ToolSpec(
-            "test.list_examples",
+            "tester.list_examples",
             "Liệt kê mẫu kiểm thử có sẵn của adapter (hành vi được kiểm, loại yêu cầu, các ca và ngưỡng, các bước nếu mẫu viết "
             "bằng DSL) và DSL mà backend kiểm thử của adapter chấp nhận (thao tác, tham số, giá trị). Dùng làm điểm xuất phát.",
             ListExamplesParams,
@@ -337,7 +337,7 @@ class AgentTools:
             inv, driver = self._current(s), self._driver()
             oracle = inv.domain_state.get(ORACLE_KEY) if inv else None
             if inv is None or driver is None or oracle is None:
-                return _text("test.run_scenario", "Chưa có bộ chạy thử cho yêu cầu này.")
+                return _text("tester.run_scenario", "Chưa có bộ chạy thử cho yêu cầu này.")
             result = await driver.probe(oracle=oracle, scenario=p.scenario, variant_name=p.variant, seed=self._seed)
             if result.get("ok"):
                 # Quan sát chỉ được mang giá trị trong từ vựng adapter; giá trị lạ thay bằng hằng của harness.
@@ -346,10 +346,10 @@ class AgentTools:
                     for k, v in result["observed"].items()
                 }
                 result = {**result, "observed": observed}
-            return _json("test.run_scenario", result)
+            return _json("tester.run_scenario", result)
 
         return ToolSpec(
-            "test.run_scenario",
+            "tester.run_scenario",
             "Chạy THỬ một kịch bản với một biến thể trên bản tham chiếu, không ghi bằng chứng. Trả về: có chạm trigger không "
             "(`trigger_reached`), kết quả oracle (PASS/FAIL/ERROR), lý do nếu lỗi (`trigger_not_reached`, `sanity_failed`...) "
             "và quan sát (cảnh báo, đóng kết nối). Dùng để sửa kịch bản trước khi nộp; kết quả cuối do Test driver chạy đủ mọi biến thể.",

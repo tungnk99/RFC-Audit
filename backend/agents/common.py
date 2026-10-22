@@ -31,7 +31,7 @@ class TaskType(StrEnum):
 class TargetRole(StrEnum):
     CODE_READER = "code_reader"
     CODE_INDEXER = "code_indexer"
-    TEST = "test"
+    TESTER = "tester"
     LOCATOR = "locator"
     VERIFIER = "verifier"
 

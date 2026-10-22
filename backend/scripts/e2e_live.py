@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 
 from agents.code_reader.handler import LocationHandler  # noqa: E402
-from agents.test.handler import ScenarioHandler  # noqa: E402
+from agents.tester.handler import ScenarioHandler  # noqa: E402
 from agents.verifier.handler import NoopHandler  # noqa: E402
 from rfcv.adapters.manifest import load_manifest  # noqa: E402
 from rfcv.core.budget import RequirementBudget  # noqa: E402
@@ -39,17 +39,16 @@ from rfcv.domains.rfc_protocol.runtime import ProtocolRuntime  # noqa: E402
 from rfcv.domains.rfc_protocol.sandbox.driver import TestDriver  # noqa: E402
 from rfcv.domains.rfc_protocol.schema_gate import SchemaGate  # noqa: E402
 from rfcv.eval.coord_world import CoordBackend  # noqa: E402
+from rfcv.eval.demo_providers import NoExec, code_index  # noqa: E402
 from rfcv.eval.faults import FAMILIES, SimImpl, correct_behaviour, references  # noqa: E402
 from rfcv.eval.sim import SimLauncher  # noqa: E402
 from rfcv.evidence.artifacts import ArtifactStore  # noqa: E402
 from rfcv.evidence.store import EvidenceStore  # noqa: E402
-from rfcv.gates.code_gate import InMemoryCodeIndex, SymbolInfo, build_code_tools  # noqa: E402
+from rfcv.gates.code_gate import build_code_tools  # noqa: E402
 from rfcv.gates.explore_policy import CodeScope  # noqa: E402
 from rfcv.gates.tool_gateway import ToolGateway  # noqa: E402
 from rfcv.plugins import current_registry, use_registry  # noqa: E402
 from rfcv.runtime.pydantic_ai import PydanticAIRoleRunner  # noqa: E402
-
-FILE = "src/internal.c"
 
 
 def load_dotenv() -> None:
@@ -64,45 +63,6 @@ def load_dotenv() -> None:
             value = value.strip().strip('"').strip("'")
             if value:
                 os.environ.setdefault(key.strip(), value)
-
-
-def code_index(alert: str) -> InMemoryCodeIndex:
-    """Một tệp C nhỏ: macro ngưỡng ở dòng 20-21, kiểm tra độ dài ở 812, phản ứng ở 815 (khớp dữ liệu độ phủ của mô phỏng)."""
-    src = [f"/* line {i} */" for i in range(1, 900)]
-
-    def put(n: int, text: str) -> None:
-        src[n - 1] = text
-
-    put(20, "#define MAX_RECORD_SIZE 16384")
-    put(21, "#define MAX_MSG_EXTRA   256   /* MAC + padding + AEAD expansion */")
-    put(350, "        ret = GetRecordHeader(ssl, &size);")
-    put(800, "static int GetRecordHeader(WOLFSSL* ssl, word32* size)")
-    put(801, "{")
-    put(810, "    /* read the 5-byte record header */")
-    put(811, "    GetRecordLength(ssl, size);")
-    put(812, "    if (*size > MAX_RECORD_SIZE + MAX_MSG_EXTRA) {")
-    put(813, '        WOLFSSL_MSG("record too long");')
-    put(814, "        /* reject over-long record */")
-    put(815, f"        SendAlert(ssl, alert_fatal, {alert});")
-    put(816, "        return LENGTH_ERROR;")
-    put(817, "    }")
-    put(830, "}")
-    sig = "static int GetRecordHeader(WOLFSSL* ssl, word32* size)"
-    return InMemoryCodeIndex(
-        sources={FILE: src},
-        symbols=[
-            SymbolInfo(FILE, "GetRecordHeader", "function", 800, 830, sig),
-            SymbolInfo(FILE, "ProcessReply", "function", 300, 420, "int ProcessReply(WOLFSSL* ssl)"),
-            SymbolInfo(FILE, "MAX_RECORD_SIZE", "macro", 20, 20, "#define MAX_RECORD_SIZE 16384"),
-            SymbolInfo(FILE, "MAX_MSG_EXTRA", "macro", 21, 21, "#define MAX_MSG_EXTRA 256"),
-        ],
-        calls={("ProcessReply", "GetRecordHeader")},
-    )
-
-
-class NoExec:
-    async def run(self, segments: list[list[str]], timeout_s: float) -> str:
-        return ""
 
 
 async def main(kind: str, outdir: Path) -> None:
@@ -153,6 +113,7 @@ async def main(kind: str, outdir: Path) -> None:
             sut_impl=impl.name,
             references=[r.name for r in refs],
         )
+        runtime.attach_driver(driver)  # để công cụ tester.run_scenario của Test agent chạy thử trên cùng bộ mô phỏng
         handlers = {
             "LOCATE": LocationHandler(rt, SchemaGate(index, vocabulary_terms(manifest))),
             "SELECT_TESTS": ScenarioHandler(rt, driver),
@@ -171,6 +132,9 @@ async def main(kind: str, outdir: Path) -> None:
         )
         with use_registry(reg):
             verdict = await loop.investigate(inv)
+            if os.environ.get("RFCV_EXPLAIN") == "1":  # bước giải thích sau kết luận (Report agent + Output gate)
+                explanation = await loop.explain(inv, verdict)
+                print("giải thích:", "được Output gate nhận" if explanation else "bị bỏ (xem sự kiện explanation_rejected)")
     print(f"\n##### KẾT QUẢ ({kind}, impl={impl.name}) #####")
     print("nhãn:", verdict.label.value, "| quy tắc:", verdict.rule, "| dừng:", verdict.stop_reason.value)
     print("assurance:", verdict.assurance, "| chuỗi hash bằng chứng:", "OK" if store.verify_chain().ok else "HỎNG")

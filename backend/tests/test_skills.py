@@ -51,7 +51,7 @@ def test_project_skills_are_valid_and_each_agent_sees_only_what_it_declares(poli
     assert undeclared_skills({r: declared(r) for r in policy.roles}, ROOT / "skills") == []
     assert reg.select(declared("planner")) == ["summarize-evidence-for-planner"]
     assert "resolve-c-macro-thresholds" not in reg.select(declared("verifier"))  # Verifier không khai báo
-    assert "write-tlsfuzzer-scenarios" in reg.select(declared("test"))
+    assert "write-tlsfuzzer-scenarios" in reg.select(declared("tester"))
     for role in ("report", "code_indexer"):  # không khai báo thì không có skill
         assert reg.select(declared(role)) == []
     assert "translate-rfc-sentence-to-rbs" in reg.select(declared("rfc_analyst"))

@@ -87,7 +87,7 @@ def test_never_suggests_a_task_without_a_handler() -> None:
 
 
 def test_provisional_compliant_is_critiqued_once_then_left_alone() -> None:
-    rows = [{"round": 1, "task_type": "SELECT_TESTS", "target": "test", "ok": True}]
+    rows = [{"round": 1, "task_type": "SELECT_TESTS", "target": "tester", "ok": True}]
     assert names(advice(provisional="COMPLIANT", history=rows)) == ["CRITIQUE"]
     assert advice(provisional="COMPLIANT", history=rows, critique={"issues": []}) is None  # không bịa thêm việc
 

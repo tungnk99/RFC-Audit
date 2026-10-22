@@ -10,9 +10,11 @@ SPEC = AgentSpec(
     output_schema="LocationClaim@1",
     stage="investigation",
     wired=True,
-    tasks=tuple(
-        TaskDefinition(t.value, TargetRole.CODE_READER.value, TaskParams)
-        for t in (TaskType.LOCATE, TaskType.TRACE_PATHS, TaskType.RECHECK)
+    tasks=(
+        # Lần LOCATE và TRACE_PATHS sau nhận tóm tắt vị trí đã tìm được ("location"), để làm tiếp thay vì tìm lại từ đầu.
+        TaskDefinition(TaskType.LOCATE.value, TargetRole.CODE_READER.value, TaskParams, prior_kinds=("location",)),
+        TaskDefinition(TaskType.TRACE_PATHS.value, TargetRole.CODE_READER.value, TaskParams, prior_kinds=("location",)),
+        TaskDefinition(TaskType.RECHECK.value, TargetRole.CODE_READER.value, TaskParams),
     ),
     schemas={"LocationClaim@1": LocationClaim},
     summary="LocationClaim → Schema gate (tệp, dòng, ký hiệu, đường gọi có thật) → T1 → liên kết độ phủ.",

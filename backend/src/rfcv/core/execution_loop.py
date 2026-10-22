@@ -24,7 +24,7 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel
 
-from rfcv.agents.schemas import Critique, PlanAction, TaskSpec
+from rfcv.agents.schemas import Critique, Explanation, PlanAction, TaskSpec
 from rfcv.core.advisor import adherence, advise, situation_from_context
 from rfcv.core.budget import BudgetTracker, LoopDetector, RequirementBudget
 from rfcv.core.context_builder import ContextBuilder, summarize_evidence, to_jsonable
@@ -43,12 +43,14 @@ from rfcv.evidence.verdict_engine import (
     assess,
     decide,
 )
+from rfcv.gates.output_gate import check_explanation
 from rfcv.gates.tool_gateway import ToolSession
 from rfcv.plugins import current_registry
 from rfcv.spi import LoopPolicy, TaskDefinition
 
 HUB = "execution_loop"
 MAX_LOGGED_OUTPUT_CHARS = 6000
+PRIOR_FINDINGS = 2  # số bằng chứng gần nhất cấp cho `task.prior_findings`
 
 
 def _clip(value: Any) -> Any:
@@ -104,6 +106,22 @@ def missing_json(report: SufficiencyReport, feasible: Mapping[str, bool]) -> lis
         {"need": m.need, "variant": m.variant, "reason": m.reason, "feasible": feasible.get(m.need, True)}
         for m in report.missing
     ]
+
+
+class _ExplanationGate:
+    """Cho `_run_role` dùng Output gate như cổng của handler: kiểm đầu ra khi agent vừa trả để agent làm lại trong ngân sách."""
+
+    def __init__(self, verdict: VerdictRecord, evidence: Sequence[Evidence]) -> None:
+        self._verdict = verdict
+        self._evidence = evidence
+
+    def precheck(self, inv: Investigation, output: Any, session: Any) -> Sequence[str]:
+        if not isinstance(output, Explanation):
+            return ()
+        return check_explanation(output, self._verdict, self._evidence)
+
+    async def handle(self, inv: Investigation, task: Any, output: Any, session: Any, msg_id: str) -> int:
+        return 0  # giải thích không ghi bằng chứng; `_run_role` chỉ gọi khi có nhiệm vụ, mà bước này không có
 
 
 class ExecutionLoop:
@@ -279,6 +297,43 @@ class ExecutionLoop:
         self._log("verdict", final.to_json(), req.requirement_id, round=tracker.rounds)
         return final
 
+    async def explain(self, inv: Investigation, verdict: VerdictRecord) -> Explanation | None:
+        """Report agent viết lời giải thích cho kết luận đã có; Output gate kiểm trước khi xuất.
+
+        Không đổi và không đọc ngược vào nhãn: `verdict` là bản ghi bất biến đã chốt. Giải thích không qua cổng (kể cả sau
+        các lần làm lại) bị bỏ, kết luận vẫn có hiệu lực. Chạy sau `investigate`, nên không tính vào ngân sách điều tra.
+        """
+        role = self._loop.report_role
+        if role is None or role not in self._policy.roles:
+            return None
+        req_id = inv.requirement.requirement_id
+        evidence = self._store.for_requirement(req_id)
+        # Căn cứ của nhãn, cộng bằng chứng mới nhất của mỗi tầng còn lại: Output gate đòi giải thích trích mọi tầng yêu cầu có.
+        basis = [e for e in evidence if e.evidence_id in set(verdict.evidence_ids)]
+        for tier in sorted({str(e.tier) for e in evidence} - {str(e.tier) for e in basis}):
+            basis.append(next(e for e in reversed(evidence) if str(e.tier) == tier))
+        available: dict[str, Labeled[Any]] = {
+            **{name: value for name, value in inv.context.items() if name.startswith("rfc.")},
+            "verdict.record": Labeled(verdict.to_json(), TrustLabel.DERIVED),
+            "evidence.cited": summarize_evidence(basis, inv.vocabulary_terms, {e.evidence_id for e in basis}),
+        }
+        gate = _ExplanationGate(verdict, evidence)
+        outcome, _ = await self._run_role(
+            role, inv, {"explain": verdict.label.value}, available, BudgetTracker(self._budget), handler=gate
+        )
+        explanation = outcome.output
+        errors = gate.precheck(inv, explanation, None) if isinstance(explanation, Explanation) else ["NO_OUTPUT"]
+        if errors or not isinstance(explanation, Explanation):
+            self._log("explanation_rejected", {"errors": errors, "failure": outcome.failure}, req_id, round=0)
+            return None
+        self._log(
+            "explanation",
+            {"label": verdict.label.value, **explanation.model_dump(mode="json")},
+            req_id,
+            round=0,
+        )
+        return explanation
+
     # ------------------------------------------------------------------
 
     async def _plan(
@@ -401,14 +456,20 @@ class ExecutionLoop:
         }
         # Nhiệm vụ trỏ vào một bằng chứng cụ thể (RECHECK theo phản biện): cấp bản tóm tắt của đúng bằng chứng đó, để agent
         # biết phải xem lại vị trí nào thay vì tìm lại từ đầu.
+        stored = self._store.for_requirement(inv.requirement.requirement_id)
         cited_id = getattr(task.params, "evidence_id", None)
         if cited_id:
-            cited = [
-                e for e in self._store.for_requirement(inv.requirement.requirement_id) if e.evidence_id == cited_id
-            ]
+            cited = [e for e in stored if e.evidence_id == cited_id]
             if cited:
                 row = summarize_evidence(cited, inv.vocabulary_terms, {cited_id}).value[0]
                 available["task.recheck_location"] = Labeled(row, TrustLabel.DERIVED)
+        # Kết quả trước của cùng loại (`prior_kinds`): tóm tắt các bằng chứng gần nhất để làm tiếp, không làm lại.
+        prior_kinds = self._tasks[task.task_type].prior_kinds
+        if prior_kinds:
+            prior = [e for e in stored if str(getattr(e.payload, "kind", "")) in prior_kinds][-PRIOR_FINDINGS:]
+            if prior:
+                rows = summarize_evidence(prior, inv.vocabulary_terms, {e.evidence_id for e in prior}).value
+                available["task.prior_findings"] = Labeled(rows, TrustLabel.DERIVED)
         outcome, new = await self._run_role(role, inv, body, available, tracker, handler=handler, task=task)
         return outcome, new
 

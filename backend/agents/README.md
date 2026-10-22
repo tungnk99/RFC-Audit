@@ -6,7 +6,7 @@ Mỗi thư mục là một agent: `agents/<tên>/role.yaml` (hồ sơ vai trò) 
 ```
 agents/
   planner/        role.yaml  prompt.md      Planner (đặc quyền)
-  test/           role.yaml  prompt.md      Test (đặc quyền)
+  tester/         role.yaml  prompt.md      Test (đặc quyền)
   verifier/       role.yaml  prompt.md      Verifier (đặc quyền)
   rfc_analyst/    role.yaml  prompt.md      RFC Analyst (đặc quyền, chưa nối vào luồng chạy)
   report/         role.yaml  prompt.md      Report (đặc quyền, chưa nối)

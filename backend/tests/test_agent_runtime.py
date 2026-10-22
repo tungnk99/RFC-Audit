@@ -158,7 +158,7 @@ def test_agents_sharing_a_model_share_its_handle_and_each_can_be_switched_alone(
             "fast": ModelSpec(provider="p", model="a", api_key_env="K"),
             "deep": ModelSpec(provider="p", model="b", api_key_env="K"),
         },
-        agents={"planner": "fast", "test": "fast", "verifier": "deep", "rfc_analyst.b": "deep"},
+        agents={"planner": "fast", "tester": "fast", "verifier": "deep", "rfc_analyst.b": "deep"},
     )
     built: list[str] = []
 
@@ -167,7 +167,7 @@ def test_agents_sharing_a_model_share_its_handle_and_each_can_be_switched_alone(
         return object()
 
     gw = LLMGateway(config, env={"K": "v"}, providers={"p": factory})
-    assert gw.model_for("planner") is gw.model_for("test")  # cùng một mô hình thì dùng chung một handle
+    assert gw.model_for("planner") is gw.model_for("tester")  # cùng một mô hình thì dùng chung một handle
     assert gw.model_for("verifier") is not gw.model_for("planner")
     assert gw.model_for("rfc_analyst.b") is gw.model_for("verifier")
     assert sorted(built) == ["a", "b"]  # mỗi mô hình dựng đúng một lần

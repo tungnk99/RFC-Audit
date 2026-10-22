@@ -163,7 +163,7 @@ class CoordRunner:
             )
         if self._drop(role, prof.no_output_p, n):
             return RoleOutcome(None, 1, "NO_OUTPUT")
-        if role == "test":
+        if role == "tester":
             if prof.dsl_error_first and n == 1:
                 bad = ScenarioProposal.model_validate(
                     {"requirement_id": REQ_ID, "reach_state": "connected", "steps": [{"op": "complete_handshake"}]}

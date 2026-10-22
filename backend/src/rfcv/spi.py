@@ -77,6 +77,9 @@ class TaskDefinition:
     target_role: str
     params_model: type[BaseModel]
     deterministic: bool = False  # True: do thành phần tất định xử lý, không gọi LLM
+    # Loại bằng chứng mà nhiệm vụ này nhận bản tóm tắt dưới tên ngữ cảnh `task.prior_findings` (tối đa hai bản gần nhất), để
+    # agent làm tiếp phần đã có thay vì làm lại từ đầu. Trống: nhiệm vụ không cần kết quả trước.
+    prior_kinds: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -84,6 +87,8 @@ class LoopPolicy:
     """Các quy ước của vòng điều tra mà miền có thể đổi."""
 
     planner_role: str = "planner"
+    # Vai trò viết giải thích sau khi có kết luận (Output gate kiểm đầu ra); None: miền không có bước giải thích.
+    report_role: str | None = None
     critique_task: str | None = "CRITIQUE"
     # Nhãn tạm cần một lần phản biện sạch trước khi dừng (mặc định chỉ COMPLIANT, vì dễ sai nhất).
     critique_before: frozenset[str] = frozenset({"COMPLIANT"})

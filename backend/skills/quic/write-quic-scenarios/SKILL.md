@@ -10,7 +10,7 @@ metadata:
 
 ## Build
 
-1. `test__list_examples`: start from the closest DSL template and set `example_id`; read the `DSL` block for the packet types,
+1. `tester__list_examples`: start from the closest DSL template and set `example_id`; read the `DSL` block for the packet types,
    frame types and arguments this backend accepts. Packet types (`packet_type`) and frame types (`type`) are different lists.
 2. State `initial` (nothing established yet): only `connect`, then the trigger. State `connected`: `connect`, then
    `complete_handshake` (with the ALPN the server expects).

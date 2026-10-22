@@ -57,7 +57,7 @@ def world(
     for spec in runtime.tools(rt):
         gateway.register(spec)
     runtime.investigations(rt, ADAPTER_DIR / "examples")
-    runtime.handlers(rt)  # dựng Test driver mà test.run_scenario dùng
+    runtime.handlers(rt)  # dựng Test driver mà tester.run_scenario dùng
     return World(gateway, store, runtime)
 
 
@@ -68,7 +68,7 @@ def test_every_tool_a_role_declares_is_registered_and_so_visible_to_that_role(
     world: World, policy: PolicyStore
 ) -> None:
     """Trước đây Planner, Test, Verifier chạy với 0 công cụ. Mỗi công cụ khai báo trong role.yaml phải có mã cài đặt."""
-    for role in ("planner", "verifier", "test", "rfc_analyst", "report"):
+    for role in ("planner", "verifier", "tester", "rfc_analyst", "report"):
         declared = set(policy.profile(role).tools)
         offered = {s.name for s in world.gateway.specs_for(role)}
         assert declared == offered, (role, sorted(declared - offered))
@@ -78,10 +78,10 @@ def test_every_tool_a_role_declares_is_registered_and_so_visible_to_that_role(
     ("role", "tool", "args"),
     [
         ("planner", "rfc.search", {"term": "length"}),
-        ("planner", "test.run_scenario", {"scenario": SCENARIO.model_dump()}),
-        ("verifier", "test.list_examples", {}),
-        ("test", "evidence.read_summary", {}),  # Test cố ý không thấy bằng chứng (độc lập với việc đọc mã)
-        ("test", "verdict.read", {}),
+        ("planner", "tester.run_scenario", {"scenario": SCENARIO.model_dump()}),
+        ("verifier", "tester.list_examples", {}),
+        ("tester", "evidence.read_summary", {}),  # Test cố ý không thấy bằng chứng (độc lập với việc đọc mã)
+        ("tester", "verdict.read", {}),
         ("report", "rfc.search", {"term": "length"}),
     ],
 )
@@ -140,7 +140,7 @@ async def test_rfc_tools_read_the_input_store(world: World) -> None:
     assert "RFC8446§5.2#p4:" in page and "5. Record Protocol › 5.2. Record Payload Protection" in page
     found = await world.call("rfc_analyst", "rfc.search", term="record_overflow")
     assert "RFC8446§5.2#p4" in found
-    definition = await world.call("test", "rfc.get_definition", name="TLSCiphertext")
+    definition = await world.call("tester", "rfc.get_definition", name="TLSCiphertext")
     assert "} TLSCiphertext;" in definition
     assert "[TRUSTED]" in sentences  # văn bản RFC là đầu vào TRUSTED
 
@@ -158,18 +158,18 @@ async def test_rfc_tools_say_so_instead_of_inventing_when_the_text_is_absent(wor
 
 
 async def test_the_adapter_example_library_is_listed(world: World) -> None:
-    text = await world.call("test", "test.list_examples")
+    text = await world.call("tester", "tester.list_examples")
     assert "tls13.record.length_overflow" in text and "just_above_limit_ciphertext" in text
-    assert "Không có mẫu phù hợp" in await world.call("test", "test.list_examples", requirement_type="A")
+    assert "Không có mẫu phù hợp" in await world.call("tester", "tester.list_examples", requirement_type="A")
 
 
 async def test_the_example_library_tells_the_test_agent_the_backend_dsl(
     world: World, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Tham số DSL khác nhau giữa các giao thức, nên Test Agent đọc chúng từ backend thay vì từ một bảng cố định."""
-    assert "DSL của backend" not in await world.call("test", "test.list_examples")  # backend giả không khai báo DSL
+    assert "DSL của backend" not in await world.call("tester", "tester.list_examples")  # backend giả không khai báo DSL
     monkeypatch.setattr(FakeBackend, "dsl", TLS_DSL, raising=False)
-    text = await world.call("test", "test.list_examples")
+    text = await world.call("tester", "tester.list_examples")
     dsl = json.loads(text.split("DSL của backend (thao tác → tham số; giá trị được phép; ý nghĩa):\n", 1)[1])
     assert "encrypted" in dsl["ops"]["send_raw_record"] and "zeros" in dsl["values"]["body"]
     assert "complete_handshake" in dsl["notes"]
@@ -177,11 +177,11 @@ async def test_the_example_library_tells_the_test_agent_the_backend_dsl(
 
 async def test_running_a_scenario_reports_trigger_and_outcome_without_writing_evidence(world: World) -> None:
     before = len(world.store.for_requirement(REQ))
-    control = await world.data("test", "test.run_scenario", scenario=SCENARIO.model_dump())
+    control = await world.data("tester", "tester.run_scenario", scenario=SCENARIO.model_dump())
     assert control["ok"] and control["trigger_reached"] is True and control["outcome"] == "PASS"
     assert control["variant"].startswith("at_limit") and control["impl"] in {"rustls", "openssl"}
     boundary = await world.data(
-        "test", "test.run_scenario", scenario=SCENARIO.model_dump(), variant=control["available_variants"][1]
+        "tester", "tester.run_scenario", scenario=SCENARIO.model_dump(), variant=control["available_variants"][1]
     )
     assert boundary["ok"] and boundary["observed"]["alert"] == "record_overflow"  # bản tham chiếu phản ứng đúng
     assert len(world.store.for_requirement(REQ)) == before  # chạy thử không ghi bằng chứng
@@ -209,17 +209,17 @@ async def test_running_a_scenario_that_never_reaches_the_trigger_tells_the_agent
     runtime.investigations(rt, ADAPTER_DIR / "examples")
     runtime.handlers(rt)
     w = World(gateway, store, runtime)
-    result = await w.data("test", "test.run_scenario", scenario=SCENARIO.model_dump())
+    result = await w.data("tester", "tester.run_scenario", scenario=SCENARIO.model_dump())
     assert result["ok"] and result["trigger_reached"] is False and result["reason"] == "trigger_not_reached"
-    assert "Không có bản RFC" in await w.call("test", "rfc.get_definition", name="TLSCiphertext")
+    assert "Không có bản RFC" in await w.call("tester", "rfc.get_definition", name="TLSCiphertext")
 
 
 async def test_running_an_invalid_scenario_or_unknown_variant_returns_an_actionable_error(world: World) -> None:
     bad = SCENARIO.model_copy(update={"steps": SCENARIO.steps[:1]})  # thiếu bước `expect` cuối
-    invalid = await world.data("test", "test.run_scenario", scenario=bad.model_dump())
+    invalid = await world.data("tester", "tester.run_scenario", scenario=bad.model_dump())
     assert invalid["ok"] is False and invalid["stage"] == "validate" and invalid["errors"]
     unknown = await world.data(
-        "test", "test.run_scenario", scenario=SCENARIO.model_dump(), variant="không-có-biến-thể-này"
+        "tester", "tester.run_scenario", scenario=SCENARIO.model_dump(), variant="không-có-biến-thể-này"
     )
     assert unknown["ok"] is False and unknown["stage"] == "variant" and unknown["available"]
 
@@ -244,6 +244,35 @@ async def test_task_history_tells_what_each_dispatch_produced_or_why_it_failed(
     rows = {r["task_type"]: r for r in second_planner_context["tasks.history"]["value"]}
     assert rows["SELECT_TESTS"]["new_evidence"] > 0 and rows["SELECT_TESTS"]["failure"] is None
     assert rows["LOCATE"]["new_evidence"] == 0  # LOCATE không cho ra bằng chứng nào: Planner phải thấy điều đó
+
+
+async def test_a_trace_paths_task_builds_on_the_location_found_before(
+    store: EvidenceStore, trace: TraceLog, policy: PolicyStore
+) -> None:
+    """Trước đây TRACE_PATHS bắt đầu từ đầu và đọc lại gần y hệt LOCATE (đo: vòng 3 và 4 lặp lại vòng 1, ~230k token mỗi vòng).
+    Nay Code Reader nhận tóm tắt các vị trí đã tìm được; lần LOCATE đầu tiên (chưa có gì) thì không có trường này."""
+    from rfcv.agents.schemas import TaskSpec
+    from rfcv.domains.rfc_protocol.schemas import TargetRole, TaskParams, TaskType
+    from test_execution_loop import CRITIQUE, OUTPUTS, FakeRunner, Noop, inv, make_loop, plan
+
+    def task(kind: TaskType) -> TaskSpec:
+        return TaskSpec(task_type=kind, target_role=TargetRole.CODE_READER, params=TaskParams())  # type: ignore[arg-type]
+
+    def script(n: int) -> Any:
+        return plan(task(TaskType.LOCATE)) if n == 1 else plan(task(TaskType.TRACE_PATHS)) if n == 2 else plan(CRITIQUE)
+
+    class LocateThenWrite(Noop):
+        async def handle(self, *args: Any, **kwargs: Any) -> int:
+            store.append(t1())
+            return 1
+
+    runner = FakeRunner(script, OUTPUTS)
+    handlers = {TaskType.LOCATE: LocateThenWrite(), TaskType.TRACE_PATHS: Noop(), TaskType.CRITIQUE: Noop()}
+    await make_loop(store, trace, policy, runner, handlers).investigate(inv())
+    reader = [c for env, c in zip(runner.calls, runner.contexts, strict=True) if env.to_role == "code_reader"]
+    assert "task.prior_findings" not in reader[0]  # lần đầu: chưa có kết quả trước
+    prior = reader[1]["task.prior_findings"]["value"]
+    assert len(prior) == 1 and prior[0]["symbol"] == "GetRecordHeader" and prior[0]["lines"]
 
 
 async def test_a_recheck_names_the_location_to_look_at_again_and_the_verifier_sees_the_history(

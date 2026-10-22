@@ -30,6 +30,9 @@ HUB_FIELDS = {
     "tasks.history",
     "budget.left",
     "task.recheck_location",  # khi nhiệm vụ trỏ vào một bằng chứng (evidence_id)
+    "task.prior_findings",  # khi loại nhiệm vụ khai prior_kinds và đã có bằng chứng loại đó
+    "verdict.record",  # bước giải thích sau kết luận (ExecutionLoop.explain), chỉ Report nhận
+    "evidence.cited",
 }
 
 # Khoảng trống năng lực đã biết: vai trò khai báo nhưng chưa có nguồn cung cấp.
@@ -39,8 +42,6 @@ KNOWN_UNSUPPLIED = {
     "rfc.errata",
     "rfc.version_diff",
     "task.scope",
-    "verdict.record",
-    "evidence.cited",
 }
 
 UNAVAILABLE_TASKS = {"STATIC_QUERY"}  # có trong danh mục nhưng chưa có handler
@@ -82,7 +83,7 @@ def test_critic_sees_the_evidence_state_and_test_sees_only_what_is_missing() -> 
     (tài liệu phối hợp agent, Bảng 11), để T3 độc lập với việc đọc mã."""
     profiles = _profiles()
     assert {"evidence.summary", "verdict.sufficiency"} <= set(profiles["verifier"]["context_fields"])
-    test_fields = set(profiles["test"]["context_fields"])
+    test_fields = set(profiles["tester"]["context_fields"])
     assert {"task.focus", "verdict.missing"} <= test_fields
     assert not test_fields & {"evidence.summary", "verdict.sufficiency"}
 

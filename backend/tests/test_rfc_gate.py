@@ -49,6 +49,13 @@ def test_sentence_split_keeps_abbreviations() -> None:
 def test_lowercase_must_is_not_normative() -> None:
     assert primary_modal("the client must do it") is None
     assert primary_modal("The server MUST NOT send") == "MUST NOT"
+    # Câu nói về chính các từ khoá không đặt yêu cầu (mẫu BCP 14, RFC 2181), nhưng câu có yêu cầu thật thì giữ.
+    boilerplate = (
+        'The key words "MUST", "MAY" in this document are to be interpreted as described in RFC 2119 [RFC2119].'
+    )
+    assert primary_modal(boilerplate) is None
+    assert primary_modal("This memo does not use the oft used expressions MUST, SHOULD, MAY.") is None
+    assert primary_modal("An endpoint MUST follow RFC 2119 conventions.") == "MUST"
 
 
 # ---- tra câu theo định danh và gói ngữ cảnh (BL-20) --------------------------------------------------------------------

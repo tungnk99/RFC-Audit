@@ -26,6 +26,8 @@ uv run rfcv verify runs/<run_id>
 uv run python scripts/e2e_live.py faulty        # thử cả vòng điều tra với LLM thật (SUT và mã giả); đo cải thiện, xem bên dưới
 uv run python scripts/analyze_run.py runs/e2e-faulty
 uv run rfcv trace runs/<run_id> -r TLS13-0042   # xem lại luồng xử lý: giao việc, bằng chứng, vì sao dừng (--json để phân tích)
+uv run rfcv serve --env-file .env               # GIAO DIỆN WEB (http://127.0.0.1:8765): chạy, xem agent trực tiếp, duyệt và phản hồi, soạn thảo có kiểm soát; --read-only để chỉ xem, --no-auth để tắt đăng nhập (mặc định có đăng nhập, vai trò admin/member); xem ../frontend/README.md
+uv run rfcv users add <tên> --role admin         # tạo tài khoản bằng CLI (hoặc dùng mã thiết lập lần đầu in ra khi serve); list|passwd|role|disable|enable|remove
 ```
 
 **Tiêu chuẩn chất lượng:** hệ thống phải đạt gì và từng thành phần phải làm được gì nằm ở [docs/quality/](../docs/quality/tieu_chuan_he_thong.md).
@@ -51,6 +53,7 @@ src/rfcv/
   adapters/           bản kê adapter + Adapter checker (phần chung)
   runtime/pydantic_ai/  duy nhất nơi được nhập PydanticAI: runner, mô hình, skills
   ui/                 CLI, SARIF
+  api/                API HTTP + SSE cho giao diện web (`rfcv serve`): danh mục, chạy nền, đọc trace; FastAPI + uvicorn
   testing/            bộ kiểm thử hợp đồng cho người viết plugin
 
   domains/rfc_protocol/   domain pack: loại bằng chứng T1–T3, quy tắc V0–V9, RBS + Oracle compiler, cổng RFC,
@@ -131,7 +134,8 @@ Phép thử tổng quát: [tests/toy_domain.py](tests/toy_domain.py) là một m
 | `DockerSutLauncher`, `TlsfuzzerBackend.run/sanity` | ⏳ |
 | Handler STATIC_QUERY; RFC Analyst hai luồng; Report/Output gate | ⏳ |
 | CLI `specs`, `status`, `rerun`, `review`, `report` | ⏳ (trả mã 2) |
-| Lớp dịch vụ: API, hàng đợi, Postgres, đa tenant, OpenTelemetry, secrets provider | ⏳ đã chừa chỗ (Protocol repository, `tenant`, `TraceSink`) |
+| Giao diện web (`rfcv serve`, `frontend/`): chọn giao thức RFC và yêu cầu, chọn mã nguồn, theo dõi agent trực tiếp (SSE), hội thoại LLM, bằng chứng gắn vào dòng mã, trình duyệt mã, **vòng phản hồi của Reviewer (BR3, ghi vào kho `reviews`)**, **soạn thảo có kiểm soát** RBS/prompt/skill/mô hình qua cổng kiểm tra của lõi, lịch sử, phát lại | ✅ cài đặt và kiểm thử (`tests/test_api.py`); chế độ *mã thật* chờ bộ chạy SUT (⏳ bên trên); chưa có xác thực người dùng |
+| Lớp dịch vụ: hàng đợi bền, Postgres, đa tenant, OpenTelemetry, secrets provider | ⏳ đã chừa chỗ (Protocol repository, `tenant`, `TraceSink`) |
 
 ### Nối agent với mã nguồn (tài liệu khám phá mã)
 

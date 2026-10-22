@@ -38,7 +38,7 @@ def edit_role(root: Path, name: str, **changes: object) -> Path:
 
 def test_the_repository_agents_directory_holds_all_seven_llm_roles() -> None:
     store = load(REAL)
-    assert set(store.roles) == {"rfc_analyst", "planner", "test", "verifier", "report", "code_indexer", "code_reader"}
+    assert set(store.roles) == {"rfc_analyst", "planner", "tester", "verifier", "report", "code_indexer", "code_reader"}
     for role in store.roles:
         assert role_prompt(store, role).strip()
 
@@ -92,7 +92,7 @@ def test_zone_rules_still_apply_to_tools(root: Path) -> None:
 
 
 def test_unknown_tools_are_rejected(root: Path) -> None:
-    edit_role(root, "test", tools=["shell.exec"])
+    edit_role(root, "tester", tools=["shell.exec"])
     with pytest.raises(PolicyError, match="không có trong danh mục"):
         load(root)
 

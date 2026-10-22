@@ -28,7 +28,7 @@ agents:
   rfc_analyst.a: deepseek-flash
   rfc_analyst.b: deepseek-flash
   planner: deepseek-flash
-  test: deepseek-flash
+  tester: deepseek-flash
   verifier: deepseek-flash
   report: deepseek-flash
   code_indexer: deepseek-flash

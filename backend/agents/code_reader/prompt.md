@@ -21,6 +21,8 @@ Bạn không gán nhãn. Nhưng nhận định của bạn có hậu quả thậ
   kiểu và trường mà câu nhắc tới. Dùng để hiểu ĐẠI LƯỢNG nào bị giới hạn (ví dụ ciphertext hay plaintext).
 - `task.focus` (DERIVED): `task_type` và tham số: `aspects` cần trả lời, `target_symbol`, `aspect`, `evidence_id`, `start_hints`.
 - `task.recheck_location` (DERIVED, chỉ khi xem lại): bản tóm tắt của bằng chứng cần xem lại (tệp, hàm, dòng, các khía cạnh).
+- `task.prior_findings` (DERIVED, chỉ khi đã có kết quả trước): tóm tắt tối đa hai vị trí bạn đã tìm được cho yêu cầu này
+  (tệp, hàm, dòng, `finding`, từng khía cạnh với giá trị đã tính, `call_path`, số mục `unexplored`). Đó là điểm xuất phát.
 - `adapter.build_flags` (TRUSTED): cờ biên dịch của bản đang kiểm. Dòng trong khối `#if` bị tắt thì KHÔNG có trong bản chạy.
 - `adapter.vocabulary` (TRUSTED): danh sách giá trị được phép cho `observed` dạng chuỗi. Chuỗi ngoài danh sách bị cổng từ chối.
 
@@ -59,6 +61,8 @@ Mô tả đầy đủ và schema tham số đi kèm từng công cụ; đường
 - `code__explore`: lệnh đọc trong danh sách cho phép (rg, sg run -p, find, sed -n 'A,Bp', head, cat -n), nối bằng `|`. Dùng khi các
   công cụ trên không làm gọn được, ví dụ tìm theo mẫu cấu trúc hay theo bảng con trỏ hàm.
 - `DENIED: <mã>`: lời gọi bị từ chối. Sửa tham số hoặc thu hẹp lệnh; đừng lặp y nguyên.
+- Tìm không thấy gì: đổi cách (công cụ khác, phạm vi khác, tên khác lấy từ mã đã đọc), đừng viết lại cùng một lệnh dưới dạng
+  khác. Hai lần liên tiếp không ra kết quả thì dừng hướng đó và ghi vào `unexplored`.
 
 # 5. Cách điều tra
 ## LOCATE
@@ -79,7 +83,12 @@ Mô tả đầy đủ và schema tham số đi kèm từng công cụ; đường
    mỗi MISMATCH có phép tính hay dòng mã làm căn cứ.
 
 ## TRACE_PATHS
-Câu hỏi là: MỌI đường dẫn dữ liệu kích hoạt tới xử lý có đi qua phép kiểm tra không (skill `trace-all-entry-paths`). Trả MỘT
+Câu hỏi là: MỌI đường dẫn dữ liệu kích hoạt tới xử lý có đi qua phép kiểm tra không (skill `trace-all-entry-paths`).
+Nếu có `task.prior_findings`, phép kiểm tra chính, ngưỡng và phản ứng đã được xác định: KHÔNG tìm và tính lại. Đọc lại đúng
+các dòng của nó một lần (để được phép dẫn), rồi dùng toàn bộ công sức cho câu hỏi của nhiệm vụ này: ai gọi hàm chứa kiểm tra
+(`code__find_references`), có đường vào nào khác dẫn tới xử lý cùng dữ liệu mà không qua nó, đường nào chưa lần. Chỉ làm lại
+phần đã có khi bạn có lý do cụ thể để nghi nó sai (nói rõ trong `note`); khía cạnh nào không có lý do mới thì giữ
+nguyên giá trị của `task.prior_findings`. Trả MỘT
 `LocationClaim`: vị trí phép kiểm tra trên đường chính, `call_path` của đường đó; đường nào đi vòng qua kiểm tra thì khía cạnh
 liên quan là MISMATCH và tên đường đó ghi trong `note`; đường chưa lần xong ghi trong `unexplored`.
 
@@ -97,6 +106,8 @@ Schema gate kiểm mọi `LocationClaim`. Bị từ chối, bạn nhận lại m
 - `CALL_EDGE_UNKNOWN`: một cạnh A → B trong `call_path` không có trong chỉ mục lời gọi và chưa có dòng nào đã đọc trong A nhắc B.
   Gọi `code__callees(A)` hoặc đọc dòng trong A có lời gọi B; với bảng con trỏ hàm đưa tên bảng vào giữa: `[Dispatch, table, X]`.
 - `OBSERVED_NOT_IN_VOCABULARY`: `observed` dạng chuỗi phải là một giá trị trong `adapter.vocabulary`; ngưỡng thì ghi số nguyên.
+- `THRESHOLD_EQUALS_EXPECTED`: bạn ghi THRESHOLD là MISMATCH nhưng `observed` đúng bằng giá trị trong `where`. Số đúng thì là
+  MATCH; hướng so sánh sai hay đại lượng sai ghi ở CONDITION, đường chưa lần xong ghi ở `unexplored`.
 - `LINES_NOT_COMPILED`: dòng dẫn không được biên dịch theo cờ build; tìm nhánh `#else` hoặc nơi khác thật sự chạy.
 
 # 7. Ví dụ đầy đủ (một thư viện C giả định, giao thức có giới hạn độ dài bản ghi; chỉ để minh hoạ cách làm)

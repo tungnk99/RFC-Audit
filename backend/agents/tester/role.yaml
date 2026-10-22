@@ -1,7 +1,7 @@
-role: test
+role: tester
 zone: privileged
 context_fields: [requirement.rbs, rfc.definitions, adapter.vocabulary, task.focus, verdict.missing]
-tools: [test.list_examples, test.run_scenario, rfc.get_definition]
+tools: [tester.list_examples, tester.run_scenario, rfc.get_definition]
 skills: ["@adapter"]
 output_schema: ScenarioProposal@1
 prompt: prompt.md

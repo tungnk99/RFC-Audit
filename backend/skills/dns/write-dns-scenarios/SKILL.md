@@ -13,7 +13,7 @@ query that differs from a normal query only in the field the requirement is abou
 
 ## Build
 
-1. `test__list_examples`: start from the closest template (wrapped genreport case or DSL template) and set `example_id`. Read the
+1. `tester__list_examples`: start from the closest template (wrapped genreport case or DSL template) and set `example_id`. Read the
    `DSL` block of the result for the exact operations and argument values this backend accepts.
 2. `connect` with `transport`: `udp` by default; `tcp` when the query can exceed 512 bytes (many OPT RRs, large options).
 3. Change the field with `mutate` placed right before the message it applies to, binding the variant value:

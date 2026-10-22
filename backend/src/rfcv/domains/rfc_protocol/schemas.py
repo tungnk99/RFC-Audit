@@ -22,7 +22,7 @@ from agents.common import (
 from agents.locator.schema import QueryProposal
 from agents.registry import AGENTS
 from agents.rfc_analyst.schema import RbsProposal
-from agents.test.schema import ScenarioProposal, ScenarioStep
+from agents.tester.schema import ScenarioProposal, ScenarioStep
 from agents.verifier.schema import CritiqueKind
 from rfcv.spi import TaskDefinition
 
