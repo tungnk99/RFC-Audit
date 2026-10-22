@@ -30,7 +30,7 @@ Quy ước này ghi lại cách đặt tên mà repo **đang dùng**, cộng và
 | Hình trong tài liệu | `docs/figures/<tên_tài_liệu>_hinh_<n>.svg` | `thiet_ke_phoi_hop_agent_hinh_1.svg` | Ô chú thích màu: `docs/figures/legend/legend_<nn>.svg` |
 | Bản HTML gốc | `docs/html/<cùng tên tài liệu>.html` | | Chỉ để đối chiếu, có thể xoá |
 | Test | `tests/test_<mô_đun_hoặc_chủ_đề>.py` | `test_execution_loop.py` | Dùng chung: `conftest.py`, `fakes.py`, `helpers.py`, `toy_domain.py`. Hàm test `test_<hành_vi>` bằng tiếng Anh |
-| Script | `scripts/<động_từ>_<đối_tượng>.py` | `analyze_run.py`, `e2e_live.py` | Có docstring đầu file nói cách chạy |
+| Script | `scripts/<động_từ>_<đối_tượng>.py` | `analyze_run.py`, `e2e_live.py` | Có docstring đầu file nói cách chạy. Script của bộ đánh giá cũng nằm ở đây, tiền tố `eval_` (`eval_make_manifest.py`); `eval/` chỉ chứa dữ liệu và cấu hình |
 | Dockerfile | `<tên-kebab>.Dockerfile` | `code-index-worker.Dockerfile` | Thói quen của Docker |
 | CI | `.github/workflows/<tên>.yml` | `ci.yml` | |
 | Dữ liệu chạy | `runs/<id>/`, `*.db`, `index/` | `runs/e2e-faulty/` | **Không commit** (đã có trong `.gitignore`) |

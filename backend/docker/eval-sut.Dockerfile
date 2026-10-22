@@ -2,7 +2,7 @@
 # Mỗi (commit, cờ build) một image; ghi digest vào bản kê lần chạy.
 #   docker build -f docker/eval-sut.Dockerfile \
 #     --build-arg WOLFSSL_REV=c18833f52^ --build-arg TAG=bug -t rfcv/sut-wolfssl:bug .
-# Dựng từ thư mục gốc repo; mã wolfSSL lấy từ eval/work/wolfssl (đã clone bằng eval/scripts/prepare.ps1|sh).
+# Dựng từ thư mục gốc repo; mã wolfSSL lấy từ eval/work/wolfssl (đã clone bằng scripts/eval_prepare.ps1).
 FROM debian:bookworm-slim AS build
 
 ARG WOLFSSL_REV

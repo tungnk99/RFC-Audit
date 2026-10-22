@@ -43,7 +43,7 @@ def rel(p: Path) -> str:
 def test_python_modules_are_ascii_snake_case() -> None:
     bad = [
         rel(p)
-        for p in py_files("src", "agents", "scripts", "tests", "eval/scripts")
+        for p in py_files("src", "agents", "scripts", "tests")
         if p.stem not in DUNDER and not SNAKE.match(p.stem)
     ]
     assert not bad, bad
@@ -126,3 +126,13 @@ def test_config_scripts_and_docker_files() -> None:
         p.name for p in (ROOT / "docker").glob("*.Dockerfile") if not KEBAB.match(p.name.removesuffix(".Dockerfile"))
     ]
     assert not [p.name for p in (ROOT / "scripts").glob("*.py") if not SNAKE.match(p.stem)]
+
+
+def test_the_top_level_agents_package_is_ours_not_a_library_of_the_same_name() -> None:
+    """CT-19: gói ngoài tên `agents` có thể va chạm với thư viện cùng tên (ví dụ OpenAI Agents SDK cài gói `agents`).
+    Giữ tên này có chủ đích; test này báo ngay khi một thư viện cài đè hay che mất gói của repo."""
+    import importlib.util
+
+    spec = importlib.util.find_spec("agents")
+    assert spec is not None and spec.origin is not None
+    assert Path(spec.origin).resolve().is_relative_to(ROOT), f"gói `agents` đang là {spec.origin}, không phải của repo"
