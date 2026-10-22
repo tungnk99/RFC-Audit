@@ -1,0 +1,8 @@
+requirement QUIC-0001 from RFC9000§14.1#p4s1 modal MUST type B
+actor server
+state initial
+# Bỏ gói nghĩa là không trả lời gì cho datagram đó: không Initial, Handshake hay Retry (chống khuếch đại, mục 8.1).
+trigger receive(packet) where datagram.payload_length < 1200
+expect discard within 1000ms
+forbid send(initial), send(handshake), send(retry)
+variants boundary(datagram.payload_length, 1199), min(datagram.payload_length), random(datagram.payload_length, k=4, stratified), valid_random(datagram.payload_length, k=4)

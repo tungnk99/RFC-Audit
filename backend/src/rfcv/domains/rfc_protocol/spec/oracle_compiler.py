@@ -144,7 +144,9 @@ class OracleCompileError(ValueError):
 
 
 def _control_value(op: str, threshold: int) -> int | None:
-    return {">": threshold, ">=": threshold - 1, "<": threshold, "<=": threshold + 1}.get(op)
+    """Giá trị hợp lệ sát ngưỡng nhất. Với `!=` đó là giá trị hợp lệ duy nhất; nó vào tập giá trị cố định nên lấy mẫu
+    phía kích hoạt không bao giờ chọn trúng nó. `==` không có một giá trị đối chứng riêng."""
+    return {">": threshold, ">=": threshold - 1, "<": threshold, "<=": threshold + 1, "!=": threshold}.get(op)
 
 
 def _trigger_range(cond: Condition | None, field: str, lo: int, hi: int) -> tuple[int, int]:
@@ -153,6 +155,8 @@ def _trigger_range(cond: Condition | None, field: str, lo: int, hi: int) -> tupl
             lo = cond.value + 1 if cond.op == ">" else cond.value
         elif cond.op in ("<", "<="):
             hi = cond.value - 1 if cond.op == "<" else cond.value
+        elif cond.op == "==":
+            lo = hi = cond.value
     return lo, hi
 
 

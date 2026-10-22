@@ -10,50 +10,33 @@ chạy trong container test-driver, phiên bản tlsfuzzer/tlslite-ng cố đị
 
 from __future__ import annotations
 
-from rfcv.domains.rfc_protocol.sandbox.backend import Endpoint, EventTrace, ValidationResult
-from rfcv.domains.rfc_protocol.schemas import ScenarioProposal
+from rfcv.backends.base import BODIES, EXPECT_ARGS, MUTATIONS, DslBackend
+from rfcv.domains.rfc_protocol.sandbox.dsl import DslSpec
 
-# Thao tác DSL được phép (tài liệu adapter, Bảng 4). Không có lệnh hệ thống, không có biểu thức tuỳ ý.
-ALLOWED_OPS = {
-    "connect": set[str](),
-    "complete_handshake": {"version", "cipher"},
-    "send_msg": {"type", "fields"},
-    "send_raw_record": {"content_type", "type", "length", "body", "encrypted"},
-    "mutate": {"field", "op", "value"},
-    "reorder": {"msgs"},
-    "repeat": {"msg"},
-    "expect": {"within_ms", "until", "timeout_ms"},
-}
-_BODIES = {"zeros", "random", "valid"}
+DSL = DslSpec(
+    ops={
+        "connect": frozenset(),
+        "complete_handshake": frozenset({"version", "cipher"}),
+        "send_msg": frozenset({"type", "fields"}),
+        "send_raw_record": frozenset({"content_type", "type", "length", "body", "encrypted"}),
+        "mutate": frozenset({"field", "op", "value"}),
+        "reorder": frozenset({"msgs"}),
+        "repeat": frozenset({"msg"}),
+        "expect": EXPECT_ARGS,
+    },
+    values={
+        "body": BODIES,
+        "op": MUTATIONS,
+        "content_type": frozenset({"change_cipher_spec", "alert", "handshake", "application_data"}),
+    },
+    notes={
+        "complete_handshake": "bắt tay TLS đầy đủ; sau bước này trạng thái là connected",
+        "send_raw_record": "một bản ghi TLS thô; encrypted=true để gửi bản ghi đã bảo vệ (TLSCiphertext) sau bắt tay",
+    },
+)
 
 
-class TlsfuzzerBackend:
+class TlsfuzzerBackend(DslBackend):
     name = "tlsfuzzer"
-
-    def validate(self, scenario: ScenarioProposal) -> ValidationResult:
-        errors: list[str] = []
-        bound = set(scenario.bindings)
-        for i, step in enumerate(scenario.steps):
-            allowed = ALLOWED_OPS.get(step.op)
-            if allowed is None:
-                errors.append(f"bước {i}: thao tác {step.op} không có trong DSL")
-                continue
-            for key, value in step.args.items():
-                if key not in allowed:
-                    errors.append(f"bước {i}: tham số {key} không hợp lệ cho {step.op}")
-                if isinstance(value, str) and value.startswith("$") and value[1:] not in bound:
-                    errors.append(f"bước {i}: biến {value} không được gắn (bindings)")
-            body = step.args.get("body")
-            if isinstance(body, str) and body not in _BODIES:
-                errors.append(f"bước {i}: body phải thuộc {sorted(_BODIES)}")
-        if not any(s.op == "expect" for s in scenario.steps):
-            errors.append("kịch bản phải kết thúc bằng một bước expect")
-        return ValidationResult(not errors, tuple(errors))
-
-    async def sanity(self, endpoint: Endpoint) -> bool:
-        raise NotImplementedError("chạy ca sanity của tlsfuzzer trong container test-driver")
-
-    async def run(
-        self, scenario: ScenarioProposal, params: dict[str, int | str], endpoint: Endpoint, seed: int
-    ) -> EventTrace:
-        raise NotImplementedError("dịch ScenarioProposal sang đồ thị hội thoại tlsfuzzer và chuẩn hoá quan sát")
+    dsl = DSL
+    runner = "đồ thị hội thoại tlsfuzzer"

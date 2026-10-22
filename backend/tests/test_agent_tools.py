@@ -13,6 +13,7 @@ from conftest import ADAPTER_DIR
 from fakes import SCENARIO, FakeBackend, FakeLauncher, make_index
 from helpers import REQ, full_passing_set, t1, t3
 from rfcv.adapters.manifest import AdapterManifest
+from rfcv.backends.tlsfuzzer import DSL as TLS_DSL
 from rfcv.core.policy import PolicyStore
 from rfcv.core.trace import TraceLog
 from rfcv.domains.rfc_protocol.payloads import Outcome
@@ -160,6 +161,18 @@ async def test_the_adapter_example_library_is_listed(world: World) -> None:
     text = await world.call("test", "test.list_examples")
     assert "tls13.record.length_overflow" in text and "just_above_limit_ciphertext" in text
     assert "Không có mẫu phù hợp" in await world.call("test", "test.list_examples", requirement_type="A")
+
+
+async def test_the_example_library_tells_the_test_agent_the_backend_dsl(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Tham số DSL khác nhau giữa các giao thức, nên Test Agent đọc chúng từ backend thay vì từ một bảng cố định."""
+    assert "DSL của backend" not in await world.call("test", "test.list_examples")  # backend giả không khai báo DSL
+    monkeypatch.setattr(FakeBackend, "dsl", TLS_DSL, raising=False)
+    text = await world.call("test", "test.list_examples")
+    dsl = json.loads(text.split("DSL của backend (thao tác → tham số; giá trị được phép; ý nghĩa):\n", 1)[1])
+    assert "encrypted" in dsl["ops"]["send_raw_record"] and "zeros" in dsl["values"]["body"]
+    assert "complete_handshake" in dsl["notes"]
 
 
 async def test_running_a_scenario_reports_trigger_and_outcome_without_writing_evidence(world: World) -> None:

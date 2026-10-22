@@ -7,6 +7,7 @@ Trường assurance ghi mức bảo đảm của nhãn COMPLIANT: LINKED, BEHAVI
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
@@ -27,6 +28,7 @@ from rfcv.evidence.verdict_engine import Conflict, Decision, Label, Missing, Req
 PROFILE = "rfc-protocol"
 OBSERVABLE = frozenset({"A", "B", "C"})
 INTERNAL = frozenset({"D"})
+_REACTION_CALL = re.compile(r"^[a-z_][a-z0-9_]*\(([a-z0-9_]+)\)$")
 
 
 class Assurance(StrEnum):
@@ -228,15 +230,19 @@ def _v8_compliant(req: RequirementView, v: _View) -> Decision | None:
 
 
 def _reaction_conflicts(v: _View) -> list[Conflict]:
-    """Phản ứng quan sát trong T3 ↔ REACTION.observed trong T1 (đối chiếu tất định, mục 7.2)."""
+    """Phản ứng quan sát trong T3 ↔ REACTION.observed trong T1 (đối chiếu tất định, mục 7.2).
+
+    REACTION.observed là một lời gọi một tham số của từ vựng adapter (`send_alert(record_overflow)`,
+    `respond(formerr)`…); tham số là mã lỗi, so với trường `alert` của Observation@1 (mã lỗi SUT phát ra, mọi giao thức)."""
     conflicts: list[Conflict] = []
     for e1, t1 in v.t1:
         reaction = next((a for a in t1.aspects if a.aspect is AspectName.REACTION), None)
         if reaction is None or not isinstance(reaction.observed, str):
             continue
-        if not reaction.observed.startswith("send_alert(") or not reaction.observed.endswith(")"):
+        call = _REACTION_CALL.match(reaction.observed)
+        if call is None:
             continue
-        claimed = reaction.observed[len("send_alert(") : -1]
+        claimed = call.group(1)
         for e3, t3 in v.t3:
             if not t3.valid or t3.variant_class == "control" or t3.side == "valid":
                 continue

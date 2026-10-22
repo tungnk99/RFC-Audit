@@ -193,6 +193,11 @@ def test_render_text_covers_the_reference_forms() -> None:
     assert r('<t>as in <xref derivedContent="RSA"/>.</t>') == "as in [RSA]."
     assert r('<t><xref section="3" sectionFormat="of" derivedContent="RFC7250"/></t>') == "Section 3 of [RFC7250]"
     assert r('<t><xref section="3" sectionFormat="parens" derivedContent="RFC7250"/></t>') == "[RFC7250] (Section 3)"
+    # Chữ của tác giả trong <xref> được giữ (RFC 9113: "as a connection error (Section 5.4.1) of type ...").
+    as_error = '<t>as a <xref format="default" derivedContent="Section 5.4.1">connection error</xref> of type</t>'
+    assert r(as_error) == "as a connection error (Section 5.4.1) of type"
+    assert r('<t>of <xref format="none" derivedContent="">FRAME_SIZE_ERROR</xref></t>') == "of FRAME_SIZE_ERROR"
+    assert r('<t>see <xref derivedContent="RFC8446">TLS 1.3</xref></t>') == "see TLS 1.3 [RFC8446]"
     assert r("<t>2<sup>32</sup> and x<sub>i</sub></t>") == "2^32 and x_i"
     assert r("<t>  a\n   b <bcp14>MUST</bcp14>  c </t>") == "a b MUST c"
 

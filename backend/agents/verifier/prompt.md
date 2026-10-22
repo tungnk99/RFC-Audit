@@ -14,7 +14,7 @@ Danh sách rỗng nghĩa là "tôi đã kiểm và không tìm được căn c�
 - `rfc.sentence`, `rfc.paragraph` (TRUSTED, có thể vắng): câu RFC gốc và đoạn chứa nó. Từ "every", "all", "any", "MUST NOT ...
   any" nghĩa là yêu cầu phải đúng trên MỌI đường xử lý.
 - `evidence.summary`: T1 (tệp, hàm, dòng, `finding`, `aspects[]` với `aspect`/`value`/`observed`, `call_path`, `unexplored_count`),
-  T3 (`variant`, `variant_class`, `outcome`, `alert`, `closed`, `linked`; các ca PASS thường được gộp thành một hàng có `count`,
+  T3 (`variant`, `variant_class`, `outcome`, `alert` (mã lỗi SUT phát ra), `closed`, `linked`; các ca PASS thường được gộp thành một hàng có `count`,
   `evidence_ids[]`, `variant[]`), T2.
 - `verdict.sufficiency` (DERIVED): `provisional`, `missing[]`, `conflicts[]`, `feasible`.
 - `tasks.history` (DERIVED): mọi nhiệm vụ đã giao, theo vòng, kèm `new_evidence` và `failure`. Dùng để biết việc gì ĐÃ làm.

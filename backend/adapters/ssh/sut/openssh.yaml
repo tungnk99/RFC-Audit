@@ -1,0 +1,20 @@
+# Công thức dựng SUT OpenSSH portable (tài liệu adapter, mục 4). Chưa dựng thử (cần Docker, BL-03); kiểm lại lệnh khi dựng.
+implementation: openssh
+repo: https://github.com/openssh/openssh-portable
+build:
+  steps:
+    - autoreconf
+    - ./configure --without-pam --without-selinux
+    - make -j2 sshd sshd-session ssh-keygen
+  coverage_cflags: ["-fprofile-instr-generate", "-fcoverage-mapping"]
+roles:
+  server:
+    # sshd cần đường dẫn tuyệt đối và người dùng sshd cho tách đặc quyền (privsep) trong image
+    cmd: "/opt/openssh/sshd -D -e -f /etc/ssh/sshd_config -p {port}"
+    host_keys: keys/
+lifecycle:
+  per_case_process: false        # sshd tạo tiến trình con cho mỗi kết nối
+  ready_check: {kind: listen_socket, port: "{port}", timeout_s: 5}
+  sanity_case: "asyncssh:kex"    # trao đổi khoá với thuật toán chung phải thành công
+  stop_signal: SIGTERM
+resources: {cpus: 1, memory: 256m, pids: 128, timeout_s: 60}

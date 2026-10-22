@@ -32,7 +32,9 @@ class EventTrace:
     events: tuple[ObservedEvent, ...]
     trigger_reached: bool
     sut_alive_after: bool = True
-    # Observation@1: mọi trường có miền hữu hạn (alert, closed, response…)
+    # Observation@1: mọi trường có miền hữu hạn. Hai trường chung cho mọi giao thức: `alert` là mã lỗi SUT phát ra,
+    # lấy từ miền enum của adapter ("none" nếu không có): cảnh báo TLS, RCODE DNS, mã lỗi GOAWAY/RST_STREAM HTTP/2,
+    # mã CONNECTION_CLOSE QUIC, mã lý do SSH_MSG_DISCONNECT; `closed` là SUT đã đóng kết nối hay luồng.
     observation: dict[str, str | int | bool] = field(default_factory=dict[str, str | int | bool])
     raw_log: bytes = b""
     pcap: bytes = b""

@@ -1,0 +1,8 @@
+requirement DNS-0002 from RFC6891§6.1.3#p3s5 modal MUST type B
+actor server
+state ready
+# Câu RFC: "does not implement the VERSION level of the request". Mọi máy chủ hiện có chỉ cài EDNS(0), nên mọi
+# VERSION > 0 là mức chưa cài; nếu SUT khai báo cài mức cao hơn thì phải sửa ngưỡng theo SUT.
+trigger receive(query) where opt.version > 0
+expect respond(badvers) within 2000ms
+variants boundary(opt.version, 1), max(opt.version), random(opt.version, k=4, stratified)

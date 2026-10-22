@@ -1,0 +1,76 @@
+# Adapter QUIC (tài liệu adapter, Bảng 10): kích thước datagram, khung và lỗi kết nối của RFC 9000; RFC 9001 tham chiếu.
+# Dữ liệu khai báo, không mã tuỳ ý. Phải qua `rfcv adapter check adapters/quic` trước khi dùng.
+adapter: quic
+version: 0.1.0
+backend: aioquic
+
+domain: rfc_protocol
+verdict_profile: rfc-protocol@3
+specs:
+  - {doc: RFC9000, role: primary, sections_in_scope: ["4.6", "8.1", "10.2", "11", "12.4", "14.1", "19"]}
+  - {doc: RFC9001, role: reference}
+
+component_taxonomy: [packetization, frames, connection_ids, flow_control, crypto_handshake, connection_close]
+
+vocabulary:
+  events:
+    - receive(packet)
+    - receive(frame)
+    - send_connection_close(error_code)
+    - send(packet_type)
+    - close
+    - discard
+  states: [initial, connected]   # initial: chưa có kết nối; connected: bắt tay xong
+  enums:
+    error_code:                  # mã lỗi giao vận, RFC 9000 mục 20.1
+      - no_error
+      - internal_error
+      - connection_refused
+      - flow_control_error
+      - stream_limit_error
+      - stream_state_error
+      - final_size_error
+      - frame_encoding_error
+      - transport_parameter_error
+      - connection_id_limit_error
+      - protocol_violation
+      - invalid_token
+      - application_error
+      - crypto_buffer_exceeded
+      - key_update_error
+      - aead_limit_reached
+      - no_viable_path
+    packet_type: [initial, zero_rtt, handshake, retry, version_negotiation, one_rtt]
+
+field_domains:
+  # tải UDP của datagram chứa gói Initial; 64 là cỡ nhỏ nhất còn dựng được một gói Initial có khung CRYPTO
+  datagram.payload_length: {min: 64, max: 65507, canonical: [1199]}
+  new_connection_id.length: {min: 0, max: 255, canonical: [21]}   # trường Length 8 bit của khung NEW_CONNECTION_ID
+
+consistency_rules: []
+
+# Gợi ý cho Locator. Tên tệp, hàm, hằng của ngtcp2; kiểm lại khi chốt commit SUT.
+locator_hints:
+  packetization:
+    keywords: ["NGTCP2_MAX_UDP_PAYLOAD_SIZE", "dgramlen", "initial"]
+    entry_points: ["ngtcp2_accept", "ngtcp2_conn_read_pkt"]
+    paths: ["lib/ngtcp2_conn.c", "lib/ngtcp2_pkt.c"]
+  connection_ids:
+    keywords: ["new_connection_id", "NGTCP2_MAX_CIDLEN", "NGTCP2_FRAME_ENCODING_ERROR"]
+    entry_points: ["ngtcp2_conn_read_pkt"]
+    paths: ["lib/ngtcp2_pkt.c", "lib/ngtcp2_conn.c"]
+
+build_flags: ["--with-gnutls"]
+
+sut:
+  repo: https://github.com/ngtcp2/ngtcp2
+  recipe: sut/ngtcp2.yaml
+  start: {role: server, port: 4433}
+
+references: ["quiche@<commit>", "picoquic@<commit>"]
+
+code_scope:
+  include: ["lib/**", "crypto/**"]
+  exclude: ["tests/**", "examples/**", "fuzz/**", "doc/**"]
+
+examples: examples/*.yaml

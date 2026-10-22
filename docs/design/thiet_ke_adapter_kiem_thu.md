@@ -346,6 +346,8 @@ Dùng lỗi lịch sử để kiểm định adapter phải tách khỏi tập �
 
 *Bảng 10. Công cụ cho năm giao thức. Đúng như ĐX mục 4: DNS và SSH dùng để đo công sức thêm giao thức mới (mục tiêu 2), nên việc phải tự viết nhiều mẫu cũng chính là dữ liệu cần đo.*
 
+Trạng thái (2026-10-22, BL-83): cả năm giao thức đã có gói khai báo trong `backend/adapters/<tên>/` (từ vựng, miền giá trị, gợi ý Locator, công thức SUT, mẫu kiểm thử, RBS ví dụ trỏ câu RFC có thật) và skill giao thức trong `backend/skills/<tên>/`, đều qua phần hình thức của Adapter checker. Backend `dnspython`, `h2spec`, `aioquic`, `asyncssh` mới cài phần kiểm kịch bản theo DSL riêng của giao thức; `run` và `sanity` cần container test-driver (BL-03 trở đi), giống backend `tlsfuzzer`, nên chưa giao thức nào chạy được với SUT thật (CT-09).
+
 ## 14. Ví dụ đầy đủ: TLS 1.3, yêu cầu về độ dài bản ghi
 
 | Bước | Kết quả (từ thực nghiệm 14/10/2026) |

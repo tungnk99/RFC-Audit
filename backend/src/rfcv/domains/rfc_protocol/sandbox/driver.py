@@ -20,6 +20,7 @@ from rfcv.common.hashing import content_hash
 from rfcv.core.trace import TraceLog
 from rfcv.domains.rfc_protocol.payloads import Outcome, Producer, T3Payload, Tier, Witness, WitnessRun
 from rfcv.domains.rfc_protocol.sandbox.backend import Backend, EventTrace, SutLauncher
+from rfcv.domains.rfc_protocol.sandbox.dsl import DslSpec
 from rfcv.domains.rfc_protocol.schemas import ScenarioProposal
 from rfcv.domains.rfc_protocol.spec.oracle_compiler import CompiledOracle, ConcreteVariant, instantiate_samples
 from rfcv.evidence.artifacts import ArtifactStore
@@ -68,6 +69,12 @@ class TestDriver:
         self._mutants = tuple(mutants)
         self._reruns = reruns_on_fail
         self._coverage = coverage
+
+    @property
+    def dsl(self) -> DslSpec | None:
+        """Đặc tả DSL của backend nếu backend khai báo; Test Agent dùng để biết thao tác và tham số hợp lệ."""
+        spec = getattr(self._backend, "dsl", None)
+        return spec if isinstance(spec, DslSpec) else None
 
     async def run_requirement(
         self,

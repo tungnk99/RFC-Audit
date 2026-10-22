@@ -1,0 +1,8 @@
+requirement QUIC-0002 from RFC9000§19.15#p5.6.1s2 modal MUST type B
+actor endpoint
+state connected
+# Câu có hai điều kiện ("less than 1 and greater than 20"); đây là phía > 20, phía < 1 là QUIC-0003.
+# Lỗi kết nối phải báo bằng khung CONNECTION_CLOSE (RFC 9000 mục 11.1) rồi kết thúc kết nối.
+trigger receive(frame) where new_connection_id.length > 20
+expect send_connection_close(frame_encoding_error) then close within 2000ms
+variants boundary(new_connection_id.length, 21), max(new_connection_id.length), random(new_connection_id.length, k=6, stratified)

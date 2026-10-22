@@ -53,11 +53,23 @@ class RfcSentence:
     section_path: tuple[str, ...]
 
 
+_TARGETS = ("Section", "Appendix", "Figure", "Table")
+
+
 def _xref(x: ET.Element) -> str:
-    """Chữ mà bản dựng hiển thị cho một `<xref>` (bản prep để trống nội dung, chữ nằm ở `derivedContent`): "Section 4.7.1",
+    """Chữ mà bản dựng (xml2rfc) hiển thị cho một `<xref>`.
+
+    Có chữ của tác giả thì hiện chữ đó: `format="none"` chỉ chữ ("FRAME_SIZE_ERROR"), còn lại kèm đích ("connection
+    error (Section 5.4.1)", "TLS [RFC8446]"). Không có chữ (bản prep) thì dùng `derivedContent`: "Section 4.7.1",
     "Figure 2", hoặc tài liệu tham khảo dạng "[RFC5280]" kèm mục nếu có."""
-    shown = x.get("derivedContent") or "".join(x.itertext()).strip()
-    if shown.startswith(("Section", "Appendix", "Figure", "Table")):
+    text = " ".join("".join(x.itertext()).split())
+    derived = x.get("derivedContent") or ""
+    if text:
+        if x.get("format") == "none" or not derived or derived == text:
+            return text
+        return f"{text} ({derived})" if derived.startswith(_TARGETS) else f"{text} [{derived}]"
+    shown = derived
+    if shown.startswith(_TARGETS):
         return shown
     ref = f"[{shown}]" if shown else ""
     section = x.get("section")

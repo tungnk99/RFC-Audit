@@ -1,0 +1,15 @@
+# Mẫu DSL (tài liệu adapter, mục 5.3): khung NEW_CONNECTION_ID với Length lấy từ biến thể, sau khi bắt tay xong.
+id: quic.frame.new_connection_id_length
+requirement_types: [B]
+rfc_refs: ["RFC9000§19.15"]
+checks_behavior: "receive(NEW_CONNECTION_ID, length outside 1..20) → send_connection_close(frame_encoding_error); close"
+variant_class: length_bound
+runner: aioquic
+steps:
+  - {op: connect, args: {version: "1"}}
+  - {op: complete_handshake, args: {alpn: hq-interop}}
+  - {op: mutate, args: {field: new_connection_id.length, op: set, value: "$new_connection_id.length"}}
+  - {op: send_msg, args: {type: new_connection_id}}
+  - {op: expect, args: {within_ms: 2000}}
+bindings: {new_connection_id.length: from_variant}
+oracle: {pass: "alert == frame_encoding_error and closed", fail: "otherwise", error: "sanity_failed or handshake_failed"}

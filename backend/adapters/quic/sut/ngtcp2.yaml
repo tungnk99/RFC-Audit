@@ -1,0 +1,19 @@
+# Công thức dựng SUT ngtcp2 với GnuTLS (tài liệu adapter, mục 4). Chưa dựng thử (cần Docker, BL-03); kiểm lại lệnh khi dựng.
+implementation: ngtcp2
+repo: https://github.com/ngtcp2/ngtcp2
+build:
+  steps:
+    - autoreconf -i
+    - ./configure --with-gnutls
+    - make -j2
+  coverage_cflags: ["-fprofile-instr-generate", "-fcoverage-mapping"]
+roles:
+  server:
+    cmd: "./examples/gtlsserver 0.0.0.0 {port} certs/server.key certs/server.crt"
+    certs: certs/
+lifecycle:
+  per_case_process: true
+  ready_check: {kind: udp_bound, port: "{port}", timeout_s: 5}   # UDP: kiểm cổng đã gắn, không gửi gói thừa
+  sanity_case: "aioquic:handshake"   # bắt tay đầy đủ phải thành công
+  stop_signal: SIGTERM
+resources: {cpus: 1, memory: 256m, pids: 64, timeout_s: 60}

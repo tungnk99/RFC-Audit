@@ -1,0 +1,17 @@
+# Mẫu bọc ca có sẵn của h2spec (tài liệu adapter, mục 5.2). Mã ca theo mục RFC; kiểm lại theo phiên bản h2spec cố định.
+id: http2.frame.size_limit
+requirement_types: [B]
+rfc_refs: ["RFC9113§4.2"]
+checks_behavior: "receive(frame, length > {limit}) → send_goaway(frame_size_error) | send_rst_stream(frame_size_error)"
+variant_class: length_bound
+runner: h2spec
+runner_version: {h2spec: "v2.6.0"}
+cases:
+  - variant: at_limit
+    limit: 16384
+    case: "http2/4.2/1"     # khung DATA dài đúng 2^14: phải được chấp nhận
+    expect: accepted
+  - variant: just_above_limit
+    limit: 16384
+    case: "http2/4.2/2"     # khung DATA vượt SETTINGS_MAX_FRAME_SIZE
+oracle: {pass: "alert == frame_size_error", fail: "otherwise", error: "sanity_failed or preface_failed"}

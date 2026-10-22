@@ -1,0 +1,9 @@
+requirement HTTP2-0001 from RFC9113§4.2#p4s1 modal MUST type B
+actor server
+state connected
+# SETTINGS_MAX_FRAME_SIZE mặc định 2^14 khi bên nhận chưa quảng bá giá trị lớn hơn (RFC 9113 mục 4.2, 6.5.2).
+# Câu chỉ đòi mã lỗi FRAME_SIZE_ERROR: lỗi luồng (RST_STREAM) hay lỗi kết nối (GOAWAY) tuỳ khung có đổi trạng thái kết nối.
+trigger receive(frame) where frame.length > 16384
+expect send_goaway(frame_size_error) within 2000ms
+accept_alternatives send_rst_stream(frame_size_error)
+variants boundary(frame.length, 16385), max(frame.length), random(frame.length, k=6, stratified), valid_random(frame.length, k=4)

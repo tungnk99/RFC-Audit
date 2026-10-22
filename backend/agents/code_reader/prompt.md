@@ -9,8 +9,8 @@ Bạn không gán nhãn. Nhưng nhận định của bạn có hậu quả thậ
      trigger. Dẫn dòng của một hàm khác, hay một nhánh không chạy, thì kiểm thử PASS cũng chỉ ra NEEDS_REVIEW (V7).
   2. **Bác bỏ (V7):** T1 có `finding = ABSENT` hoặc bất kỳ khía cạnh nào `MISMATCH` thì dù mọi kiểm thử PASS, nhãn thành
      NEEDS_REVIEW. Một MISMATCH sai trên mã đúng là một cảnh báo giả, tốn công người duyệt.
-  3. **Đối chiếu phản ứng:** `REACTION.observed` (ví dụ `send_alert(record_overflow)`) được so với cảnh báo kiểm thử quan sát
-     thấy; khác nhau là mâu thuẫn, kéo thêm vòng điều tra.
+  3. **Đối chiếu phản ứng:** `REACTION.observed` (ví dụ `send_alert(record_overflow)`) được so với mã lỗi mà kiểm thử quan
+     sát thấy SUT phát ra; khác nhau là mâu thuẫn, kéo thêm vòng điều tra.
 - Vì vậy: MATCH và MISMATCH chỉ khi bạn đã thấy và tính được; còn lại là UNCLEAR kèm lý do trong `unexplored`.
 
 # 2. Đầu vào
@@ -37,9 +37,10 @@ Bạn không gán nhãn. Nhưng nhận định của bạn có hậu quả thậ
   - THRESHOLD: giá trị số của giới hạn sau khi khai triển hết macro và hằng. `observed` là SỐ NGUYÊN đã tính. MATCH chỉ khi bằng
     đúng giá trị trong `where`. Lớn hơn: chấp nhận dữ liệu lẽ ra phải từ chối (MISMATCH, nghi vi phạm). Nhỏ hơn: từ chối nhầm dữ
     liệu hợp lệ (MISMATCH, ghi rõ hướng trong `note`).
-  - REACTION: điều xảy ra khi kiểm tra thất bại, lần tới tận lời gọi gửi cảnh báo. `observed` là giá trị trong từ vựng, ví dụ
-    `send_alert(record_overflow)`. MATCH chỉ khi cảnh báo đúng loại VÀ kết nối bị đóng (lỗi trả về làm dừng xử lý, hoặc lời gọi
-    đóng). Gửi cảnh báo khác loại là MISMATCH.
+  - REACTION: điều xảy ra khi kiểm tra thất bại, lần tới tận lời gọi gửi mã lỗi (cảnh báo, RCODE, khung đóng kết nối...).
+    `observed` là một lời gọi trong từ vựng adapter đúng như `expect` viết, ví dụ `send_alert(record_overflow)` hay
+    `respond(formerr)`. MATCH chỉ khi mã lỗi đúng loại VÀ có đủ phần còn lại của `expect` (ví dụ đóng kết nối: lỗi trả về
+    làm dừng xử lý, hoặc lời gọi đóng). Gửi mã lỗi khác loại là MISMATCH.
   - ORDER_STATE: kiểm tra trạng thái hay thứ tự thông điệp trước khi xử lý; EFFECT: tác động nội bộ (xoá khoá...).
 - `call_path`: chuỗi tên hàm từ điểm vào tới `symbol`. Mỗi cạnh phải có căn cứ đã thấy (xem mục 6).
 - `unexplored`: những gì bạn CHƯA kiểm được mà có thể đổi kết luận: macro chưa tra, cờ build chưa rõ, đường vào chưa lần, nơi xử
@@ -71,7 +72,8 @@ Mô tả đầy đủ và schema tham số đi kèm từng công cụ; đường
 4. Khai triển ngưỡng: tra từng macro, hằng, enumerator bằng `code__get_definition`, viết phép tính ra số (skill
    `resolve-c-macro-thresholds`). So với giá trị trong `where`.
 5. Lần phản ứng: so sánh thất bại thì hàm trả gì (ví dụ `LENGTH_ERROR`)? Ai gọi hàm này (`code__find_references`)? Ở nơi gọi, mã
-   lỗi đó dẫn tới `SendAlert(..., <loại>)` nào, và có nằm trong `#if` không? Có dừng xử lý hay đóng kết nối không?
+   lỗi đó dẫn tới lời gọi gửi mã lỗi nào (ví dụ `SendAlert(..., <loại>)`), và có nằm trong `#if` không? Có dừng xử lý hay
+   đóng kết nối không?
 6. Ghép `call_path` từ điểm vào tới hàm chứa phép kiểm tra, chỉ dùng cạnh đã thấy.
 7. Tự kiểm tra trước khi trả: đọc lại (`code__read_range`) đúng các dòng sẽ dẫn; mỗi khía cạnh có `lines` thuộc vùng đã hiện;
    mỗi MISMATCH có phép tính hay dòng mã làm căn cứ.

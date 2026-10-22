@@ -1,0 +1,17 @@
+# Mẫu DSL (tài liệu adapter, mục 5.3): QUIC Interop Runner không có ca vi phạm cỡ datagram.
+id: quic.initial.small_datagram
+requirement_types: [B]
+rfc_refs: ["RFC9000§14.1"]
+checks_behavior: "receive(Initial in datagram, payload < {limit}) → discard (không trả lời)"
+variant_class: length_bound
+runner: aioquic
+cases:
+  - variant: at_limit
+    limit: 1200
+    expect: accepted
+steps:
+  - {op: connect, args: {version: "1"}}
+  - {op: send_raw_record, args: {packet_type: initial, datagram_length: "$datagram.payload_length", body: valid}}
+  - {op: expect, args: {within_ms: 1000}}
+bindings: {datagram.payload_length: from_variant}
+oracle: {pass: "no response packet", fail: "otherwise", error: "sanity_failed"}

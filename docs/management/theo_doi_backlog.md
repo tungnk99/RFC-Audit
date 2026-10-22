@@ -57,11 +57,11 @@ quyết định số đo của mọi lần chạy sau.
 
 | ID | Việc cần làm | Đáp ứng | Phụ thuộc | Cỡ | Giai đoạn | Xong khi | Trạng thái |
 |---|---|---|---|---|---|---|---|
-| BL-10 | Chặn vòng lặp nạp skill: thêm vào prompt "nạp mỗi skill một lần, rồi làm theo"; nếu chưa đủ thì nhúng thẳng skill ngắn vào prompt | CT-01, AG-04, AG-06 | – | S | Ngay | `skill_reloads` = 0 và `worker_first_failures` = 0 trên cả hai ca, mỗi ca ít nhất 3 lần | Đang làm |
+| BL-10 | Chặn vòng lặp nạp skill: thêm vào prompt "nạp mỗi skill một lần, rồi làm theo"; nếu chưa đủ thì nhúng thẳng skill ngắn vào prompt | CT-01, AG-04, AG-06 | – | S | Ngay | `skill_reloads` = 0 và `worker_first_failures` = 0 trên cả hai ca, mỗi ca ít nhất 3 lần | Xong |
 | BL-11 | Bỏ giới hạn `llm_calls` của mọi agent (quyết định 2026-10-22, thay cho nâng lên 20) và đo lại; token, công cụ và thời gian vẫn bị chặn | CT-02, AG-05, CR-4 | – | S | Ngay | Không còn `UsageLimitExceeded` qua 3 lần mỗi ca; token mỗi ca không tăng | Đang làm |
 | BL-12 | Rút gọn `evidence.summary`: gộp T3 theo biến thể và kết quả, giữ chi tiết cho ca FAIL, mâu thuẫn, ca được trích | CT-03, VF-7 | – | M | Ngay | Token đầu vào của Verifier giảm so với mốc 55k; `verifier_smoke` vẫn nêu đúng hai tình huống | Xong |
 | BL-13 | Sửa chỉ số bám sổ tay: kế hoạch chứa đủ nhiệm vụ được gợi ý tính là `followed` | CT-04, PL-6 | – | S | Ngay | Có test; ca bản lỗi không còn bị ghi `deviated_unannounced` | Xong |
-| BL-14 | Giảm chi phí Code Reader: rút gọn đầu ra công cụ đọc mã, dừng sớm khi các khía cạnh đã đủ | CT-17, CR-5 | BL-10, BL-11 | M | G1 | Token Code Reader mỗi ca giảm có số đo mà độ chính xác T1 không đổi | Chưa làm |
+| BL-14 | Giảm chi phí Code Reader: rút gọn đầu ra công cụ đọc mã, dừng sớm khi các khía cạnh đã đủ | CT-17, CT-25, CR-5 | BL-10, BL-11 | M | G1 | Token Code Reader mỗi ca giảm có số đo mà độ chính xác T1 không đổi | Chưa làm |
 | BL-15 | Thử `MAP_COMPONENTS` với LLM thật; quyết định quy tắc vòng 1 của sổ tay và skill Verifier cho `WRONG_LOCATION` | CT-18, CI-3, CI-4 | – | S | G2 | Có số đo gán thành phần trên 30 hàm; sổ tay và skill được cập nhật theo kết quả | Xong |
 | BL-16 | Thêm một mô hình họ khác vào `models` và gán cho Verifier và `rfc_analyst.b` | CT-07, RA-6 | – | S | G2 | Verifier chạy bằng mô hình khác họ; có số đo so với dùng chung | Chặn |
 
@@ -75,7 +75,7 @@ quyết định số đo của mọi lần chạy sau.
 | BL-26 | Ghi phiên bản RFC, errata và hash vào mọi kết luận; xử lý RFC 8446 và RFC 9846 theo quyết định của thầy | YD-05, CT-23 | BL-25 | S | G1 | 100% kết luận ghi phiên bản RFC và hash | Chưa làm |
 | BL-23 | Nối RFC Analyst: hai luồng dùng hai họ mô hình khác nhau, so khớp, phân loại A–D, bất đồng chuyển người duyệt | YD-03, YD-04, CT-12, RA-1, RA-3, RA-5 | BL-16, BL-20 | L | G2 | Phân loại A–D đúng ≥ 90% (ĐX) trên 30 mục hai người gán; câu hai luồng lệch không tự quyết (100%) | Chưa làm |
 | BL-24 | Trạng thái cuối cho **mọi** câu quy phạm (cả "ngoài phạm vi" và "thiếu adapter") kèm lý do | YD-02, YD-04, YD-11, YD-42 | BL-23, BL-30 | M | G2 | Tổng theo trạng thái bằng tổng câu tách được; mỗi câu ngoài ngữ pháp hay thiếu adapter có lý do | Chưa làm |
-| BL-22 | Bộ phân tích RFC bản TXT (DNS, SSH), hoặc chọn RFC có bản XML | YD-12, CT-22 | BL-25 | M | DNS | Tách câu đúng ranh giới trên 30 câu mỗi giao thức | Chưa làm |
+| BL-22 | Bộ phân tích RFC bản TXT (DNS, SSH), hoặc chọn RFC có bản XML | YD-12, CT-22 | BL-25 | M | DNS | Tách câu đúng ranh giới trên 30 câu mỗi giao thức | Đang làm |
 
 ## EP-4. Phát hiện triển khai sai RFC, không bỏ sót im lặng
 
@@ -134,6 +134,7 @@ quyết định số đo của mọi lần chạy sau.
 |---|---|---|---|---|---|---|---|
 | BL-80 | Backend DNS (dnspython và genreport) | YD-10, YD-13 | BL-04 | L | DNS | Backend chạy một ca DNS và chuẩn hoá quan sát | Chưa làm |
 | BL-81 | Adapter DNS và ba bản triển khai (CoreDNS, Knot, thêm một bản tham chiếu); cần BL-22 cho RFC bản TXT | YD-10, YD-13 | BL-80, BL-22 | L | DNS | Adapter checker đạt; 15–20 yêu cầu DNS chạy được | Chưa làm |
+| BL-83 | Gói khai báo cho DNS, HTTP/2, QUIC, SSH theo tài liệu adapter (Bảng 10): adapter (từ vựng, miền giá trị, gợi ý Locator, phạm vi mã, công thức SUT), RBS ví dụ trỏ câu RFC có thật, mẫu kiểm thử, skill giao thức, backend phần kiểm kịch bản; lõi miền bỏ chỗ gắn TLS | YD-10, YD-13 | – | L | Ngay | `rfcv adapter check` đạt phần hình thức cho bốn adapter; skill lõi không nhắc giao thức nào | Xong |
 | BL-82 | Đo số dòng đổi trong lõi khi thêm DNS | YD-10, QS-40 | BL-81 | S | DNS | `git diff --stat` các thư mục lõi, agent, quy tắc bằng 0 | Chưa làm |
 | BL-97 | Skill đọc mã cho Rust hoặc Go khi có adapter ngôn ngữ đó | YD-13, CT-13 | BL-81 | M | T2 | Skill tương đương skill C có số đo, hoặc ghi vào hạn chế | Chưa làm |
 
@@ -166,10 +167,10 @@ Các yêu cầu sau đã đạt ở mức hiện có; chỉ cần giữ đạt k
 | YD-03 | BL-23, BL-33 |
 | YD-04 | BL-23, BL-24 |
 | YD-05 | BL-26 |
-| YD-10 | BL-80, BL-81, BL-82 |
+| YD-10 | BL-80, BL-81, BL-82, BL-83 |
 | YD-11 | BL-24 |
 | YD-12 | BL-22 |
-| YD-13 | BL-02, BL-03, BL-80, BL-81, BL-97 |
+| YD-13 | BL-02, BL-03, BL-80, BL-81, BL-83, BL-97 |
 | YD-14 | BL-25 |
 | YD-20 | BL-05, BL-08, BL-73 |
 | YD-21 | BL-01, BL-06, BL-08, BL-70, BL-71, BL-73 |

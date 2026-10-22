@@ -1,0 +1,18 @@
+# Công thức dựng SUT nghttp2 (tài liệu adapter, mục 4). Chưa dựng thử (cần Docker, BL-03); kiểm lại lệnh khi dựng.
+implementation: nghttp2
+repo: https://github.com/nghttp2/nghttp2
+build:
+  steps:
+    - autoreconf -i
+    - ./configure --enable-app --disable-python-bindings
+    - make -j2
+  coverage_cflags: ["-fprofile-instr-generate", "-fcoverage-mapping"]
+roles:
+  server:
+    cmd: "./src/nghttpd --no-tls -d /srv/www {port}"   # HTTP/2 không TLS (h2c, lời mở đầu trực tiếp)
+lifecycle:
+  per_case_process: true          # lỗi kết nối không làm máy chủ thoát, nhưng mỗi ca một tiến trình để độ phủ tách bạch
+  ready_check: {kind: listen_socket, port: "{port}", timeout_s: 5}
+  sanity_case: "h2spec:http2/6.7/1"   # PING hợp lệ phải được ACK
+  stop_signal: SIGTERM
+resources: {cpus: 1, memory: 256m, pids: 64, timeout_s: 60}

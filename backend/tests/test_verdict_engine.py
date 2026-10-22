@@ -140,6 +140,16 @@ def test_reaction_conflict_between_t1_and_t3() -> None:
     assert any(c.kind == "T1_vs_T3" for c in report.conflicts)
 
 
+def test_reaction_conflict_works_for_any_protocol_error_signal() -> None:
+    """REACTION là lời gọi một tham số bất kỳ của từ vựng (RCODE DNS, mã lỗi HTTP/2...), không chỉ send_alert."""
+    conflicting = [t1(observed="respond(formerr)"), t3(outcome=Outcome.PASS, alert="servfail")]
+    assert any(c.kind == "T1_vs_T3" for c in assess(REQ_B, chain(conflicting)).conflicts)
+    agreeing = [t1(observed="send_goaway(frame_size_error)"), t3(outcome=Outcome.PASS, alert="frame_size_error")]
+    assert not assess(REQ_B, chain(agreeing)).conflicts
+    no_code = [t1(observed="close"), t3(outcome=Outcome.PASS, alert="servfail")]
+    assert not assess(REQ_B, chain(no_code)).conflicts
+
+
 def test_other_requirements_evidence_ignored() -> None:
     assert label(REQ_B, [t3(outcome=Outcome.FAIL, requirement_id="OTHER-1")])[0] is Label.UNVERIFIABLE
 

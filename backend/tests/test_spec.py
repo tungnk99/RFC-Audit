@@ -76,6 +76,14 @@ def test_vocabulary_check(manifest: AdapterManifest) -> None:
     assert any("loại B" in e for e in check(parse_rbs(BASE.replace("type B", "type A")), vocab))
 
 
+def test_boundary_must_be_on_the_trigger_side(manifest: AdapterManifest) -> None:
+    errors = check(
+        parse_rbs(BASE.replace("boundary(record.length, 16641)", "boundary(record.length, 16640)")),
+        to_vocabulary(manifest),
+    )
+    assert any("phía kích hoạt" in e for e in errors)
+
+
 def test_compile_rejects_out_of_vocabulary(manifest: AdapterManifest) -> None:
     with pytest.raises(OracleCompileError):
         compile_oracle(parse_rbs(BASE.replace("record.length > 16640", "record.weight > 1")), to_vocabulary(manifest))
@@ -93,6 +101,30 @@ def test_compiled_variants(oracle: CompiledOracle) -> None:
         "max:record.length=65535",
     }
     assert oracle.random_k == rnd.expected_count and oracle.valid_random_k > 0
+
+
+def test_not_equal_has_control_and_never_samples_the_valid_value(manifest: AdapterManifest) -> None:
+    """`where f != v`: v là giá trị hợp lệ duy nhất, nên là ca đối chứng và không bao giờ được lấy mẫu phía kích hoạt."""
+    text = BASE.replace("record.length > 16640", "record.length != 8").replace(
+        "boundary(record.length, 16641), max(record.length), random(record.length, k=3)",
+        "boundary(record.length, 9), random(record.length, k=40, stratified)",
+    )
+    oracle = compile_oracle(parse_rbs(text), to_vocabulary(manifest))
+    control = next(v for v in oracle.variants if v.variant_class == "control")
+    assert control.value == 8 and oracle.side_of("record.length", 8) == "valid"
+    rnd = next(v for v in oracle.variants if v.variant_class == "random")
+    assert 8 not in rnd.special
+    assert all(8 not in instantiate_random(rnd, seed) for seed in range(50))
+
+
+def test_equal_samples_only_the_trigger_value(manifest: AdapterManifest) -> None:
+    text = BASE.replace("record.length > 16640", "record.length == 0").replace(
+        "boundary(record.length, 16641), max(record.length), random(record.length, k=3)", "random(record.length, k=2)"
+    )
+    oracle = compile_oracle(parse_rbs(text), to_vocabulary(manifest))
+    rnd = next(v for v in oracle.variants if v.variant_class == "random")
+    assert (rnd.lo, rnd.hi) == (0, 0)
+    assert not any(v.variant_class == "control" for v in oracle.variants)
 
 
 def test_oracle_hash_is_stable(manifest: AdapterManifest, oracle: CompiledOracle) -> None:

@@ -28,7 +28,7 @@ WEIGHTS = {"kw": 3.0, "comp": 2.0, "near": 2.0, "hint": 1.0}
 MAX_DEPTH = 6
 BODY_SCAN_LINES = 400
 # Động từ chung của từ vựng sự kiện: không giúp phân biệt hàm.
-_GENERIC = frozenset({"send", "receive", "close", "discard", "send_alert", "then"})
+_GENERIC = frozenset({"send", "receive", "respond", "close", "discard", "send_alert", "then"})
 
 
 @dataclass(frozen=True)

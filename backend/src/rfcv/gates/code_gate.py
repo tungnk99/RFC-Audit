@@ -229,7 +229,7 @@ class ReadFunctionParams(_P):
 
 
 class ReadRangeParams(_P):
-    file: str = Field(min_length=1, max_length=500, description=_FILE_DOC, examples=["src/tls13.c"])
+    file: str = Field(min_length=1, max_length=500, description=_FILE_DOC, examples=["src/conn.c"])
     start: int = Field(ge=1, description="Dòng đầu (tính từ 1).", examples=[4395])
     end: int = Field(ge=1, description="Dòng cuối (bao gồm); tối đa start+99.", examples=[4415])
 
@@ -245,7 +245,7 @@ class SearchTextParams(_P):
         min_length=1,
         max_length=300,
         description="Biểu thức chính quy cú pháp ripgrep (Rust regex).",
-        examples=["record_overflow", r"MAX_RECORD_SIZE\s*\+"],
+        examples=["msg_too_long", r"MAX_MSG_SIZE\s*\+"],
     )
     path_glob: str | None = Field(
         default=None, max_length=200, description="Glob lọc tệp kiểu rg -g.", examples=["src/*.c", "*.h"]
@@ -258,9 +258,9 @@ class ExploreParams(_P):
         max_length=500,
         description="Một lệnh đọc, có thể nối bằng |. Không dùng ; && || > < $ ` hay biến môi trường.",
         examples=[
-            "rg -n record_overflow src/",
-            "sg run -p 'SendAlert($S, $L, record_overflow)' -l c src",
-            "sed -n '9100,9140p' src/internal.c",
+            "rg -n msg_too_long src/",
+            "sg run -p 'send_error($C, msg_too_long)' -l c src",
+            "sed -n '910,940p' src/parser.c",
         ],
     )
 
@@ -279,34 +279,34 @@ TOOL_DOCS: dict[str, str] = {
         "không có thân hàm.\n"
         "Khi dùng: trước khi đọc một tệp lớn, để chọn hàm cần đọc.\n"
         "Trả về: '<dòng> <loại> <chữ ký>  [đầu–cuối]'. Tối đa 200 ký hiệu.\n"
-        'Ví dụ: {"file": "src/internal.c"}'
+        'Ví dụ: {"file": "src/parser.c"}'
     ),
     "code.search_symbol": (
         "Tìm ký hiệu theo tên chính xác trong chỉ mục cấu trúc (không phải tìm văn bản).\n"
         "Khi dùng: đã biết tên hàm/macro/kiểu và cần biết nó nằm ở đâu; với Rust/Go trả mọi phương thức trùng tên.\n"
         "Trả về: '<tệp>:<dòng>: <loại> <chữ ký>'. Tối đa 50 kết quả.\n"
-        'Ví dụ: {"name": "GetRecordHeader"} hoặc {"name": "Read", "kind": "method"}'
+        'Ví dụ: {"name": "parse_header"} hoặc {"name": "Read", "kind": "method"}'
     ),
     "code.read_function": (
         "Đọc thân một hàm, có số dòng, 100 dòng mỗi trang.\n"
         "Khi dùng: đã biết tên hàm ứng viên. Hàm dài: trang 1 kèm chữ ký và danh sách khối lệnh cấp một để chọn trang.\n"
         "Trả về: tiêu đề '<tệp> <hàm> lines A–B page i/n' rồi các dòng '<số dòng> <mã>'. Nếu trùng tên ở nhiều tệp, "
         "tiêu đề nêu các định nghĩa khác; gọi lại với 'file'.\n"
-        'Ví dụ: {"symbol": "GetRecordHeader"}, {"symbol": "ProcessReplyEx", "page": 2}'
+        'Ví dụ: {"symbol": "parse_header"}, {"symbol": "process_input", "page": 2}'
     ),
     "code.read_range": (
         "Đọc một khoảng dòng bất kỳ của một tệp, có số dòng, tối đa 100 dòng mỗi lần.\n"
         "Khi dùng: đọc mã ngoài hàm (bảng con trỏ hàm, khai báo, khối #ifdef), đọc tiếp quanh một dòng khớp, và "
         "TỰ KIỂM TRA: đọc lại đúng các dòng sẽ dẫn trong LocationClaim.\n"
         "Trả về: '<số dòng> <mã>'. Dòng nào chưa hiện qua công cụ thì không được dẫn.\n"
-        'Ví dụ: {"file": "src/tls13.c", "start": 4395, "end": 4415}'
+        'Ví dụ: {"file": "src/conn.c", "start": 4395, "end": 4415}'
     ),
     "code.get_definition": (
         "Tra định nghĩa macro, hằng, enum/enumerator, struct, typedef (và hàm nếu không còn gì khác).\n"
-        "Khi dùng: LUÔN tra trước khi kết luận về ngưỡng, hằng số, mã cảnh báo; khi gặp tên viết hoa trong điều kiện.\n"
+        "Khi dùng: LUÔN tra trước khi kết luận về ngưỡng, hằng số, mã lỗi; khi gặp tên viết hoa trong điều kiện.\n"
         "Trả về: thân định nghĩa có số dòng; nếu trùng tên (ví dụ macro định nghĩa khác nhau theo #ifdef) in tối đa 3 "
         "định nghĩa và liệt kê phần còn lại.\n"
-        'Ví dụ: {"name": "MAX_RECORD_SIZE"}, {"name": "record_overflow", "kind": "enumerator"}'
+        'Ví dụ: {"name": "MAX_MSG_SIZE"}, {"name": "msg_too_long", "kind": "enumerator"}'
     ),
     "code.find_references": (
         "Tìm mọi chỗ dùng một ký hiệu: nơi gọi hàm (thay cho 'callers'), nơi đọc/ghi biến hay trường struct, nơi gán "
@@ -314,20 +314,20 @@ TOOL_DOCS: dict[str, str] = {
         "Khi dùng: lần ngược luồng gọi tới hàm ứng viên; theo dấu biến độ dài hay trường trạng thái.\n"
         "Trả về: '<tệp>:<dòng>: [<loại> in <hàm chứa>] <dòng mã>'; loại là call, read, write hoặc fn_pointer. "
         "Tối đa 50 kết quả; lọc bằng kind.\n"
-        'Ví dụ: {"name": "GetRecordHeader"}, {"name": "curSize", "kind": "write"}'
+        'Ví dụ: {"name": "parse_header"}, {"name": "cur_len", "kind": "write"}'
     ),
     "code.callees": (
         "Liệt kê các hàm được gọi trong thân một hàm, kèm dòng gọi.\n"
         "Khi dùng: lần xuôi luồng xử lý từ một điểm vào.\n"
         "Trả về: '<dòng> <tên hàm được gọi>'. Tối đa 100 kết quả. Lời gọi qua con trỏ hàm hiện bằng tên trường.\n"
-        'Ví dụ: {"name": "ProcessReplyEx"}'
+        'Ví dụ: {"name": "process_input"}'
     ),
     "code.search_text": (
         "Tìm văn bản theo regex trong toàn phạm vi (ripgrep), ±2 dòng ngữ cảnh.\n"
-        "Khi dùng: tìm điểm vào theo thuật ngữ của yêu cầu: tên cảnh báo, tên trường, hằng số, thông điệp lỗi.\n"
+        "Khi dùng: tìm điểm vào theo thuật ngữ của yêu cầu: tên mã lỗi, tên trường, hằng số, thông điệp lỗi.\n"
         "Trả về: dòng khớp '<tệp>:<dòng>:<mã>', ngữ cảnh '<tệp>-<dòng>-<mã>', cuối cùng là danh sách 'hàm chứa'. "
         "Tối đa 50 kết quả.\n"
-        'Ví dụ: {"regex": "record_overflow"}, {"regex": "MAX_RECORD_SIZE", "path_glob": "src/*.c"}'
+        'Ví dụ: {"regex": "msg_too_long"}, {"regex": "MAX_MSG_SIZE", "path_glob": "src/*.c"}'
     ),
     "code.explore": (
         "Tự khám phá như trên terminal, chỉ với lệnh đọc trong danh sách cho phép, chạy trong sandbox chỉ đọc, "
@@ -339,9 +339,9 @@ TOOL_DOCS: dict[str, str] = {
         "Trả về: đầu ra của lệnh. Lệnh đọc một tệp (sed -n, head, tail, cat -n) được đánh số dòng; dòng dạng "
         "'<tệp>:<dòng>:' của rg -n cũng tính là đã đọc. Tối đa 10 giây, 200 dòng hoặc 16 KB: quá thì bị từ chối "
         "(OUTPUT_TOO_LARGE), hãy thu hẹp lệnh.\n"
-        'Ví dụ: {"command": "rg -n record_overflow src/"}, '
-        '{"command": "sg run -p \'if ($S > MAX_RECORD_SIZE + $$$) { $$$ }\' -l c src"}, '
-        '{"command": "rg -l SendAlert src | sort"}'
+        'Ví dụ: {"command": "rg -n msg_too_long src/"}, '
+        '{"command": "sg run -p \'if ($S > MAX_MSG_SIZE + $$$) { $$$ }\' -l c src"}, '
+        '{"command": "rg -l send_error src | sort"}'
     ),
 }
 

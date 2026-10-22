@@ -300,24 +300,32 @@ class AgentTools:
     def test_list_examples(self) -> ToolSpec:
         async def handler(p: BaseModel, s: ToolSession) -> ToolResult:
             assert isinstance(p, ListExamplesParams)
-            if self._examples is None or not self._examples.is_dir():
-                return _text("test.list_examples", "Adapter chưa có thư viện mẫu.", TrustLabel.TRUSTED)
             out: list[str] = []
-            for f in sorted(self._examples.glob("*.yaml")):
-                data: dict[str, Any] = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
-                types: list[str] = data.get("requirement_types", [])
-                if p.requirement_type and p.requirement_type not in types:
-                    continue
-                raw_cases: list[dict[str, Any]] = data.get("cases", [])
-                cases = ", ".join(f"{c.get('variant')}(limit={c.get('limit')})" for c in raw_cases)
-                out.append(
-                    f"{data.get('id', f.stem)}: kiểm {data.get('checks_behavior', '?')}; loại {types}; ca: {cases}"
-                )
-            return _text("test.list_examples", "\n".join(out) or "Không có mẫu phù hợp.", TrustLabel.TRUSTED)
+            if self._examples is not None and self._examples.is_dir():
+                for f in sorted(self._examples.glob("*.yaml")):
+                    data: dict[str, Any] = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+                    types: list[str] = data.get("requirement_types", [])
+                    if p.requirement_type and p.requirement_type not in types:
+                        continue
+                    raw_cases: list[dict[str, Any]] = data.get("cases", [])
+                    cases = ", ".join(f"{c.get('variant')}(limit={c.get('limit')})" for c in raw_cases)
+                    line = f"{data.get('id', f.stem)}: kiểm {data.get('checks_behavior', '?')}; loại {types}"
+                    line += f"; ca: {cases}" if cases else ""
+                    if data.get("steps"):  # mẫu viết bằng DSL: các bước là điểm xuất phát trực tiếp
+                        line += "; bước: " + json.dumps(data["steps"], ensure_ascii=False)
+                    out.append(line)
+            text = "\n".join(out) or "Không có mẫu phù hợp."
+            driver = self._driver()
+            dsl = driver.dsl if driver is not None else None
+            if dsl is not None:
+                text += "\n\nDSL của backend (thao tác → tham số; giá trị được phép; ý nghĩa):\n"
+                text += json.dumps(dsl.describe(), ensure_ascii=False)
+            return _text("test.list_examples", text, TrustLabel.TRUSTED)
 
         return ToolSpec(
             "test.list_examples",
-            "Liệt kê mẫu kiểm thử có sẵn của adapter (hành vi được kiểm, loại yêu cầu, các ca và ngưỡng). Dùng làm điểm xuất phát.",
+            "Liệt kê mẫu kiểm thử có sẵn của adapter (hành vi được kiểm, loại yêu cầu, các ca và ngưỡng, các bước nếu mẫu viết "
+            "bằng DSL) và DSL mà backend kiểm thử của adapter chấp nhận (thao tác, tham số, giá trị). Dùng làm điểm xuất phát.",
             ListExamplesParams,
             handler,
             title="Mẫu kịch bản của adapter",

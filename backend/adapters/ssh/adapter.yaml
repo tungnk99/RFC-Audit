@@ -1,0 +1,90 @@
+# Adapter SSH (tài liệu adapter, Bảng 10): tầng giao vận (RFC 4253) và xác thực (RFC 4252); RFC 4254 tham chiếu.
+# Chưa có bộ kiểm thử tuân thủ SSH phù hợp để bọc, nên mọi mẫu viết bằng DSL.
+# Dữ liệu khai báo, không mã tuỳ ý. Phải qua `rfcv adapter check adapters/ssh` trước khi dùng.
+adapter: ssh
+version: 0.1.0
+backend: asyncssh
+
+domain: rfc_protocol
+verdict_profile: rfc-protocol@3
+specs:
+  - {doc: RFC4253, role: primary, sections_in_scope: ["4.2", "6", "7.1", "11"]}
+  - {doc: RFC4252, role: primary, sections_in_scope: ["4", "5", "6"]}
+  - {doc: RFC4254, role: reference}
+
+component_taxonomy: [transport, kex, packet_protocol, userauth, connection]
+
+vocabulary:
+  events:
+    - receive(msg)
+    - receive(kexinit)
+    - send(msg_type)
+    - send_disconnect(reason)
+    - close
+    - discard
+  # version_exchanged: đã trao đổi chuỗi định danh; authenticating: trao đổi khoá xong, chưa xác thực
+  states: [initial, version_exchanged, authenticating, authenticated]
+  enums:
+    msg_type:
+      - disconnect
+      - ignore
+      - unimplemented
+      - debug
+      - service_request
+      - service_accept
+      - kexinit
+      - newkeys
+      - userauth_request
+      - userauth_failure
+      - userauth_success
+      - userauth_banner
+    reason:                      # mã lý do của SSH_MSG_DISCONNECT, RFC 4253 mục 11.1
+      - host_not_allowed_to_connect
+      - protocol_error
+      - key_exchange_failed
+      - reserved
+      - mac_error
+      - compression_error
+      - service_not_available
+      - protocol_version_not_supported
+      - host_key_not_verifiable
+      - connection_lost
+      - by_application
+      - too_many_connections
+      - auth_cancelled_by_user
+      - no_more_auth_methods_available
+      - illegal_user_name
+
+field_domains:
+  msg.number: {min: 0, max: 255, canonical: [80]}        # byte số thông điệp đầu tải gói nhị phân
+  kexinit.common_kex_count: {min: 0, max: 32}           # số thuật toán kex trong danh sách của client mà SUT cũng hỗ trợ
+
+consistency_rules: []
+
+# Gợi ý cho Locator. Tên tệp, hàm, hằng của OpenSSH portable; kiểm lại khi chốt commit SUT.
+locator_hints:
+  packet_protocol:
+    keywords: ["ssh_packet_read_poll2", "dispatch_protocol_error", "SSH2_MSG_UNIMPLEMENTED", "SSH2_MSG_USERAUTH_SUCCESS"]
+    entry_points: ["ssh_packet_read_poll2"]
+    paths: ["packet.c", "dispatch.c"]
+  kex:
+    keywords: ["kex_choose_conf", "SSH_ERR_NO_KEX_ALG_MATCH", "match_list"]
+    paths: ["kex.c"]
+  userauth:
+    keywords: ["input_userauth_request", "SSH2_MSG_USERAUTH_REQUEST"]
+    paths: ["auth2.c"]
+
+build_flags: ["--without-pam", "--without-selinux"]
+
+sut:
+  repo: https://github.com/openssh/openssh-portable
+  recipe: sut/openssh.yaml
+  start: {role: server, port: 2222}
+
+references: ["dropbear@<commit>", "libssh@<commit>"]
+
+code_scope:
+  include: ["*.c", "*.h", "openbsd-compat/**"]
+  exclude: ["regress/**", "contrib/**"]
+
+examples: examples/*.yaml

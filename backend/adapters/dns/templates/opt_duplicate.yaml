@@ -1,0 +1,14 @@
+# Mẫu DSL (tài liệu adapter, mục 5.3): genreport không có ca gửi nhiều OPT RR với số lượng tuỳ ý.
+id: dns.edns.multiple_opt
+requirement_types: [B]
+rfc_refs: ["RFC6891§6.1.1"]
+checks_behavior: "receive(query, opt RR count > 1) → respond(formerr)"
+variant_class: length_bound
+runner: dnspython
+steps:
+  - {op: connect, args: {transport: tcp}}        # TCP: nhiều OPT RR có thể vượt 512 byte của UDP không EDNS
+  - {op: mutate, args: {field: opt.count, op: set, value: "$query.opt_count"}}
+  - {op: send_msg, args: {type: query, qname: example.test., qtype: SOA}}
+  - {op: expect, args: {within_ms: 2000}}
+bindings: {query.opt_count: from_variant}
+oracle: {pass: "alert == formerr", fail: "otherwise", error: "no_response or sanity_failed"}

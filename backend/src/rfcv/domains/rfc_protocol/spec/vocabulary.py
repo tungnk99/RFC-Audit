@@ -75,6 +75,17 @@ def _check_call(call: Call, sigs: dict[str, list[tuple[str, ...]]], vocab: Vocab
     return [f"{where}: {e}" for e in min(attempts, key=len)]
 
 
+def _holds(op: str, value: int, threshold: int) -> bool:
+    return {
+        ">": value > threshold,
+        ">=": value >= threshold,
+        "<": value < threshold,
+        "<=": value <= threshold,
+        "==": value == threshold,
+        "!=": value != threshold,
+    }[op]
+
+
 def check(rbs: RBS, vocab: Vocabulary) -> list[str]:
     """Trả danh sách lỗi; rỗng nghĩa là RBS chỉ dùng từ vựng adapter và nhất quán."""
     sigs = vocab.signatures()
@@ -98,6 +109,19 @@ def check(rbs: RBS, vocab: Vocabulary) -> list[str]:
             dom = vocab.field_domains[v.field]
             if not dom.min <= v.value <= dom.max:
                 errors.append(f"variant: {v.value} nằm ngoài miền [{dom.min}, {dom.max}] của {v.field}")
+        cond = rbs.where
+        if (
+            v.kind == "boundary"
+            and isinstance(v.value, int)
+            and cond is not None
+            and cond.field == v.field
+            and isinstance(cond.value, int)
+            and not _holds(cond.op, v.value, cond.value)
+        ):
+            errors.append(
+                f"variant: boundary({v.field}, {v.value}) không thoả `where {cond.field} {cond.op} {cond.value}`; "
+                "biến thể biên phải nằm phía kích hoạt (giá trị hợp lệ sát ngưỡng là ca đối chứng, oracle tự thêm)"
+            )
 
     for v in rbs.variants:
         if v.kind in ("random", "valid_random") and (v.k is None or v.k < 1):

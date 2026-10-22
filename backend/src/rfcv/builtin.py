@@ -11,10 +11,25 @@ from typing import Any
 from rfcv.plugins import Registry
 
 
-def _tlsfuzzer(manifest: Any, config: Any) -> Any:
-    from rfcv.backends.tlsfuzzer import TlsfuzzerBackend
+def _backend(module: str, cls: str) -> Any:
+    """Nhập muộn: chỉ nạp mô-đun backend khi adapter chọn nó."""
 
-    return TlsfuzzerBackend()
+    def factory(manifest: Any, config: Any) -> Any:
+        import importlib
+
+        return getattr(importlib.import_module(f"rfcv.backends.{module}"), cls)()
+
+    return factory
+
+
+# tên backend (giá trị trường `backend` trong adapter.yaml) → (mô-đun trong rfcv.backends, lớp).
+BACKENDS = {
+    "tlsfuzzer": ("tlsfuzzer", "TlsfuzzerBackend"),
+    "dnspython": ("dns", "DnspythonBackend"),
+    "h2spec": ("http2", "H2specBackend"),
+    "aioquic": ("quic", "AioquicBackend"),
+    "asyncssh": ("ssh", "AsyncsshBackend"),
+}
 
 
 def _codeindex(name: str) -> Any:
@@ -36,7 +51,8 @@ def register_builtin(reg: Registry) -> None:
     for tool in CODE_TOOL_DESCRIPTORS:  # code pack dùng chung cho mọi miền đọc mã
         reg.register_tool(tool)
     reg.register_domain(pack())
-    reg.register_backend("tlsfuzzer", _tlsfuzzer)
+    for name, (module, cls) in BACKENDS.items():
+        reg.register_backend(name, _backend(module, cls))
     reg.register_code_index("treesitter", _codeindex("treesitter_sandboxed"))
     reg.register_code_index("treesitter-local", _codeindex("treesitter_local"))
     reg.register_executor("docker", _codeindex("docker_executor"))

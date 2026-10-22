@@ -1,0 +1,7 @@
+requirement QUIC-0003 from RFC9000§19.15#p5.6.1s2 modal MUST type B
+actor endpoint
+state connected
+# Phía < 1 của cùng câu với QUIC-0002: khung NEW_CONNECTION_ID có Length = 0.
+trigger receive(frame) where new_connection_id.length < 1
+expect send_connection_close(frame_encoding_error) then close within 2000ms
+variants boundary(new_connection_id.length, 0)

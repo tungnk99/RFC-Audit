@@ -1,0 +1,14 @@
+# Mẫu DSL (tài liệu adapter, mục 5.3): thông điệp của tầng sau xác thực (số >= 80) gửi trước khi xác thực xong.
+id: ssh.userauth.msg_before_auth
+requirement_types: [C]
+rfc_refs: ["RFC4252§6"]
+checks_behavior: "receive(msg, number >= {limit}) trước khi xác thực xong → close"
+variant_class: message_order
+runner: asyncssh
+steps:
+  - {op: connect}
+  - {op: complete_handshake, args: {until: kex}}
+  - {op: send_raw_record, args: {msg_number: "$msg.number", body: zeros, encrypted: true}}
+  - {op: expect, args: {within_ms: 2000}}
+bindings: {msg.number: from_variant}
+oracle: {pass: "closed and no USERAUTH_SUCCESS", fail: "otherwise", error: "sanity_failed or kex_failed"}
