@@ -85,9 +85,7 @@ def test_docs_are_snake_case_with_the_prefix_of_their_folder_and_no_version_word
         if not SNAKE.match(p.stem) or VERSION_WORDS.search(p.stem) or not p.stem.startswith(DOC_FOLDERS[p.parent.name])
     ]
     assert not bad, bad
-    html = [
-        p for p in (DOCS / "html").glob("*.html") if not SNAKE.match(p.stem) or VERSION_WORDS.search(p.stem)
-    ]
+    html = [p for p in (DOCS / "html").glob("*.html") if not SNAKE.match(p.stem) or VERSION_WORDS.search(p.stem)]
     assert not html, [p.name for p in html]
 
 

@@ -64,11 +64,7 @@ class CoordReport:
 
     def by(self, exp: str, policy: str, profile: str, arm: str = "base") -> list[CoordCell]:
         return sorted(
-            (
-                c
-                for c in self.cells
-                if (c.exp, c.policy, c.profile, c.arm) == (exp, policy, profile, arm)
-            ),
+            (c for c in self.cells if (c.exp, c.policy, c.profile, c.arm) == (exp, policy, profile, arm)),
             key=lambda c: (c.impl, c.seed),
         )
 

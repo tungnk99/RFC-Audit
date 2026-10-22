@@ -181,11 +181,11 @@ def typed_outcomes(report: CoordReport) -> Decision:
         fewer = sum(s > 0 for s in saved)
         more = sum(s < 0 for s in saved)
         p_rounds = mcnemar_exact(fewer, more)
-        win = (delta >= D1_MIN_DELTA and p < ALPHA) or (
-            median(saved) >= D1_MIN_ROUNDS_SAVED and p_rounds < ALPHA
-        )
+        win = (delta >= D1_MIN_DELTA and p < ALPHA) or (median(saved) >= D1_MIN_ROUNDS_SAVED and p_rounds < ALPHA)
         passed |= win
-        notes.append(f"{prof}: Δquyết định={delta:+.2f} (p={p:.3f}), vòng tiết kiệm trung vị={median(saved):+.1f} (p={p_rounds:.3f})")
+        notes.append(
+            f"{prof}: Δquyết định={delta:+.2f} (p={p:.3f}), vòng tiết kiệm trung vị={median(saved):+.1f} (p={p_rounds:.3f})"
+        )
     return Decision("D1", passed if seen else None, "; ".join(notes) or "không có dữ liệu")
 
 

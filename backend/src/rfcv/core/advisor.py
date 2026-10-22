@@ -128,7 +128,9 @@ def _resolve(source: str, sit: Situation, need: str | None) -> Any:
     raise ValueError(f"nguồn gắn tham số lạ: {source}")  # freeze() đã chặn; đến đây là lỗi lập trình
 
 
-def build_task(suggest: Suggest, sit: Situation, definition: TaskDefinition, need: str | None = None) -> TaskSpec | None:
+def build_task(
+    suggest: Suggest, sit: Situation, definition: TaskDefinition, need: str | None = None
+) -> TaskSpec | None:
     """Dựng nhiệm vụ từ gợi ý; None nếu thiếu dữ liệu để gắn tham số hoặc tham số không hợp lệ."""
     params: dict[str, Any] = dict(suggest.params)
     for name, source in suggest.bind.items():
@@ -168,14 +170,18 @@ def advise(
     return None
 
 
-def adherence(advice: Advice | None, action: str, planned: Sequence[TaskSpec], rationale: str, deviation_code: str) -> str:
+def adherence(
+    advice: Advice | None, action: str, planned: Sequence[TaskSpec], rationale: str, deviation_code: str
+) -> str:
     """So kế hoạch của Planner với lời khuyên: no_advice | followed | deviated_declared | deviated_unannounced."""
     if advice is None:
         return "no_advice"
     same_stop = advice.stop and action == "stop"
-    same_tasks = not advice.stop and action == "dispatch" and {t.task_type for t in planned} == {
-        t.task_type for t in advice.tasks
-    }
+    same_tasks = (
+        not advice.stop
+        and action == "dispatch"
+        and {t.task_type for t in planned} == {t.task_type for t in advice.tasks}
+    )
     if same_stop or same_tasks:
         return "followed"
     return "deviated_declared" if rationale == deviation_code else "deviated_unannounced"
@@ -217,7 +223,9 @@ def validate_playbook(
                 definition.params_model.model_validate(s.params)
             except ValidationError as exc:
                 # Tham số sẽ được gắn từ tình huống thì thiếu lúc này là bình thường; mọi lỗi khác là lỗi thật.
-                real = [e for e in exc.errors() if not (e["type"] == "missing" and e["loc"][:1] and e["loc"][0] in s.bind)]
+                real = [
+                    e for e in exc.errors() if not (e["type"] == "missing" and e["loc"][:1] and e["loc"][0] in s.bind)
+                ]
                 if real:
                     errors.append(f"{r.id}: tham số tĩnh của {s.task_type} không hợp lệ: {real[0]['msg']}")
     return errors
@@ -236,7 +244,9 @@ def _describe_when(w: When) -> str:
     if w.conflict is not None:
         parts.append("có mâu thuẫn" if w.conflict else "không có mâu thuẫn")
     if w.critique:
-        parts.append({"none": "chưa phản biện", "clean": "phản biện sạch", "issues": "phản biện nêu vấn đề"}[w.critique])
+        parts.append(
+            {"none": "chưa phản biện", "clean": "phản biện sạch", "issues": "phản biện nêu vấn đề"}[w.critique]
+        )
     if w.critique_kind:
         parts.append(f"vấn đề {w.critique_kind}")
     if w.first_round is not None:
@@ -256,7 +266,10 @@ def render_playbook(rules: Sequence[PlaybookRule]) -> str:
     lines: list[str] = []
     for r in sorted(rules, key=lambda x: (x.priority, x.id)):
         action = "dừng" if r.stop else " + ".join(_describe_suggest(s) for s in r.suggest)
-        lines.append(f"- `{r.id}` khi {_describe_when(r.when)} → {action} (`{r.rationale_code}`)." + (f" {r.note}" if r.note else ""))
+        lines.append(
+            f"- `{r.id}` khi {_describe_when(r.when)} → {action} (`{r.rationale_code}`)."
+            + (f" {r.note}" if r.note else "")
+        )
     return "\n".join(lines)
 
 

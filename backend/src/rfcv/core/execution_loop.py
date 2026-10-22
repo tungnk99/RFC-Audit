@@ -399,8 +399,8 @@ class ExecutionLoop:
         session = ToolSession(
             self.run_id, role, inv.requirement.requirement_id, max_tool_calls=profile.budget_per_task.tool_calls
         )
-        precheck = getattr(handler, "precheck", None)
-        if callable(precheck):
+        precheck: Any = getattr(handler, "precheck", None)
+        if precheck is not None:
             # Handler có cổng kiểm tra thuần (không ghi): runtime agent dùng để cho agent làm lại trước khi trả kết quả.
             session.output_check = lambda out: precheck(inv, out, session)
         started = time.monotonic()

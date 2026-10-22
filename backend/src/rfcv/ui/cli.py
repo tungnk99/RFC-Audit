@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 
@@ -106,8 +107,19 @@ app.add_typer(code_app, name="code")
 
 
 class _NullTrace:
-    def append(self, *args: object, **kwargs: object) -> None:
-        return None
+    def append(
+        self,
+        run_id: str,
+        kind: str,
+        payload: dict[str, Any],
+        *,
+        role: str | None = None,
+        requirement_id: str | None = None,
+    ) -> int:
+        return 0
+
+    def events(self, kind: str | None = None) -> Iterator[dict[str, Any]]:
+        return iter(())
 
 
 class _NoExecutor:
@@ -139,8 +151,8 @@ def code_tools(
     index = InMemoryCodeIndex({})
     for spec in build_code_tools(index, _NoExecutor(), CodeScope(Path("."))):
         gateway.register(spec)
-    domain_tools = getattr(pack.runtime, "tools", None)
-    if callable(domain_tools):
+    domain_tools: Any = getattr(pack.runtime, "tools", None)
+    if domain_tools is not None:
         rt = SimpleNamespace(manifest=manifest, run_id="cli", providers=SimpleNamespace(code_index=index))
         for spec in domain_tools(rt):
             gateway.register(spec)

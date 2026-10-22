@@ -77,7 +77,8 @@ def _parser_for(lang: LanguageSpec) -> Any:
         grammar = importlib.import_module(lang.module)
     except ImportError as exc:  # pragma: no cover
         raise IndexBuildError(f"thiếu grammar {lang.module}: pip install 'rfcv[codeindex]'") from exc
-    return Parser(Language(grammar.language()))
+    capsule: object = grammar.language()  # PyCapsule; kiểu object để không rơi vào overload int đã deprecated
+    return Parser(Language(capsule))
 
 
 def tool_versions() -> dict[str, str]:
@@ -92,11 +93,15 @@ def tool_versions() -> dict[str, str]:
 
 @dataclass
 class _FileFacts:
-    symbols: list[tuple[str, str, str, int, int, str]] = field(default_factory=list[tuple[str, str, str, int, int, str]])
+    symbols: list[tuple[str, str, str, int, int, str]] = field(
+        default_factory=list[tuple[str, str, str, int, int, str]]
+    )
     calls: list[tuple[str, str, str, int, str]] = field(default_factory=list[tuple[str, str, str, int, str]])
     refs: list[tuple[str, str, int, str, str]] = field(default_factory=list[tuple[str, str, int, str, str]])
     blocks: list[tuple[str, int, int, str, str]] = field(default_factory=list[tuple[str, int, int, str, str]])
-    branches: list[tuple[str, int, int, int, int, str]] = field(default_factory=list[tuple[str, int, int, int, int, str]])
+    branches: list[tuple[str, int, int, int, int, str]] = field(
+        default_factory=list[tuple[str, int, int, int, int, str]]
+    )
 
 
 # ---------------------------------------------------------------- tiền xử lý C
@@ -182,9 +187,12 @@ def _ref_kind(node: Node) -> str:
         grand = parent.parent
         if grand is not None and grand.type == "call_expression" and _same(child(grand, "function"), parent):
             return "call"
-        if grand is not None and grand.type in ("assignment_expression", "compound_assignment_expr"):
-            if _same(child(grand, "left"), parent):
-                return "write"
+        if (
+            grand is not None
+            and grand.type in ("assignment_expression", "compound_assignment_expr")
+            and _same(child(grand, "left"), parent)
+        ):
+            return "write"
         if grand is not None and grand.type == "update_expression":
             return "write"
         return "read"
@@ -202,7 +210,13 @@ def _ref_kind(node: Node) -> str:
 
 
 def _same(a: Node | None, b: Node | None) -> bool:
-    return a is not None and b is not None and a.start_byte == b.start_byte and a.end_byte == b.end_byte and a.type == b.type
+    return (
+        a is not None
+        and b is not None
+        and a.start_byte == b.start_byte
+        and a.end_byte == b.end_byte
+        and a.type == b.type
+    )
 
 
 def _block_head(node: Node, lines: list[str]) -> str:
@@ -240,7 +254,9 @@ def index_file(lang: LanguageSpec, parser: Any, file: str, source: bytes, lines:
                 if body is not None:
                     for stmt in body.named_children:
                         if stmt.type in lang.control_types or _end_line(stmt) - _line(stmt) >= 5:
-                            facts.blocks.append((file, _line(stmt), _end_line(stmt), stmt.type, _block_head(stmt, lines)))
+                            facts.blocks.append(
+                                (file, _line(stmt), _end_line(stmt), stmt.type, _block_head(stmt, lines))
+                            )
 
         # Lời gọi ở phạm vi tệp (ví dụ trong bộ khởi tạo bảng) vẫn ghi, gắn với biến chứa nó.
         target = lang.call_target(node)
