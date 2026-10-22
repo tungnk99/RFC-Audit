@@ -258,6 +258,14 @@ def _summarize_t3(e: Any, terms: frozenset[str]) -> dict[str, Any]:
     }
 
 
+def _routine_t3(e: Any) -> bool:
+    """T3 không có gì đáng chú ý: PASS, kích hoạt đạt, nhất quán, chưa liên kết độ phủ. Loại này được gộp theo biến thể;
+    FAIL, ERROR, không nhất quán hay đã liên kết giữ hàng riêng."""
+    t3: T3Payload = e.payload
+    linked = bool(t3.coverage_link and t3.coverage_link.linked)
+    return t3.outcome is Outcome.PASS and t3.trigger_reached and t3.consistent and not linked
+
+
 def _summarize_link(e: Any, terms: frozenset[str]) -> dict[str, Any]:
     p: T3LinkPayload = e.payload
     return {"link_t3": VerifiedRef(p.t3), "link_t1": VerifiedRef(p.t1), "linked": p.linked}
@@ -285,6 +293,8 @@ def evidence_kinds() -> list[EvidenceKind]:
             frozenset({Producer.TEST_DRIVER}),
             _polarity_t3,
             _summarize_t3,
+            is_routine=_routine_t3,
+            fold_fields=("variant",),
             version=2,
             # v1 -> v2 chỉ thêm trường có mặc định (side); payload cũ hợp lệ nguyên vẹn.
             upgrades={1: lambda payload: payload},
