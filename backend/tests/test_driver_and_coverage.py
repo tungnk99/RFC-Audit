@@ -12,6 +12,7 @@ from rfcv.core.trace import TraceLog
 from rfcv.domains.rfc_protocol.coverage_linker import link, link_pending, parse_lcov
 from rfcv.domains.rfc_protocol.payloads import Outcome, T1Payload, T3Payload
 from rfcv.domains.rfc_protocol.rules import Assurance, ProtocolRequirement
+from rfcv.domains.rfc_protocol.sandbox.backend import EventTrace
 from rfcv.domains.rfc_protocol.sandbox.driver import ScenarioRejected, TestDriver
 from rfcv.domains.rfc_protocol.spec.oracle_compiler import CompiledOracle
 from rfcv.evidence.artifacts import ArtifactStore
@@ -154,6 +155,48 @@ async def test_trigger_not_reached_is_error(
     )
     p = evs[1].payload
     assert isinstance(p, T3Payload) and p.outcome is Outcome.ERROR and p.observed["reason"] == "trigger_not_reached"
+
+
+class CrashingBackend(FakeBackend):
+    """SUT sập ngay khi nhận bản ghi quá dài; các bản tham chiếu vẫn trả cảnh báo đúng (BL-46)."""
+
+    async def run(self, scenario, params, endpoint, seed):  # type: ignore[no-untyped-def]
+        trace = await super().run(scenario, params, endpoint, seed)
+        if endpoint.impl == "sut" and int(params["record.length"]) > 16640:
+            return EventTrace(events=(), trigger_reached=True, sut_alive_after=False, observation={"closed": True})
+        return trace
+
+
+async def test_a_sut_that_crashes_after_the_trigger_is_a_flagged_fail(
+    store: EvidenceStore, trace: TraceLog, tmp_path: Path, oracle: CompiledOracle
+) -> None:
+    """YD-27: SUT sập sau khi nhận dữ liệu kích hoạt là FAIL (không phải ERROR) và mang cờ `sut_crashed`, vì có thể là
+    lỗi bảo mật; ca đối chứng hợp lệ vẫn PASS."""
+    evs = await driver(store, trace, tmp_path, CrashingBackend()).run_requirement(
+        run_id="run-test", oracle=oracle, scenario=SCENARIO, seed=7
+    )
+    by_variant = {e.payload.variant: e.payload for e in evs if isinstance(e.payload, T3Payload)}
+    boundary = by_variant["boundary:record.length=16641"]
+    assert boundary.outcome is Outcome.FAIL and boundary.trigger_reached
+    assert boundary.observed["reason"] == "sut_crashed"  # cờ nằm trong bản ghi bằng chứng
+    assert boundary.runs == 3 and boundary.consistent  # chạy lại ở môi trường khác vẫn sập: không phải nhiễu
+    assert by_variant["at_limit:record.length=16640"].outcome is Outcome.PASS
+    sut_cases = [e["payload"] for e in trace.events("t3_case") if e["payload"]["role"] in ("sut", "rerun")]
+    crashed = [c for c in sut_cases if c["reason"] == "sut_crashed"]
+    assert crashed and all(c["outcome"] == "FAIL" and c["sut_alive_after"] is False for c in crashed)
+    # Các bản tham chiếu không sập nên làm chứng dương: ca sập không bị coi là lỗi của bộ kiểm thử.
+    assert boundary.witness.has_positive
+    verdict = decide(view(oracle), store.for_requirement(REQ), StopReason.SUFFICIENT)
+    assert verdict.label is Label.VIOLATION
+
+
+async def test_a_sut_that_stays_alive_has_no_crash_flag(
+    store: EvidenceStore, trace: TraceLog, tmp_path: Path, oracle: CompiledOracle
+) -> None:
+    evs = await driver(store, trace, tmp_path, FakeBackend()).run_requirement(
+        run_id="run-test", oracle=oracle, scenario=SCENARIO, seed=7
+    )
+    assert all(e.payload.observed.get("reason") != "sut_crashed" for e in evs if isinstance(e.payload, T3Payload))
 
 
 async def test_invalid_scenario_rejected(

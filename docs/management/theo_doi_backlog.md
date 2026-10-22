@@ -81,7 +81,7 @@ quyết định số đo của mọi lần chạy sau.
 
 | ID | Việc cần làm | Đáp ứng | Phụ thuộc | Cỡ | Giai đoạn | Xong khi | Trạng thái |
 |---|---|---|---|---|---|---|---|
-| BL-46 | Viết test riêng cho nhánh SUT sập sau khi nhận dữ liệu kích hoạt (`sut_crashed`) | YD-27 | – | S | G1 | Test pass; ca sập có cờ và là FAIL | Chưa làm |
+| BL-46 | Viết test riêng cho nhánh SUT sập sau khi nhận dữ liệu kích hoạt (`sut_crashed`) | YD-27 | – | S | G1 | Test pass; ca sập có cờ và là FAIL | Xong |
 | BL-41 | Skill và prompt cho khía cạnh REACTION (lần từ mã lỗi nội bộ tới cảnh báo, kiểm có đóng kết nối) và cho tìm điểm vào, mẫu tìm theo cấu trúc | YD-22, CR-2 | BL-10 | S | G1 | Đo recall khía cạnh REACTION trước và sau, có cải thiện hoặc ghi rõ không đổi | Chưa làm |
 | BL-40 | Bộ quét nhánh nghi vấn (T2 `suspicious_branch`): so sánh với hằng khớp giá trị thử, đọc biến môi trường hay tên máy, trên đường xử lý của yêu cầu | YD-25, CG-6, QS-11 | BL-03 | L | G2 | Phát hiện kịch bản A7 mức 1 và 2: 100%; mức 3 được báo cáo trung thực | Chưa làm |
 | BL-44 | Đo `TRACE_PATHS`: ca nhiều đường xử lý, kiểm `unexplored` điền đúng khi cạn ngân sách | YD-24, CR-7 | BL-04 | M | G2 | 100% T1 có `unexplored` đúng; tỉ lệ yêu cầu loại "mọi" đủ đường được báo cáo | Chưa làm |
