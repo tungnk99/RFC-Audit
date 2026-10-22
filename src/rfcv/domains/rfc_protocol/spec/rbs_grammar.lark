@@ -1,0 +1,45 @@
+// Ngữ pháp Requirement Behavior Spec (RBS) — thiết kế chính, mục 4.3.
+// Đủ nhỏ để kiểm thử toàn bộ Oracle compiler. Mọi EVENT, OBS, STATE, FIELD
+// phải thuộc vocabulary của adapter (kiểm tra ở vocabulary.check, không ở ngữ pháp).
+
+start: requirement
+
+requirement: "requirement" REQ_ID "from" SENTENCE_ID "modal" MODAL "type" RTYPE \
+             "actor" NAME \
+             "state" NAME \
+             "trigger" call where? \
+             "expect" call ("then" call)* within? \
+             forbid? \
+             alternatives? \
+             "variants" variant ("," variant)*
+
+where: "where" FIELD OP value
+within: "within" INT "ms"
+forbid: "forbid" call ("," call)*
+alternatives: "accept_alternatives" call ("|" call)*
+
+call: NAME ("(" [NAME ("," NAME)*] ")")?
+
+variant: "boundary" "(" FIELD "," value ")"       -> v_boundary
+       | "max" "(" FIELD ")"                       -> v_max
+       | "min" "(" FIELD ")"                       -> v_min
+       | "random" "(" FIELD "," "k" "=" INT ")"    -> v_random
+       | "random" "(" FIELD "," "k" "=" INT "," "stratified" ")"  -> v_random_stratified
+       | "valid_random" "(" FIELD "," "k" "=" INT ")"             -> v_valid_random
+       | "probe" "(" FIELD "," "budget" "=" INT ")"               -> v_probe
+
+value: INT | NAME
+
+REQ_ID: /[A-Za-z][A-Za-z0-9_]*-[0-9]+/
+SENTENCE_ID: /RFC[0-9]+§[0-9A-Za-z.]+#[0-9A-Za-z.]+/
+MODAL: /MUST NOT|MUST|SHALL NOT|SHALL|SHOULD NOT|SHOULD|NOT RECOMMENDED|RECOMMENDED|REQUIRED|MAY|OPTIONAL/
+RTYPE: /[ABCD]/
+FIELD: /[a-z_][a-z0-9_]*(\.[a-z_][a-z0-9_]*)*/
+NAME: /[a-z_][a-z0-9_]*/
+OP: ">=" | "<=" | "==" | "!=" | ">" | "<"
+INT: /[0-9]+/
+
+COMMENT: /#[^\n]*/
+%import common.WS
+%ignore WS
+%ignore COMMENT

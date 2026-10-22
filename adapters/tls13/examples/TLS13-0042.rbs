@@ -1,0 +1,7 @@
+requirement TLS13-0042 from RFC8446§5.2#p4s3 modal MUST type B
+actor server
+state connected                       # trạng thái tiền điều kiện
+trigger receive(record) where record.length > 16640
+expect send_alert(record_overflow) then close within 2000ms
+forbid send(application_data)         # hành vi bị cấm sau kích hoạt
+variants boundary(record.length, 16641), max(record.length), random(record.length, k=6, stratified), valid_random(record.length, k=6)

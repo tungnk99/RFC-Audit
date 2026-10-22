@@ -1,0 +1,40 @@
+# Mô hình theo vai trò (LLM gateway). Hash tệp này ghi vào bản kê lần chạy.
+# Khoá API chỉ đọc từ biến môi trường, chỉ trong LLM gateway.
+# Lưu ý: Claude đời mới trả 400 nếu đặt temperature/top_p; chỉ thêm `settings` khi mô hình hỗ trợ.
+roles:
+  rfc_analyst.a:
+    provider: anthropic
+    model: claude-opus-5-5
+    api_key_env: ANTHROPIC_API_KEY
+  rfc_analyst.b:            # luồng dịch thứ hai: khác họ mô hình để lỗi ít tương quan (M2)
+    provider: openai_compatible
+    model: qwen3-max
+    base_url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+    api_key_env: DASHSCOPE_API_KEY
+    settings: {temperature: 0}
+  planner:
+    provider: anthropic
+    model: claude-sonnet-5-5
+    api_key_env: ANTHROPIC_API_KEY
+  test:
+    provider: anthropic
+    model: claude-sonnet-5-5
+    api_key_env: ANTHROPIC_API_KEY
+  verifier:                 # phản biện bằng họ mô hình khác
+    provider: openai_compatible
+    model: deepseek-chat
+    base_url: https://api.deepseek.com/v1
+    api_key_env: DEEPSEEK_API_KEY
+    settings: {temperature: 0}
+  report:
+    provider: anthropic
+    model: claude-haiku-5-5
+    api_key_env: ANTHROPIC_API_KEY
+  code_indexer:
+    provider: anthropic
+    model: claude-haiku-5-5
+    api_key_env: ANTHROPIC_API_KEY
+  code_reader:
+    provider: anthropic
+    model: claude-sonnet-5-5
+    api_key_env: ANTHROPIC_API_KEY

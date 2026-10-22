@@ -1,0 +1,7 @@
+role: verifier
+zone: privileged
+context_fields: [requirement.structured, rfc.sentence, rfc.paragraph, evidence.summary, verdict.sufficiency]
+tools: [registry.read, evidence.read_summary, verdict.read, rfc.read_section]
+output_schema: Critique@1
+prompt: prompt.md
+budget_per_task: {llm_calls: 4, tool_calls: 6, tokens: 80000, seconds: 180}

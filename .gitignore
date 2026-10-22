@@ -218,3 +218,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# rfcv: dữ liệu lần chạy (gói tái lập lưu riêng, không commit)
+runs/
+index/
+*.db
+*.db-wal
+*.db-shm

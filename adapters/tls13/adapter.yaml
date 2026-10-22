@@ -1,0 +1,65 @@
+# Adapter TLS 1.3 (thiết kế chính, mục 4.3; tài liệu adapter, mục 3).
+# Dữ liệu khai báo, không mã tuỳ ý. Phải qua `rfcv adapter check adapters/tls13` trước khi dùng.
+adapter: tls13
+version: 0.1.0
+backend: tlsfuzzer
+
+domain: rfc_protocol
+verdict_profile: rfc-protocol@3
+specs:
+  - {doc: RFC8446, role: primary, sections_in_scope: ["4.1", "4.2", "5.1", "5.2", "6"]}
+  - {doc: RFC9846, role: reference, sections_in_scope: ["4.1", "4.2", "5.1", "5.2", "6"]}
+
+component_taxonomy: [record_layer, handshake, key_schedule, extensions, alerts]
+
+vocabulary:
+  events:
+    - receive(record)
+    - receive(handshake_msg)
+    - send_alert(code)
+    - send(content_type)
+    - close
+    - discard
+  states: [initial, client_hello_sent, server_hello_sent, connected]
+  alerts:
+    - close_notify
+    - unexpected_message
+    - bad_record_mac
+    - record_overflow
+    - handshake_failure
+    - bad_certificate
+    - illegal_parameter
+    - decode_error
+    - decrypt_error
+    - protocol_version
+    - internal_error
+    - missing_extension
+    - unsupported_extension
+  content_types: [change_cipher_spec, alert, handshake, application_data]
+
+field_domains:
+  record.length: {min: 0, max: 65535, canonical: [16641, 65535]}           # uint16 (TLSCiphertext.length, TLSPlaintext.length)
+  handshake.length: {min: 0, max: 16777215}     # uint24
+
+consistency_rules:
+  - {if_expect_contains: send_alert, then_type: B}
+
+locator_hints:
+  record_layer: {keywords: ["record", "TLSCiphertext", "length", "MAX_RECORD_SIZE"]}
+  alerts: {keywords: ["SendAlert", "record_overflow", "decode_error"]}
+
+# Cờ build là đầu vào cố định, dùng chung cho Test driver và Code gate (tài liệu khả thi, mục 6).
+build_flags: ["--enable-tls13", "--disable-shared", "--enable-static", "-DWOLFSSL_TLS13_MIDDLEBOX_COMPAT"]
+
+sut:
+  repo: https://github.com/wolfSSL/wolfssl
+  recipe: sut/wolfssl.yaml
+  start: {role: server, port: 4433}
+
+references: ["rustls@<commit>", "openssl@<commit>"]
+
+code_scope:
+  include: ["src/**", "wolfssl/**"]
+  exclude: ["tests/**", "**/*.pem", "**/*.key", "certs/**"]
+
+examples: examples/*.yaml

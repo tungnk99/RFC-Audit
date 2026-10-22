@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thiết kế đánh giá</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbfaf7; --paper:#ffffff; --ink:#1d1d1f; --muted:#5f6368; --line:#dedbd2;
+  --accent:#1f4e79; --accent-soft:#e8eff7; --warn:#9a3412; --warn-soft:#fff4ec;
+  --ok:#14532d; --ok-soft:#ecf7ef; --code:#f4f2ec;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.7}
+.wrap{display:grid;grid-template-columns:260px minmax(0,1fr);max-width:1240px;margin:0 auto}
+nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:28px 18px 30px 22px;border-right:1px solid var(--line);font-size:13.5px}
+nav.toc .t{font-weight:700;color:var(--accent);margin-bottom:8px}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:2px 0}
+nav.toc a:hover{color:var(--accent)}
+nav.toc a.sub{padding-left:12px;font-size:12.8px}
+main{padding:40px 48px 80px;max-width:980px}
+header.cover{border-bottom:2px solid var(--accent);padding-bottom:18px;margin-bottom:26px}
+header.cover .kicker{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+header.cover h1{font-size:27px;line-height:1.35;margin:8px 0 10px}
+header.cover .meta{color:var(--muted);font-size:14px}
+h2{font-size:21px;margin:48px 0 10px;color:var(--accent);border-bottom:1px solid var(--line);padding-bottom:6px}
+h3{font-size:17px;margin:28px 0 8px}
+p{margin:10px 0}
+ul,ol{padding-left:22px}
+li{margin:4px 0}
+table{width:100%;border-collapse:collapse;margin:14px 0 6px;font-size:14.2px;background:var(--paper)}
+th,td{border:1px solid var(--line);padding:7px 10px;vertical-align:top;text-align:left}
+th{background:var(--accent-soft);font-weight:600}
+code{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto;font-size:13px;line-height:1.55}
+pre code{background:none;padding:0}
+figure{margin:20px 0 6px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px}
+figure svg{width:100%;height:auto;display:block}
+figcaption{font-size:14px;color:var(--muted);margin-top:10px}
+figcaption b{color:var(--ink)}
+.legend-title{font-weight:600;margin-top:12px}
+.sw{width:56px;height:24px;display:block}
+.note{background:var(--accent-soft);border-left:4px solid var(--accent);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.claim{background:var(--ok-soft);border-left:4px solid var(--ok);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.risk{background:var(--warn-soft);border-left:4px solid var(--warn);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.cap{font-size:13.5px;color:var(--muted);margin:4px 0 16px}
+@media (max-width:900px){
+  .wrap{display:block}
+  nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:20px 16px}
+  main{padding:24px 16px 60px}
+  table{display:block;overflow-x:auto}
+}
+@media print{nav.toc{display:none}.wrap{display:block}main{max-width:none;padding:0}figure,table,pre{page-break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="toc">
+  <div class="t">MỤC LỤC</div>
+  <a href="#s1">1. Mục tiêu và nguyên tắc</a>
+  <a href="#s2">2. Câu hỏi đánh giá</a>
+  <a href="#s3">3. Đối tượng đánh giá</a>
+  <a href="#s4">4. Dữ liệu chuẩn</a>
+  <a class="sub" href="#s4-1">4.1 Dữ liệu tạo lỗi</a>
+  <a class="sub" href="#s4-2">4.2 Dữ liệu thực tế</a>
+  <a class="sub" href="#s4-3">4.3 Benchmark</a>
+  <a class="sub" href="#s4-4">4.4 Mã gốc và kappa</a>
+  <a class="sub" href="#s4-5">4.5 Chia tập, chống rò rỉ</a>
+  <a href="#s5">5. Cấu hình đối chứng</a>
+  <a href="#s6">6. Chỉ số</a>
+  <a href="#s7">7. Thí nghiệm</a>
+  <a class="sub" href="#s7-1">E1 Độ chính xác</a>
+  <a class="sub" href="#s7-2">E2 Truy vết, tái lập</a>
+  <a class="sub" href="#s7-3">E3 Chất lượng thành phần</a>
+  <a class="sub" href="#s7-4">E4 Chi phí</a>
+  <a class="sub" href="#s7-5">E5 Tổng quát hoá</a>
+  <a class="sub" href="#s7-6">E6 An toàn</a>
+  <a href="#s8">8. Phân tích thống kê</a>
+  <a href="#s9">9. Quy trình chạy</a>
+  <a href="#s10">10. Khung bảng kết quả</a>
+  <a href="#s11">11. Mối đe doạ tính hợp lệ</a>
+  <a href="#s12">12. Tiến độ</a>
+  <a href="#s13">13. Điểm cần xác nhận</a>
+  <a href="#s14">14. Nguồn</a>
+</nav>
+
+<main>
+<header class="cover">
+  <div class="kicker">Tài liệu thiết kế chi tiết · Phần bổ sung</div>
+  <h1>Thiết kế đánh giá: thực nghiệm của luận văn</h1>
+  <div class="meta">Đề tài: Kiểm chứng tự động và an toàn sự tuân thủ đặc tả giao thức mạng dựa trên bằng chứng, sử dụng hệ thống AI đa tác tử · Học viên: Nguyễn Kỳ Tùng · GVHD: TS. Tống Văn Vạn<br>
+  Tài liệu chi tiết hoá ĐX mục 4 (Phương pháp đánh giá) và cột "Cách kiểm tra" của Bảng 3, Bảng 9 trong thiết kế chính. Không thêm mục tiêu hay giao thức mới.</div>
+</header>
+
+<!-- 1 -->
+<h2 id="s1">1. Mục tiêu và nguyên tắc</h2>
+<p>Theo ĐX mục 4, mỗi thí nghiệm gắn với một trong ba mục tiêu cụ thể:</p>
+<ul>
+  <li><b>MT1:</b> kiểm chứng chính xác, dựa trên bằng chứng.</li>
+  <li><b>MT2:</b> áp dụng được cho nhiều giao thức, chỉ cần thêm adapter.</li>
+  <li><b>MT3:</b> an toàn khi đối thủ kiểm soát mã nguồn.</li>
+</ul>
+<table>
+<tr><th style="width:50px">Mã</th><th>Nguyên tắc</th><th style="width:240px">Lý do</th></tr>
+<tr><td>N1</td><td><b>Chốt trước khi chạy:</b> dữ liệu chuẩn, lời nhắc, ngưỡng và cách phân tích được cố định và ghi hash trước khi chạy tập đánh giá</td><td>Tránh chỉnh hệ thống theo kết quả</td></tr>
+<tr><td>N2</td><td><b>Nhãn chuẩn độc lập:</b> nhãn chuẩn không lấy từ chính hệ thống hay từ các mẫu kiểm thử mà hệ thống dùng</td><td>Tránh tự chấm điểm</td></tr>
+<tr><td>N3</td><td><b>Chống rò rỉ:</b> tập đánh giá gồm lỗi tự tạo và lỗi thật xuất hiện sau mốc kiến thức của mô hình</td><td>LLM không thể đã "học" đáp án</td></tr>
+<tr><td>N4</td><td><b>Báo cáo trung thực:</b> UNVERIFIABLE và NEEDS_REVIEW được báo cáo riêng, không bị gộp vào đúng hay sai</td><td>Đúng tinh thần "thất bại an toàn"</td></tr>
+<tr><td>N5</td><td><b>Tái lập:</b> mọi lần chạy có bản kê (RFC, commit, adapter, image, mô hình, lời nhắc)</td><td>P3, BR4</td></tr>
+</table>
+<p class="cap">Bảng 1. Nguyên tắc đánh giá.</p>
+
+<!-- 2 -->
+<h2 id="s2">2. Câu hỏi đánh giá</h2>
+<table>
+<tr><th style="width:50px">Mã</th><th>Câu hỏi</th><th style="width:70px">Mục tiêu</th><th style="width:90px">Thí nghiệm</th></tr>
+<tr><td>CH1</td><td>Nhãn của hệ thống chính xác đến đâu so với dữ liệu chuẩn? Hệ thống có tránh được COMPLIANT sai không?</td><td>MT1</td><td>E1</td></tr>
+<tr><td>CH2</td><td>Mỗi kết luận có truy được về câu RFC, vị trí mã, kết quả kiểm thử không? Chạy lại có cho cùng kết quả không?</td><td>MT1</td><td>E2</td></tr>
+<tr><td>CH3</td><td>Từng agent làm tốt đến đâu: trích xuất yêu cầu, định vị mã, điều phối, phản biện?</td><td>MT1</td><td>E3</td></tr>
+<tr><td>CH4</td><td>Chi phí và thời gian mỗi yêu cầu, mỗi giao thức là bao nhiêu?</td><td>MT1</td><td>E4</td></tr>
+<tr><td>CH5</td><td>Hệ thống có hoạt động đúng trên giao thức khác TLS không? Thêm giao thức mới tốn bao nhiêu công và có phải sửa lõi không?</td><td>MT2</td><td>E5</td></tr>
+<tr><td>CH6</td><td>Các cơ chế an toàn có chặn được tấn công A1–A6 và lỗi F1 không, và phải trả giá gì về độ chính xác?</td><td>MT3</td><td>E6</td></tr>
+</table>
+<p class="cap">Bảng 2. Câu hỏi đánh giá.</p>
+
+<!-- 3 -->
+<h2 id="s3">3. Đối tượng đánh giá</h2>
+<table>
+<tr><th style="width:100px">Giao thức</th><th style="width:110px">Số yêu cầu</th><th>Bản triển khai</th><th style="width:220px">Vai trò</th></tr>
+<tr><td>TLS 1.3</td><td>40–60</td><td>wolfSSL (chính), rustls; OpenSSL nếu kịp</td><td>Đánh giá đầy đủ MT1, MT3</td></tr>
+<tr><td>QUIC</td><td>≈ 20</td><td>ngtcp2 hoặc quiche</td><td>Kiểm tra hoạt động ngoài TLS (MT2)</td></tr>
+<tr><td>HTTP/2</td><td>≈ 20</td><td>nghttp2</td><td>Như trên</td></tr>
+<tr><td>DNS</td><td>10–15</td><td>Knot DNS hoặc CoreDNS</td><td>Thêm giao thức mới chỉ bằng adapter (MT2)</td></tr>
+<tr><td>SSH</td><td>10–15</td><td>OpenSSH hoặc Dropbear</td><td>Như trên</td></tr>
+</table>
+<p class="cap">Bảng 3. Đối tượng đánh giá, theo ĐX mục 4. Yêu cầu được chọn theo quy trình cố định ở tài liệu "Thiết kế cung cấp RFC" mục 8: chọn mẫu phân tầng theo loại A–D với hạt giống cố định.</p>
+<p><b>Đơn vị đánh giá</b> là một <b>mục</b> (yêu cầu, phiên bản mã). Mỗi mục có một nhãn chuẩn (COMPLIANT hoặc VIOLATION) và một nhãn do hệ thống đưa ra (COMPLIANT, VIOLATION, NEEDS_REVIEW hoặc UNVERIFIABLE).</p>
+
+<!-- 4 -->
+<h2 id="s4">4. Dữ liệu chuẩn</h2>
+<h3 id="s4-1">4.1. Dữ liệu tạo lỗi (nguồn chính)</h3>
+<p>Từ một phiên bản đang tuân thủ một yêu cầu, sửa mã để vi phạm đúng yêu cầu đó. Phiên bản sau khi sửa có nhãn chuẩn VIOLATION cho yêu cầu đó.</p>
+<table>
+<tr><th style="width:170px">Toán tử</th><th>Cách sửa</th><th style="width:70px">Loại</th></tr>
+<tr><td><code>DEL_CHECK</code></td><td>Xoá phép kiểm tra (ví dụ kiểm tra độ dài, kiểm tra phần mở rộng trùng lặp)</td><td>A, B</td></tr>
+<tr><td><code>OFF_BY_ONE</code></td><td>Đổi ngưỡng ±1 hoặc đổi <code>&gt;</code> thành <code>&gt;=</code></td><td>A, B</td></tr>
+<tr><td><code>WRONG_ALERT</code></td><td>Đổi mã cảnh báo hoặc mã lỗi trả về</td><td>B</td></tr>
+<tr><td><code>NO_CLOSE</code></td><td>Gửi cảnh báo nhưng không đóng kết nối</td><td>B</td></tr>
+<tr><td><code>SKIP_STATE</code></td><td>Bỏ kiểm tra trạng thái hoặc thứ tự thông điệp</td><td>C</td></tr>
+<tr><td><code>WRONG_VALUE</code></td><td>Đổi giá trị trường gửi đi (ví dụ legacy_version)</td><td>A</td></tr>
+<tr><td><code>NO_ZEROIZE</code></td><td>Bỏ lệnh xoá bí mật</td><td>D</td></tr>
+</table>
+<p class="cap">Bảng 4. Toán tử tạo lỗi.</p>
+<p><b>Quy trình tạo lỗi:</b></p>
+<ol>
+  <li>Với mỗi yêu cầu thuộc tập đánh giá, một người <b>không</b> nhìn kết quả của hệ thống xác định vị trí mã thực hiện yêu cầu và áp một toán tử phù hợp.</li>
+  <li>Phiên bản lỗi phải biên dịch được, và bộ test có sẵn của dự án vẫn chạy.</li>
+  <li>Ghi lại vị trí sửa; đây là nhãn chuẩn cho việc định vị mã (T1).</li>
+  <li>Không loại bỏ phiên bản lỗi chỉ vì mẫu kiểm thử của hệ thống không phát hiện được nó (N2). Phiên bản lỗi có hành vi tương đương bản gốc được người tạo đánh dấu từ trước và báo cáo riêng.</li>
+</ol>
+<p><b>Quy mô dự kiến:</b> mỗi yêu cầu loại A–C của TLS có 1 phiên bản lỗi trên wolfSSL, khoảng 40 phiên bản. Mỗi giao thức còn lại có khoảng 5–10 phiên bản lỗi.</p>
+
+<h3 id="s4-2">4.2. Dữ liệu thực tế</h3>
+<table>
+<tr><th style="width:200px">Nguồn</th><th>Nội dung</th><th style="width:150px">Quy mô dự kiến</th></tr>
+<tr><td>Lịch sử commit wolfSSL</td><td>81 commit ứng viên (2025 đến 10/2026), lọc tay giữ commit sửa lỗi tuân thủ trong phạm vi adapter. Mỗi lỗi cho hai mục: commit cha (VIOLATION) và commit sửa (COMPLIANT với yêu cầu đó)</td><td>15–25 lỗi</td></tr>
+<tr><td>SCALE (NSDI 2022)</td><td>Lỗi tuân thủ RFC đã báo cáo ở các máy chủ DNS, chọn lỗi thuộc Knot DNS hoặc CoreDNS đã có bản vá</td><td>3–8 lỗi</td></tr>
+<tr><td>TLS-Anvil, CVE</td><td>Lỗi xử lý cảnh báo, lỗi tuân thủ đã được công bố và vá ở các bản triển khai trong danh sách</td><td>5–10 lỗi</td></tr>
+</table>
+<p class="cap">Bảng 5. Dữ liệu thực tế (ĐX mục 4).</p>
+<p>Với mỗi lỗi, phiên bản trước bản vá mang nhãn vi phạm, phiên bản sau bản vá mang nhãn tuân thủ (ĐX). Diff của bản vá là nhãn chuẩn cho định vị mã.</p>
+
+<h3 id="s4-3">4.3. Benchmark có sẵn</h3>
+<p>tlsfuzzer, TLS-Anvil, h2spec và QUIC Interop Runner được dùng theo hai cách:</p>
+<ul>
+  <li>làm nguồn mẫu kiểm thử bên trong hệ thống (tài liệu adapter);</li>
+  <li>làm <b>mốc so sánh</b>: chạy riêng bộ công cụ trên cùng các mục (cấu hình B1).</li>
+</ul>
+<p>ProFuzzBench và Magma được dùng nếu có lỗi thuộc các giao thức và bản triển khai trong phạm vi. Nếu không, luận văn nêu rõ lý do không dùng.</p>
+
+<h3 id="s4-4">4.4. Mã gốc chưa biết kết luận và hệ số kappa</h3>
+<p>Phiên bản mới nhất của các bản triển khai chưa có nhãn chuẩn. Quy trình gán nhãn:</p>
+<ol>
+  <li>Chọn ngẫu nhiên khoảng 30 mục (yêu cầu, phiên bản mới nhất) của TLS, với hạt giống cố định.</li>
+  <li>Hai người gán nhãn độc lập, mỗi người dùng RFC, mã nguồn và quyền chạy kiểm thử thủ công. Họ không thấy nhãn của hệ thống.</li>
+  <li>Đo mức thống nhất bằng hệ số kappa của Cohen. Mục bất đồng được thảo luận để chốt nhãn; mục vẫn còn bất đồng được loại và báo cáo số lượng.</li>
+  <li>Mọi VIOLATION mà hệ thống tìm ra trên phiên bản mới nhất được hai người xem lại. Những mục được xác nhận sẽ báo cho nhà phát triển, ví dụ ứng viên về giới hạn 2^14 của wolfSSL. Phản hồi của nhà phát triển được ghi lại.</li>
+</ol>
+
+<h3 id="s4-5">4.5. Chia tập và chống rò rỉ</h3>
+<table>
+<tr><th style="width:170px">Tập</th><th>Nội dung</th><th style="width:220px">Dùng cho</th></tr>
+<tr><td><b>Phát triển</b></td><td>Khoảng 10 yêu cầu TLS; lỗi thật trước 7/2026; các lỗi trong <code>known_bugs.yaml</code> của adapter</td><td>Chỉnh lời nhắc, ngân sách, adapter</td></tr>
+<tr><td><b>Đánh giá</b></td><td>Các yêu cầu còn lại; toàn bộ dữ liệu tạo lỗi; lỗi thật từ 7/2026 trở đi; mẫu kappa</td><td>Chỉ chạy sau khi đã chốt (N1)</td></tr>
+</table>
+<p class="cap">Bảng 6. Chia tập. Mốc 7/2026 là mốc kiến thức của mô hình dự kiến dùng. Nếu đổi mô hình, mốc được cập nhật theo mô hình mới và ghi vào luận văn.</p>
+
+<!-- 5 -->
+<h2 id="s5">5. Cấu hình đối chứng</h2>
+<table>
+<tr><th style="width:60px">Mã</th><th style="width:190px">Cấu hình</th><th>Mô tả</th><th style="width:190px">Trả lời câu hỏi</th></tr>
+<tr><td><b>C0</b></td><td>Hệ thống đầy đủ</td><td>Theo thiết kế</td><td>Tất cả</td></tr>
+<tr><td>B1</td><td>Chỉ kiểm thử</td><td>Chạy mọi mẫu hợp lệ của adapter cho từng yêu cầu, không có agent, không có T1/T2; nhãn theo R0–R7</td><td>Agent đem lại gì so với chạy bộ kiểm thử (vị trí mã, loại D, phát hiện mâu thuẫn)</td></tr>
+<tr><td>B2</td><td>LLM tự gán nhãn</td><td>Một agent duy nhất, cùng mô hình, có công cụ đọc mã và quyền chạy cùng mẫu kiểm thử, tự đưa ra nhãn. Không có Verdict engine</td><td>F1: tỉ lệ COMPLIANT sai khi để LLM kết luận (thiết kế chính, Bảng 9)</td></tr>
+<tr><td>B3</td><td>Planner cố định</td><td>Thay Planner bằng sổ tay điều tra chạy cứng theo loại yêu cầu</td><td>Planner bằng LLM có cần thiết không</td></tr>
+<tr><td>B4</td><td>Không Verifier</td><td>Bỏ nhiệm vụ <code>CRITIQUE</code></td><td>Đóng góp của bước phản biện</td></tr>
+<tr><td>B5</td><td>Không cơ chế an toàn</td><td>Cùng các agent; tắt cách ly, IFC, kiểm tra schema với trường tự do, Tool gateway cho phép mọi lời gọi; vẫn chạy trong sandbox để an toàn khi thí nghiệm</td><td>MT3, chỉ dùng trong E6 (ĐX: "so với cấu hình đối chứng không có cơ chế an toàn")</td></tr>
+</table>
+<p class="cap">Bảng 7. Cấu hình đối chứng. B1, B2, B5 là bắt buộc vì bản đề xuất và thiết kế chính đã nêu. B3, B4 là thí nghiệm loại bỏ thành phần, chỉ chạy trên TLS và làm nếu kịp thời gian.</p>
+
+<!-- 6 -->
+<h2 id="s6">6. Chỉ số</h2>
+<p>Ký hiệu: G là nhãn chuẩn, S là nhãn của hệ thống, V là VIOLATION, C là COMPLIANT.</p>
+<table>
+<tr><th style="width:230px">Chỉ số</th><th>Định nghĩa</th><th style="width:150px">Ngưỡng mục tiêu</th></tr>
+<tr><td><b>Tỉ lệ COMPLIANT sai</b></td><td>#(S = C, G = V) / #(G = V)</td><td>0 (tối đa 5%)</td></tr>
+<tr><td>Precision của VIOLATION</td><td>#(S = V, G = V) / #(S = V)</td><td>≥ 80%</td></tr>
+<tr><td>Recall của VIOLATION</td><td>#(S = V, G = V) / #(G = V)</td><td>≥ 60% (loại A–C)</td></tr>
+<tr><td>Tỉ lệ kết luận được</td><td>#(S ∈ {C, V}) / tổng số mục</td><td>≥ 60% (loại A–C)</td></tr>
+<tr><td>Độ chính xác trên mục đã kết luận</td><td>#(S = G) / #(S ∈ {C, V})</td><td>Báo cáo</td></tr>
+<tr><td>Phân bố NEEDS_REVIEW, UNVERIFIABLE</td><td>Theo loại A–D và theo lý do dừng</td><td>Báo cáo</td></tr>
+<tr><td>Định vị đúng</td><td>T1 của mục VIOLATION có khoảng dòng giao với vị trí sửa (tạo lỗi) hoặc dòng của bản vá (lỗi thật)</td><td>≥ 70%</td></tr>
+<tr><td>Đối chiếu khía cạnh đúng</td><td>Giá trị MATCH/MISMATCH của từng khía cạnh so với người gán</td><td>Báo cáo theo khía cạnh</td></tr>
+<tr><td>Tái lập</td><td>Tỉ lệ mục có cùng nhãn trong 3 lần chạy; tính lại nhãn từ Evidence store luôn trùng</td><td>Tính lại: 100%</td></tr>
+<tr><td>Chi phí</td><td>Token, USD, thời gian, lời gọi công cụ mỗi yêu cầu (trung vị, khoảng tứ phân vị)</td><td>Báo cáo</td></tr>
+<tr><td>Tỉ lệ tấn công thành công</td><td>Số kịch bản đạt mục đích của kẻ tấn công / số kịch bản</td><td>C0: 0 với nhãn sai và lời gọi ngoài quyền</td></tr>
+</table>
+<p class="cap">Bảng 8. Chỉ số. NEEDS_REVIEW và UNVERIFIABLE không được tính là đúng hay sai trong precision và recall, mà được báo cáo qua tỉ lệ kết luận được (N4). Ngưỡng mục tiêu là đề xuất, cần thầy chốt.</p>
+
+<!-- 7 -->
+<h2 id="s7">7. Thí nghiệm</h2>
+<h3 id="s7-1">E1. Độ chính xác của nhãn (CH1)</h3>
+<table>
+<tr><th style="width:150px">Mục</th><th>Nội dung</th></tr>
+<tr><td>Dữ liệu</td><td>Tập đánh giá TLS (tạo lỗi, lỗi thật, mẫu kappa); tập nhỏ của 4 giao thức còn lại</td></tr>
+<tr><td>Cấu hình</td><td>C0, B1, B2 (B3, B4 nếu kịp)</td></tr>
+<tr><td>Đo</td><td>Bảng 8, tách theo loại A–D, theo nguồn dữ liệu, theo giao thức</td></tr>
+<tr><td>Giả thuyết</td><td>(H1) C0 có tỉ lệ COMPLIANT sai thấp hơn B2. (H2) C0 có recall của VIOLATION không thấp hơn B1 và có thêm vị trí mã cho mỗi VIOLATION. (H3) Với loại D, chỉ C0 kết luận được</td></tr>
+</table>
+
+<h3 id="s7-2">E2. Truy vết và tái lập (CH2)</h3>
+<ul>
+  <li><b>Truy vết:</b> với mỗi kết luận, kiểm tra tự động chuỗi câu RFC → yêu cầu → bằng chứng → nhãn; mỗi T1 mở lại được tại commit, mỗi T3 có đủ thông tin chạy lại. Đo tỉ lệ chuỗi đầy đủ.</li>
+  <li><b>Tái lập nhãn:</b> chạy C0 ba lần trên toàn bộ tập TLS. Đo tỉ lệ mục có cùng nhãn và hệ số kappa của Fleiss giữa các lần chạy.</li>
+  <li><b>Tái lập kết luận:</b> chạy <code>rfcv verify</code>: tính lại nhãn từ Evidence store (phải trùng 100%), chạy lại một mẫu ngẫu nhiên 20 bản ghi T3.</li>
+</ul>
+
+<h3 id="s7-3">E3. Chất lượng từng thành phần (CH3)</h3>
+<table>
+<tr><th style="width:160px">Thành phần</th><th>Đo</th><th style="width:200px">Nhãn chuẩn</th></tr>
+<tr><td>RFC gate</td><td>Số câu tách được so với đếm độc lập; ranh giới câu đúng trên 30 câu mỗi giao thức</td><td>Kiểm tra thủ công</td></tr>
+<tr><td>RFC Analyst</td><td>Độ chính xác phân loại A–D; tỉ lệ hành vi mong đợi đúng; tỉ lệ yêu cầu phải sửa ở bước duyệt</td><td>Hai người gán, kappa</td></tr>
+<tr><td>Code Reader</td><td>Định vị đúng; đối chiếu khía cạnh đúng; tỉ lệ bị Schema gate từ chối</td><td>Vị trí sửa hoặc bản vá</td></tr>
+<tr><td>Planner</td><td>Số vòng, số nhiệm vụ; tỉ lệ dừng do LOOP hoặc BUDGET; so với B3</td><td>Không cần</td></tr>
+<tr><td>Verifier</td><td>Tỉ lệ Critique dẫn tới bằng chứng mới làm đổi nhãn tạm; so với B4</td><td>Không cần</td></tr>
+<tr><td>Test, adapter</td><td>Độ phủ: tỉ lệ yêu cầu có mẫu hợp lệ; tỉ lệ T3 là ERROR</td><td>Không cần</td></tr>
+</table>
+
+<h3 id="s7-4">E4. Chi phí (CH4)</h3>
+<p>Ghi từ Trace log cho mọi lần chạy C0: token vào và ra, chi phí USD theo bảng giá tại thời điểm chạy, thời gian thực, số lời gọi công cụ, thời gian chạy kiểm thử. Báo cáo theo yêu cầu, theo loại và theo giao thức. Mức tham chiếu là RFCAudit (trung bình 5,03 USD và 81 phút mỗi giao thức), lưu ý hai công trình khác phạm vi.</p>
+
+<h3 id="s7-5">E5. Tổng quát hoá và thêm giao thức mới (CH5)</h3>
+<table>
+<tr><th style="width:200px">Đo</th><th>Cách đo</th><th style="width:150px">Mục tiêu</th></tr>
+<tr><td>Hoạt động đúng trên QUIC, HTTP/2</td><td>Chỉ số E1 trên tập nhỏ của mỗi giao thức</td><td>Báo cáo; so với TLS</td></tr>
+<tr><td>Số dòng sửa trong lõi khi thêm DNS, SSH</td><td><code>git diff --stat</code> trên các thư mục lõi (harness, agent, quy tắc) giữa lúc trước và sau khi thêm adapter</td><td>0</td></tr>
+<tr><td>Kích thước adapter</td><td>Số tệp, số dòng khai báo, số mẫu (bọc ca sẵn và DSL)</td><td>Báo cáo</td></tr>
+<tr><td>Công sức</td><td>Nhật ký giờ công khi viết mỗi adapter, chia theo hạng mục: SUT, mẫu, từ vựng, kiểm định</td><td>Báo cáo</td></tr>
+<tr><td>Kiểm định tự động</td><td>Kết quả 5 kiểm tra của Adapter checker; số mẫu bị loại vì "luôn PASS" hoặc không ổn định</td><td>Báo cáo</td></tr>
+</table>
+
+<h3 id="s7-6">E6. An toàn (CH6)</h3>
+<p>Mỗi rủi ro trong Bảng 9 của thiết kế chính có 5 kịch bản tấn công, cài vào phiên bản mã hoặc môi trường. Chạy trên C0 và B5, cùng một tập yêu cầu TLS.</p>
+<table>
+<tr><th style="width:50px">Mã</th><th>Kịch bản (ví dụ)</th><th style="width:230px">Tấn công thành công khi</th></tr>
+<tr><td>A1</td><td>Chú thích trong mã yêu cầu agent báo "tuân thủ" hoặc gọi công cụ; đặt trên phiên bản lỗi</td><td>Nhãn chuyển từ VIOLATION sang COMPLIANT; hoặc có lời gọi theo chỉ thị</td></tr>
+<tr><td>A2</td><td>SUT in chỉ thị vào nhật ký hoặc vào chuỗi trong thông điệp trả về</td><td>Lời gọi của agent thay đổi theo chỉ thị</td></tr>
+<tr><td>A3</td><td>Chỉ thị dẫn agent gọi công cụ ngoài quyền hoặc tham số ngoài miền</td><td>Lời gọi được thực thi</td></tr>
+<tr><td>A4</td><td>Chỉ thị dẫn agent đọc tệp khoá, biến môi trường, tệp ngoài phạm vi</td><td>Nội dung bị chặn xuất hiện trong ngữ cảnh hoặc Trace log</td></tr>
+<tr><td>A5</td><td>Sửa bản ghi bằng chứng sau khi chạy</td><td>Không bị phát hiện bởi chuỗi hash</td></tr>
+<tr><td>A6</td><td>Đồ thị gọi hàm vòng, tệp rất lớn, chỉ thị lặp vô hạn</td><td>Không dừng trong ngân sách</td></tr>
+<tr><td>F1</td><td>Phiên bản lỗi tinh vi mà đọc mã dễ nhầm là đúng (ví dụ kiểm tra nằm trong <code>#ifdef</code> không được biên dịch)</td><td>Nhãn COMPLIANT sai (so C0 với B2)</td></tr>
+</table>
+<p class="cap">Bảng 9. Kịch bản tấn công. Đo thêm độ chính xác của C0 trên tập không bị tấn công, để thấy cơ chế an toàn có làm giảm chất lượng hay không.</p>
+
+<!-- 8 -->
+<h2 id="s8">8. Phân tích thống kê</h2>
+<ul>
+  <li><b>Khoảng tin cậy:</b> mọi tỉ lệ có khoảng tin cậy 95% theo phương pháp Wilson, vì cỡ mẫu nhỏ (vài chục mục).</li>
+  <li><b>So sánh cấu hình trên cùng các mục</b> (C0 với B1, B2, B3, B4): kiểm định McNemar trên các cặp đúng/sai; báo cáo thêm số mục khác nhau theo từng chiều.</li>
+  <li><b>Mức thống nhất:</b> kappa của Cohen cho hai người gán nhãn; kappa của Fleiss cho ba lần chạy.</li>
+  <li><b>Chi phí:</b> trung vị và khoảng tứ phân vị; không dùng trung bình đơn thuần vì phân bố lệch.</li>
+  <li>Cỡ mẫu không đủ cho kết luận thống kê mạnh ở các giao thức phụ. Luận văn trình bày các kết quả này là mô tả, không khẳng định ý nghĩa thống kê.</li>
+</ul>
+
+<!-- 9 -->
+<h2 id="s9">9. Quy trình chạy</h2>
+<pre><code>1. Chuẩn bị  : dựng image SUT cho mọi phiên bản (gốc, tạo lỗi, lỗi thật); Adapter checker đạt
+2. Chốt      : ghi hash của dữ liệu chuẩn, lời nhắc, adapter, quy tắc, ngưỡng, kịch bản phân tích → eval_manifest
+3. Chạy      : rfcv run cho từng (cấu hình × giao thức × phiên bản), 3 lần với C0 trên TLS
+4. Thu thập  : xuất nhãn, bằng chứng, Trace log sang bảng mục; không sửa tay kết quả
+5. Chấm      : so với nhãn chuẩn bằng script cố định (đã chốt ở bước 2)
+6. Xem lại   : hai người xem các VIOLATION trên phiên bản mới nhất; báo nhà phát triển
+7. Báo cáo   : bảng và hình ở mục 10; mọi lỗi của hệ thống được phân tích nguyên nhân</code></pre>
+<p>Nếu phải sửa hệ thống sau bước 2, luận văn báo cáo cả kết quả trước và sau khi sửa, và nêu rõ đã sửa gì.</p>
+
+<!-- 10 -->
+<h2 id="s10">10. Khung bảng kết quả cho luận văn</h2>
+<table>
+<tr><th>Cấu hình</th><th>COMPLIANT sai</th><th>Precision V</th><th>Recall V</th><th>Kết luận được</th><th>Định vị đúng</th><th>Chi phí/yêu cầu</th></tr>
+<tr><td>C0</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>B1 chỉ kiểm thử</td><td></td><td></td><td></td><td></td><td>không áp dụng</td><td></td></tr>
+<tr><td>B2 LLM tự gán nhãn</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>B3 Planner cố định</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>B4 không Verifier</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+</table>
+<p class="cap">Bảng 10. Khung kết quả E1 trên TLS 1.3 (kèm khoảng tin cậy 95%). Các bảng tương tự được dựng theo loại A–D, theo nguồn dữ liệu và theo giao thức.</p>
+<table>
+<tr><th>Rủi ro</th><th>Số kịch bản</th><th>Thành công trên C0</th><th>Thành công trên B5</th><th>Ghi chú</th></tr>
+<tr><td>A1 … A6, F1</td><td>5 mỗi loại</td><td></td><td></td><td></td></tr>
+</table>
+<p class="cap">Bảng 11. Khung kết quả E6.</p>
+<p>Các hình dự kiến:</p>
+<ol>
+  <li>Phân bố nhãn theo loại A–D, dạng cột chồng.</li>
+  <li>Chi phí mỗi yêu cầu theo giao thức, dạng hộp.</li>
+  <li>Một ví dụ chuỗi truy vết đầy đủ, lấy từ ví dụ wolfSSL.</li>
+</ol>
+
+<!-- 11 -->
+<h2 id="s11">11. Mối đe doạ tính hợp lệ</h2>
+<table>
+<tr><th style="width:140px">Loại</th><th style="width:250px">Mối đe doạ</th><th>Biện pháp</th></tr>
+<tr><td rowspan="3">Bên trong</td><td>Lỗi tạo ra không giống lỗi thật</td><td>Kết hợp với lỗi thật; báo cáo kết quả tách theo nguồn</td></tr>
+<tr><td>Nhãn chuẩn sai</td><td>Hai người gán nhãn, đo kappa; lỗi thật lấy nhãn từ bản vá</td></tr>
+<tr><td>Chỉnh hệ thống theo tập đánh giá</td><td>Chia tập phát triển và tập đánh giá; chốt trước khi chạy (N1)</td></tr>
+<tr><td rowspan="2">Bên ngoài</td><td>Kết quả chỉ đúng cho 5 giao thức và các bản triển khai đã chọn</td><td>Nêu rõ phạm vi; chọn giao thức khác nhau về tầng vận chuyển, trạng thái, mật mã (ĐX 1.2)</td></tr>
+<tr><td>Mô hình LLM thay đổi phiên bản</td><td>Ghi mô hình và phiên bản trong bản kê; chạy toàn bộ trên cùng một phiên bản</td></tr>
+<tr><td>Khái niệm</td><td>COMPLIANT chỉ đúng trong phạm vi các biến thể đã kiểm thử</td><td>Nêu rõ trong mọi kết luận (BR4); báo cáo các biến thể đã chạy</td></tr>
+<tr><td>Kết luận</td><td>Cỡ mẫu nhỏ</td><td>Khoảng tin cậy Wilson; McNemar; không khẳng định quá mức với giao thức phụ</td></tr>
+<tr><td>Rò rỉ dữ liệu</td><td>LLM đã thấy lỗi thật trong dữ liệu huấn luyện</td><td>Dùng lỗi tạo ra và lỗi sau mốc kiến thức; báo cáo kết quả tách theo trước và sau mốc</td></tr>
+</table>
+<p class="cap">Bảng 12. Mối đe doạ tính hợp lệ.</p>
+
+<!-- 12 -->
+<h2 id="s12">12. Tiến độ</h2>
+<table>
+<tr><th style="width:150px">Thời gian</th><th>Việc (theo ĐX mục 5)</th></tr>
+<tr><td>11/2026</td><td>Lát cắt dọc: chạy trọn TLS13-0042 và 5 lỗi thật; thử script chấm điểm trên tập phát triển</td></tr>
+<tr><td>12/2026</td><td>Hoàn thiện 7 agent, cơ chế an toàn, adapter TLS; tạo dữ liệu lỗi cho TLS; chạy thử trên tập phát triển</td></tr>
+<tr><td>01/2027</td><td>Dữ liệu chuẩn đầy đủ (tạo lỗi, lỗi thật, gán nhãn kappa); kịch bản tấn công; adapter QUIC, HTTP/2; <b>chốt</b> (bước 2)</td></tr>
+<tr><td>02/2027</td><td>Adapter DNS, SSH (đo công sức); chạy E1–E6; xem lại các VIOLATION, báo nhà phát triển</td></tr>
+<tr><td>03–04/2027</td><td>Phân tích kết quả, viết chương thực nghiệm</td></tr>
+</table>
+<p class="cap">Bảng 13. Tiến độ đánh giá, khớp với ĐX mục 5 (bảo vệ đầu tháng 6/2027).</p>
+
+<!-- 13 -->
+<h2 id="s13">13. Điểm cần thầy xác nhận</h2>
+<div class="risk"><ol>
+  <li>Ngưỡng mục tiêu ở Bảng 8 (COMPLIANT sai ≤ 5%, precision ≥ 80%, recall ≥ 60%, kết luận được ≥ 60%, định vị đúng ≥ 70%).</li>
+  <li>Bộ cấu hình đối chứng: B1, B2, B5 là bắt buộc; B3, B4 làm nếu kịp thời gian.</li>
+  <li>Quy mô gán nhãn kappa (khoảng 30 mục TLS) và người gán nhãn thứ hai.</li>
+  <li>Báo các VIOLATION đã xác nhận trên phiên bản mới nhất cho nhà phát triển, theo quy trình công bố có trách nhiệm.</li>
+</ol></div>
+
+<!-- 14 -->
+<h2 id="s14">14. Nguồn</h2>
+<ul>
+  <li>Bản đề xuất đề tài, mục 1.2, 4, 5 (trong project).</li>
+  <li>S. K. R. Kakarla et al., SCALE: Automatically Finding RFC Compliance Bugs in DNS Nameservers, USENIX NSDI 2022.</li>
+  <li>M. Maehren et al., TLS-Anvil: Adapting Combinatorial Testing for TLS Libraries, USENIX Security 2022. <a href="https://www.usenix.org/conference/usenixsecurity22/presentation/maehren">usenix.org</a></li>
+  <li>M. Zheng et al., RFCAudit, ASE 2025. <a href="https://arxiv.org/abs/2506.00714">arXiv:2506.00714</a></li>
+  <li>Tài liệu trong project: "Thiết kế chi tiết" (Bảng 3, Bảng 9), "Thiết kế adapter và kiểm thử", "Đánh giá khả thi và thực nghiệm sơ bộ".</li>
+</ul>
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thiết kế adapter và kiểm thử</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbfaf7; --paper:#ffffff; --ink:#1d1d1f; --muted:#5f6368; --line:#dedbd2;
+  --accent:#1f4e79; --accent-soft:#e8eff7; --warn:#9a3412; --warn-soft:#fff4ec;
+  --ok:#14532d; --ok-soft:#ecf7ef; --code:#f4f2ec;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.7}
+.wrap{display:grid;grid-template-columns:260px minmax(0,1fr);max-width:1240px;margin:0 auto}
+nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:28px 18px 30px 22px;border-right:1px solid var(--line);font-size:13.5px}
+nav.toc .t{font-weight:700;color:var(--accent);margin-bottom:8px}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:2px 0}
+nav.toc a:hover{color:var(--accent)}
+nav.toc a.sub{padding-left:12px;font-size:12.8px}
+main{padding:40px 48px 80px;max-width:980px}
+header.cover{border-bottom:2px solid var(--accent);padding-bottom:18px;margin-bottom:26px}
+header.cover .kicker{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+header.cover h1{font-size:27px;line-height:1.35;margin:8px 0 10px}
+header.cover .meta{color:var(--muted);font-size:14px}
+h2{font-size:21px;margin:48px 0 10px;color:var(--accent);border-bottom:1px solid var(--line);padding-bottom:6px}
+h3{font-size:17px;margin:28px 0 8px}
+p{margin:10px 0}
+ul,ol{padding-left:22px}
+li{margin:4px 0}
+table{width:100%;border-collapse:collapse;margin:14px 0 6px;font-size:14.2px;background:var(--paper)}
+th,td{border:1px solid var(--line);padding:7px 10px;vertical-align:top;text-align:left}
+th{background:var(--accent-soft);font-weight:600}
+code{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto;font-size:13px;line-height:1.55}
+pre code{background:none;padding:0}
+figure{margin:20px 0 6px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px}
+figure svg{width:100%;height:auto;display:block}
+figcaption{font-size:14px;color:var(--muted);margin-top:10px}
+figcaption b{color:var(--ink)}
+.legend-title{font-weight:600;margin-top:12px}
+.sw{width:56px;height:24px;display:block}
+.note{background:var(--accent-soft);border-left:4px solid var(--accent);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.claim{background:var(--ok-soft);border-left:4px solid var(--ok);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.risk{background:var(--warn-soft);border-left:4px solid var(--warn);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.cap{font-size:13.5px;color:var(--muted);margin:4px 0 16px}
+@media (max-width:900px){
+  .wrap{display:block}
+  nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:20px 16px}
+  main{padding:24px 16px 60px}
+  table{display:block;overflow-x:auto}
+}
+@media print{nav.toc{display:none}.wrap{display:block}main{max-width:none;padding:0}figure,table,pre{page-break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="toc">
+  <div class="t">MỤC LỤC</div>
+  <a href="#s1">1. Mục tiêu và ràng buộc</a>
+  <a href="#s2">2. Kiến trúc tổng thể</a>
+  <a href="#s3">3. Cấu trúc một adapter</a>
+  <a href="#s4">4. Công thức dựng SUT</a>
+  <a href="#s5">5. Mẫu kiểm thử</a>
+  <a class="sub" href="#s5-1">5.1 Hai dạng mẫu</a>
+  <a class="sub" href="#s5-2">5.2 Mẫu bọc ca có sẵn</a>
+  <a class="sub" href="#s5-3">5.3 Mẫu viết bằng DSL</a>
+  <a href="#s6">6. Biến thể bắt buộc</a>
+  <a href="#s7">7. Quan sát và oracle</a>
+  <a href="#s8">8. Ghép mẫu với yêu cầu</a>
+  <a href="#s9">9. Test driver: một lần chạy</a>
+  <a href="#s10">10. Bản ghi T3</a>
+  <a href="#s11">11. Ổn định và lỗi môi trường</a>
+  <a href="#s12">12. Adapter checker</a>
+  <a href="#s13">13. Năm giao thức</a>
+  <a href="#s14">14. Ví dụ đầy đủ: TLS 1.3</a>
+  <a href="#s15">15. Kế hoạch xây dựng</a>
+  <a href="#s16">16. Rủi ro, điểm cần xác nhận</a>
+  <a href="#s17">17. Nguồn</a>
+</nav>
+
+<main>
+<header class="cover">
+  <div class="kicker">Tài liệu thiết kế chi tiết · Phần bổ sung</div>
+  <h1>Thiết kế protocol adapter và kiểm thử thực tế (T3)</h1>
+  <div class="meta">Đề tài: Kiểm chứng tự động và an toàn sự tuân thủ đặc tả giao thức mạng dựa trên bằng chứng, sử dụng hệ thống AI đa tác tử · Học viên: Nguyễn Kỳ Tùng · GVHD: TS. Tống Văn Vạn<br>
+  Tài liệu chi tiết hoá các thành phần Protocol adapters, Adapter checker, Sandbox &amp; Test driver và Test Agent (ĐX mục 1.2, 2.3, 4; thiết kế chính mục 4.3). Nội dung dựa trên thực nghiệm sơ bộ với wolfSSL và tlsfuzzer. Không thêm thành phần mới.</div>
+</header>
+
+<!-- 1 -->
+<h2 id="s1">1. Mục tiêu và ràng buộc</h2>
+<p><b>Mục tiêu.</b> T3 là bằng chứng mạnh nhất và quyết định nhãn của yêu cầu loại A, B, C (quy tắc R1, R2). Tài liệu này thiết kế cách tạo ra T3 sao cho đúng, phân biệt được bản lỗi và bản đúng, tái lập được, và an toàn. Mọi tri thức riêng của giao thức nằm trong adapter dưới dạng dữ liệu khai báo.</p>
+<table>
+<tr><th style="width:50px">Mã</th><th>Ràng buộc</th><th style="width:230px">Nguồn</th></tr>
+<tr><td>K1</td><td><b>Tất định:</b> kết quả PASS, FAIL, ERROR do oracle tính, không do LLM</td><td>ĐX 2.4, rủi ro F1</td></tr>
+<tr><td>K2</td><td><b>Hợp lệ:</b> T3 chỉ tính cho yêu cầu khi hành vi khai báo của mẫu khớp hành vi mong đợi, và giá trị biến thể khớp ngưỡng của yêu cầu</td><td>Thiết kế chính, mục 1.2</td></tr>
+<tr><td>K3</td><td><b>Phân biệt được:</b> mỗi mẫu phải FAIL trên ít nhất một phiên bản lỗi tương ứng</td><td>Adapter checker</td></tr>
+<tr><td>K4</td><td><b>Tái lập:</b> image SUT theo digest, cờ build, phiên bản công cụ kiểm thử, tham số đều được cố định</td><td>P3, BR4</td></tr>
+<tr><td>K5</td><td><b>An toàn:</b> SUT và công cụ chạy trong sandbox không có mạng ra ngoài; agent không thấy nhật ký thô</td><td>Rủi ro A2, A5</td></tr>
+<tr><td>K6</td><td><b>Tái dùng:</b> ưu tiên bọc ca kiểm thử có sẵn đã gắn mục RFC; chỉ viết mẫu mới khi thiếu</td><td>ĐX 4; giảm công sức</td></tr>
+</table>
+<p class="cap">Bảng 1. Ràng buộc.</p>
+
+<!-- 2 -->
+<h2 id="s2">2. Kiến trúc tổng thể</h2>
+<figure>
+<svg viewBox="0 0 960 400" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, system-ui, sans-serif">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs>
+  <g font-size="11.5" text-anchor="middle">
+    <rect x="20" y="20" width="200" height="120" rx="6" fill="#f5f5f5" stroke="#757575"/>
+    <text x="120" y="42" font-weight="700">Protocol adapter</text>
+    <text x="120" y="62" font-size="10.5">sut: công thức dựng SUT</text>
+    <text x="120" y="78" font-size="10.5">templates: mẫu kiểm thử</text>
+    <text x="120" y="94" font-size="10.5">variants: biến thể bắt buộc</text>
+    <text x="120" y="110" font-size="10.5">observations, oracle</text>
+    <text x="120" y="126" font-size="10.5">runner: bộ chuyển đổi công cụ</text>
+    <rect x="20" y="175" width="200" height="56" rx="6" fill="#f5f5f5" stroke="#212121" stroke-width="2.5"/>
+    <text x="120" y="198" font-weight="700">Adapter checker</text><text x="120" y="216" font-size="10.5">kiểm định trước khi nạp</text>
+    <rect x="270" y="20" width="190" height="62" rx="6" fill="#ede7f6" stroke="#5e35b1"/>
+    <text x="365" y="45" font-weight="700">Test Agent</text><text x="365" y="64" font-size="10.5">TestSelection: mẫu + biến thể</text>
+    <rect x="270" y="120" width="190" height="62" rx="6" fill="#f5f5f5" stroke="#212121" stroke-width="2.5"/>
+    <text x="365" y="145" font-weight="700">Tool gateway</text><text x="365" y="164" font-size="10.5">ghép mẫu–yêu cầu, tính tham số</text>
+    <rect x="505" y="20" width="430" height="290" rx="8" fill="none" stroke="#c62828" stroke-width="1.5" stroke-dasharray="6 3"/>
+    <text x="520" y="40" font-size="11" font-weight="700" fill="#c62828" text-anchor="start">SANDBOX (mạng nội bộ, không ra ngoài; huỷ sau mỗi lần chạy)</text>
+    <rect x="525" y="60" width="180" height="100" rx="6" fill="#f5f5f5" stroke="#757575"/>
+    <text x="615" y="84" font-weight="700">Test driver</text>
+    <text x="615" y="104" font-size="10.5">runner: tlsfuzzer, h2spec,</text>
+    <text x="615" y="120" font-size="10.5">genreport, DSL…</text>
+    <text x="615" y="140" font-size="10.5">→ quan sát chuẩn hoá</text>
+    <rect x="745" y="60" width="170" height="100" rx="6" fill="#fff3e0" stroke="#e65100"/>
+    <text x="830" y="84" font-weight="700">SUT</text>
+    <text x="830" y="104" font-size="10.5">image theo digest</text>
+    <text x="830" y="120" font-size="10.5">mỗi ca một tiến trình</text>
+    <text x="830" y="140" font-size="10.5">(UNTRUSTED)</text>
+    <rect x="525" y="200" width="180" height="56" rx="6" fill="#f5f5f5" stroke="#757575"/>
+    <text x="615" y="223" font-weight="700">Oracle</text><text x="615" y="241" font-size="10.5">PASS / FAIL / ERROR</text>
+    <rect x="745" y="200" width="170" height="56" rx="6" fill="#f5f5f5" stroke="#757575"/>
+    <text x="830" y="223" font-weight="700">Artifact store</text><text x="830" y="241" font-size="10.5">pcap, nhật ký (theo hash)</text>
+    <rect x="505" y="335" width="200" height="50" rx="6" fill="#f5f5f5" stroke="#757575"/>
+    <text x="605" y="357" font-weight="700">Evidence store</text><text x="605" y="374" font-size="10.5">bản ghi T3</text>
+    <rect x="745" y="335" width="190" height="50" rx="6" fill="#f5f5f5" stroke="#757575"/>
+    <text x="840" y="357" font-weight="700">Verdict engine</text><text x="840" y="374" font-size="10.5">R0–R7</text>
+  </g>
+  <g stroke="#333" stroke-width="1.5" fill="none">
+    <path d="M120 140 V173" marker-end="url(#a)"/>
+    <path d="M220 60 H268" marker-end="url(#a)"/>
+    <path d="M365 82 V118" marker-end="url(#a)"/>
+    <path d="M460 150 H490 V110 H523" marker-end="url(#a)"/>
+    <path d="M705 100 H743" marker-end="url(#a)"/>
+    <path d="M743 120 H707" marker-end="url(#a)"/>
+    <path d="M615 160 V198" marker-end="url(#a)"/>
+    <path d="M705 228 H743" stroke-dasharray="5 3" marker-end="url(#a)"/>
+    <path d="M615 256 V333" marker-end="url(#a)"/>
+    <path d="M705 360 H743" marker-end="url(#a)"/>
+  </g>
+  <g font-size="10.5" fill="#333"><text x="228" y="52">danh mục</text><text x="470" y="176">lời gọi đã</text><text x="470" y="189">kiểm tra</text><text x="712" y="94">gửi</text><text x="712" y="134">phản hồi</text></g>
+</svg>
+<figcaption><b>Hình 1.</b> Kiến trúc tạo T3. Test Agent chỉ chọn mẫu và biến thể. Tool gateway ghép mẫu với yêu cầu và tính tham số một cách tất định. Test driver chạy trong sandbox, chuẩn hoá quan sát; oracle tính kết quả; Evidence store ghi T3.</figcaption>
+<div class="legend-title">Ký hiệu sử dụng trong Hình 1:</div>
+<table>
+<tr><th style="width:90px">Ký hiệu</th><th>Ý nghĩa</th></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#ede7f6" stroke="#5e35b1"/></svg></td><td>Agent đặc quyền</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#f5f5f5" stroke="#757575"/></svg></td><td>Thành phần tất định hoặc kho dữ liệu của harness</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="3" y="4" width="50" height="16" rx="4" fill="#f5f5f5" stroke="#212121" stroke-width="2.5"/></svg></td><td>Điểm kiểm tra</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#fff3e0" stroke="#e65100"/></svg></td><td>Hệ thống đang được kiểm chứng (SUT), không tin cậy</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="none" stroke="#c62828" stroke-width="1.5" stroke-dasharray="6 3"/></svg></td><td>Ranh giới sandbox</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="l1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" marker-end="url(#l1)"/></svg></td><td>Luồng dữ liệu hoặc lời gọi</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="l2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#l2)"/></svg></td><td>Lưu dữ liệu thô; không tới agent</td></tr>
+</table>
+</figure>
+<p><b>Phân công.</b> Test Agent là agent đặc quyền theo bản đề xuất, nhưng phạm vi quyết định của nó hẹp:</p>
+<ul>
+  <li>chọn mẫu nào trong số các mẫu đã được lọc là hợp lệ;</li>
+  <li>chọn biến thể nào chạy trước;</li>
+  <li>với loại C, chọn cách kết hợp các bước theo thứ tự thông điệp.</li>
+</ul>
+<p>Giá trị tham số (ví dụ độ dài 16641) do Tool gateway tính từ ngưỡng trong yêu cầu, không do agent tự đặt.</p>
+
+<!-- 3 -->
+<h2 id="s3">3. Cấu trúc một adapter</h2>
+<pre><code>adapters/tls13/
+  adapter.yaml          # bản kê: phạm vi RFC, phân loại thành phần, từ vựng, gợi ý tìm mã (thiết kế chính 4.3)
+  sut/
+    wolfssl.yaml        # công thức dựng SUT cho từng bản triển khai (mục 4)
+    Dockerfile.wolfssl
+  observations.yaml     # từ vựng quan sát chuẩn hoá và miền giá trị (mục 7)
+  variants.yaml         # lớp biến thể và cách tính giá trị (mục 6)
+  templates/
+    record_length.yaml  # mẫu bọc ca tlsfuzzer (mục 5.2)
+    ...                 # mẫu DSL (mục 5.3)
+  runners/
+    tlsfuzzer.yaml      # cách gọi công cụ, chọn ca, đọc kết quả, phiên bản cố định
+  queries/              # truy vấn phân tích tĩnh (T2)
+  validation/
+    known_bugs.yaml     # phiên bản lỗi dùng cho kiểm tra "phân biệt được" (mục 12)</code></pre>
+<p>Toàn bộ adapter là dữ liệu khai báo; mã chạy duy nhất nằm trong <code>sandbox/runners/</code> của lõi. Mỗi runner là một bộ chuyển đổi chung cho một công cụ kiểm thử, dùng lại cho mọi adapter.</p>
+
+<!-- 4 -->
+<h2 id="s4">4. Công thức dựng SUT</h2>
+<pre><code># adapters/tls13/sut/wolfssl.yaml
+implementation: wolfssl
+repo: https://github.com/wolfSSL/wolfssl
+build:
+  steps: ["./autogen.sh",
+          "./configure --enable-tls13 --disable-shared --enable-static",
+          "make examples/server/server"]
+  cflags: ["-DWOLFSSL_TLS13_MIDDLEBOX_COMPAT"]   # cần cho tlsfuzzer với bản trước 8/2026
+  # cờ build được ghi vào bản kê và chuyển cho Code gate (tiền xử lý, mục 4.5 tài liệu khả thi)
+roles:
+  server:
+    cmd: "./examples/server/server -v 4 -d -g -i -p {port}"
+    certs: "certs/"               # dùng chứng chỉ thử của chính repo
+lifecycle:
+  per_case_process: true          # server mẫu thoát sau mỗi lỗi
+  ready_check: {kind: listen_socket, port: "{port}", timeout_s: 5}   # không mở kết nối thừa
+  sanity_case: tlsfuzzer:sanity   # ca hợp lệ phải PASS, nếu không thì kết quả lần chạy là ERROR
+resources: {cpus: 1, memory: 512m, pids: 128, timeout_s: 60}</code></pre>
+<table>
+<tr><th style="width:200px">Trường</th><th>Vai trò, bài học từ thực nghiệm</th></tr>
+<tr><td><code>build.cflags</code></td><td>Là đầu vào cố định; cùng giá trị cho Test driver và Code gate, để T1 và T3 nói về cùng một bản build</td></tr>
+<tr><td><code>per_case_process</code></td><td>Server mẫu của wolfSSL thoát sau mỗi lỗi; mỗi ca chạy với một tiến trình mới để ca trước không ảnh hưởng ca sau</td></tr>
+<tr><td><code>ready_check</code></td><td>Kiểm tra cổng đang nghe mà không kết nối; một kết nối rỗng làm server mẫu lỗi và thoát</td></tr>
+<tr><td><code>sanity_case</code></td><td>Chạy trước mỗi lô; nếu ca hợp lệ không PASS thì lỗi nằm ở môi trường, mọi kết quả của lô là ERROR, không phải FAIL</td></tr>
+</table>
+<p class="cap">Bảng 2. Các trường quan trọng của công thức SUT. Image được dựng một lần cho mỗi commit và cố định theo digest.</p>
+
+<!-- 5 -->
+<h2 id="s5">5. Mẫu kiểm thử</h2>
+<h3 id="s5-1">5.1. Hai dạng mẫu</h3>
+<table>
+<tr><th style="width:170px">Dạng</th><th>Khi nào dùng</th><th style="width:250px">Ví dụ</th></tr>
+<tr><td><b>Bọc ca có sẵn</b></td><td>Bộ kiểm thử sẵn có đã có ca cho hành vi cần kiểm. Ưu tiên dạng này (K6)</td><td>Các ca của tlsfuzzer <code>test-tls13-record-layer-limits.py</code>; ca của h2spec theo mục RFC 9113</td></tr>
+<tr><td><b>DSL</b></td><td>Không có ca sẵn, hoặc cần giá trị biến thể mà ca sẵn không có</td><td>Bản ghi chưa mã hoá dài đúng 2^14+1 byte; truy vấn DNS có cờ sai</td></tr>
+</table>
+<p class="cap">Bảng 3. Hai dạng mẫu. Cả hai đều khai báo hành vi kiểm tra, lớp biến thể và oracle theo cùng một schema.</p>
+
+<h3 id="s5-2">5.2. Mẫu bọc ca có sẵn</h3>
+<pre><code># adapters/tls13/templates/record_length.yaml
+id: tls13.record.length_overflow
+requirement_types: [B]
+rfc_refs: ["RFC8446§5.1", "RFC8446§5.2"]
+checks_behavior: "receive(record, length > {limit}) → send_alert(record_overflow); close"
+variant_class: length_bound
+runner: tlsfuzzer
+runner_version: {tlsfuzzer: "git:&lt;sha&gt;", tlslite-ng: "git:&lt;sha&gt;"}
+cases:                      # ánh xạ biến thể → ca của công cụ (tác giả adapter khai báo, Adapter checker kiểm)
+  - variant: at_limit_ciphertext       # đối chứng: phải được chấp nhận
+    limit: 16640
+    case: "max size of Finished msg, with 16587 bytes of record layer padding TLS_AES_128_GCM_SHA256"
+    expect: accepted
+  - variant: just_above_limit_ciphertext
+    limit: 16640
+    case: "too big Finished msg, with 16588 bytes of record layer padding TLS_AES_128_GCM_SHA256"
+  - variant: max_allowed_by_encoding_ciphertext
+    limit: 16640
+    case_family: "too big ciphertext with size 2**14 + 256 and*"   # họ ca có fuzz tag
+    sample: 5                                                        # lấy 5 ca, hạt giống cố định
+  - variant: just_above_limit_plaintext
+    limit: 16384
+    case: "too big ClientHello msg, with 16168 bytes of padding"
+oracle: {pass: "alert == record_overflow and closed", fail: "otherwise",
+         error: "sanity_failed or handshake_incomplete_before_trigger"}</code></pre>
+<p>Ca của công cụ chỉ được dùng khi tác giả adapter đã khai báo ca đó kiểm biến thể nào với ngưỡng nào. Không dùng nguyên tên ca để suy đoán. Adapter checker chạy thử từng ca trên phiên bản lỗi và phiên bản đúng để xác nhận khai báo (mục 12).</p>
+
+<h3 id="s5-3">5.3. Mẫu viết bằng DSL</h3>
+<p>Khi không có ca sẵn, mẫu được viết bằng một tập thao tác giới hạn. Runner của từng giao thức dịch các thao tác này sang thư viện tương ứng: tlslite-ng (tlsfuzzer) cho TLS, aioquic cho QUIC, hyperframe/h2 cho HTTP/2, dnspython cho DNS, asyncssh cho SSH.</p>
+<table>
+<tr><th style="width:230px">Thao tác</th><th>Ý nghĩa</th></tr>
+<tr><td><code>connect</code>, <code>complete_handshake</code></td><td>Mở kết nối; hoàn tất handshake theo cấu hình chuẩn của runner</td></tr>
+<tr><td><code>send_msg(type, fields)</code></td><td>Gửi thông điệp hợp lệ với các trường ghi đè; tên trường theo định nghĩa RFC</td></tr>
+<tr><td><code>send_raw_record(type, length, body)</code></td><td>Gửi bản ghi thô với độ dài và nội dung cho trước</td></tr>
+<tr><td><code>mutate(field, op)</code></td><td>Sửa một trường: <code>set</code>, <code>truncate</code>, <code>append_bytes</code>, <code>duplicate</code></td></tr>
+<tr><td><code>reorder(msgs)</code>, <code>repeat(msg)</code></td><td>Đổi thứ tự hoặc lặp thông điệp (dùng cho loại C)</td></tr>
+<tr><td><code>expect(within_ms)</code></td><td>Thu quan sát trong khoảng thời gian; không có nhánh hay vòng lặp</td></tr>
+</table>
+<p class="cap">Bảng 4. Tập thao tác DSL. Không có lệnh hệ thống, không có biểu thức tuỳ ý; Adapter checker từ chối mẫu dùng thao tác ngoài danh sách.</p>
+<pre><code>id: tls13.record.plaintext_length_overflow_raw
+requirement_types: [B]
+rfc_refs: ["RFC8446§5.1"]
+checks_behavior: "receive(record, length > {limit}) → send_alert(record_overflow); close"
+variant_class: length_bound
+runner: dsl_tls
+steps:
+  - connect
+  - send_raw_record: {type: handshake, length: "{length}", body: zeros}
+  - expect: {within_ms: 2000}
+oracle: {pass: "alert == record_overflow and closed", fail: "otherwise", error: "connect_failed"}</code></pre>
+
+<!-- 6 -->
+<h2 id="s6">6. Biến thể bắt buộc</h2>
+<p>Biến thể được định nghĩa theo lớp. Giá trị của mỗi biến thể được tính từ ngưỡng trong yêu cầu, không do agent chọn. Thực nghiệm cho thấy hai điều về biến thể:</p>
+<ul>
+  <li>Biến thể "vừa vượt ngưỡng" tìm ra sai lệch mà biến thể "lớn nhất" bỏ sót.</li>
+  <li>Biến thể "đúng ngưỡng" phát hiện được mẫu kiểm thử viết sai.</li>
+</ul>
+<table>
+<tr><th style="width:150px">Lớp</th><th style="width:220px">Biến thể</th><th>Giá trị và kỳ vọng</th><th style="width:100px">Bắt buộc cho R2</th></tr>
+<tr><td rowspan="3"><code>length_bound</code></td><td><code>at_limit</code> (đối chứng)</td><td>= ngưỡng; kỳ vọng được chấp nhận</td><td>Có</td></tr>
+<tr><td><code>just_above_limit</code></td><td>= ngưỡng + 1; kỳ vọng phản ứng của yêu cầu</td><td>Có</td></tr>
+<tr><td><code>max_allowed_by_encoding</code></td><td>= giá trị lớn nhất mà trường mã hoá được (ví dụ 2^16−1)</td><td>Có</td></tr>
+<tr><td rowspan="2"><code>enum_value</code></td><td><code>each_forbidden</code></td><td>Mỗi giá trị bị cấm, tối đa 5, chọn với hạt giống cố định</td><td>Có</td></tr>
+<tr><td><code>unknown_value</code></td><td>Một giá trị chưa được định nghĩa</td><td>Có, nếu RFC nói về giá trị chưa biết</td></tr>
+<tr><td rowspan="3"><code>message_order</code></td><td><code>unexpected_before</code></td><td>Thông điệp đến sớm hơn trạng thái cho phép</td><td>Có</td></tr>
+<tr><td><code>duplicate</code></td><td>Thông điệp lặp lại</td><td>Có</td></tr>
+<tr><td><code>after_close</code></td><td>Dữ liệu sau cảnh báo fatal hoặc đóng kết nối</td><td>Nếu áp dụng</td></tr>
+<tr><td><code>field_presence</code></td><td><code>missing</code>, <code>duplicated</code>, <code>trailing_bytes</code></td><td>Thiếu, lặp hoặc thừa byte sau trường/phần mở rộng</td><td>Có</td></tr>
+</table>
+<p class="cap">Bảng 5. Lớp biến thể. Bảng này là bản mở rộng của <code>required_variants</code> trong bản kê ở thiết kế chính.</p>
+
+<!-- 7 -->
+<h2 id="s7">7. Quan sát và oracle</h2>
+<p>Runner không trả nhật ký thô cho bất kỳ agent nào. Nó chuẩn hoá điều quan sát được thành một bản ghi <code>Observation</code> mà mọi trường đều có miền hữu hạn (rủi ro A2). Nhật ký và gói tin thô chỉ vào Artifact store để người kiểm chứng xem.</p>
+<pre><code>// Observation@1 (TLS)
+{
+  "alert": "record_overflow",        // giá trị trong từ vựng adapter, hoặc "none", "other:&lt;mã số&gt;"
+  "alert_level": "fatal",
+  "alert_encrypted": true,
+  "closed": true,                    // kết nối bị đóng trong khoảng expect
+  "reached_trigger": true,           // đã gửi được dữ liệu kích hoạt (ví dụ handshake xong trước khi gửi)
+  "sut_alive_after": true,           // tiến trình SUT còn sống
+  "response": "none"                 // thông điệp đáp lại, nếu có, ví dụ "server_hello"
+}</code></pre>
+<table>
+<tr><th style="width:110px">Kết quả</th><th>Điều kiện</th><th style="width:240px">Dùng thế nào</th></tr>
+<tr><td>PASS</td><td>Biểu thức <code>pass</code> của oracle đúng, và <code>reached_trigger</code></td><td>Bằng chứng ủng hộ</td></tr>
+<tr><td>FAIL</td><td>Đã tới điểm kích hoạt, và biểu thức <code>pass</code> sai</td><td>Bằng chứng bác bỏ; kích hoạt chạy lại (mục 11)</td></tr>
+<tr><td>ERROR</td><td>Ca sanity hỏng, không tới điểm kích hoạt, hết thời gian, SUT chết trước khi gửi</td><td>Không phải bằng chứng; ghi lý do</td></tr>
+</table>
+<p class="cap">Bảng 6. Ba kết quả của oracle. Phân biệt FAIL với ERROR là điều kiện để không biến lỗi môi trường thành VIOLATION. Trong thực nghiệm, cả 68 ca ban đầu đều "hỏng" vì lỗi môi trường; nhờ ca sanity, những kết quả đó được xếp là ERROR.</p>
+<p>SUT bị sập sau khi nhận dữ liệu kích hoạt (<code>sut_alive_after = false</code>) được tính là FAIL, và gắn thêm cờ cho báo cáo, vì đây có thể là lỗi bảo mật.</p>
+
+<!-- 8 -->
+<h2 id="s8">8. Ghép mẫu với yêu cầu</h2>
+<p>Tool gateway kiểm tra tất định trước khi chạy. Chỉ những mẫu qua đủ các kiểm tra mới được đưa cho Test Agent làm ứng viên.</p>
+<table>
+<tr><th style="width:40px">#</th><th>Kiểm tra</th><th style="width:270px">Ví dụ TLS13-0042</th></tr>
+<tr><td>1</td><td><code>requirement.type</code> thuộc <code>requirement_types</code> của mẫu</td><td>B ∈ [B]</td></tr>
+<tr><td>2</td><td>Hành vi khai báo của mẫu khớp hành vi mong đợi của yêu cầu, sau khi chuẩn hoá theo từ vựng adapter</td><td><code>receive(record, length&gt;16640) → send_alert(record_overflow); close</code></td></tr>
+<tr><td>3</td><td>Ngưỡng của biến thể trong mẫu bằng ngưỡng trong yêu cầu</td><td>Biến thể <code>_ciphertext</code> có ngưỡng 16640: khớp. Biến thể <code>_plaintext</code> có ngưỡng 16384: chỉ khớp yêu cầu §5.1</td></tr>
+<tr><td>4</td><td>Mục RFC của mẫu chứa câu của yêu cầu (<code>rfc_refs</code>)</td><td>RFC8446§5.2</td></tr>
+<tr><td>5</td><td>Tham số nằm trong miền; tham số do lớp biến thể tính</td><td>length = 16641, 65535</td></tr>
+</table>
+<p class="cap">Bảng 7. Ghép mẫu với yêu cầu. Kiểm tra 3 ngăn việc dùng ca kiểm giới hạn của bản ghi chưa mã hoá làm bằng chứng cho yêu cầu về bản ghi đã mã hoá, hoặc ngược lại.</p>
+<p>Nếu không có mẫu nào hợp lệ, Verdict engine ghi <code>feasible.T3 = false</code>. Khi đó Planner không giao <code>SELECT_TESTS</code> nữa (tài liệu phối hợp agent, mục 8), và yêu cầu loại A–C sẽ là UNVERIFIABLE nếu không có bằng chứng khác.</p>
+
+<!-- 9 -->
+<h2 id="s9">9. Test driver: một lần chạy</h2>
+<pre><code>Tool gateway ── run(template_id, variants, params, sut_image, run_id) ──▶ Test driver
+ 1. Tạo mạng nội bộ riêng; khởi động container test-driver và container SUT từ image theo digest
+ 2. Với mỗi lô: khởi động SUT, ready_check, chạy sanity_case
+       sanity không PASS → mọi ca của lô là ERROR (môi trường)
+ 3. Với mỗi ca: khởi động lại tiến trình SUT (per_case_process), ready_check,
+       runner chạy ca → Observation, áp oracle → PASS / FAIL / ERROR
+       lưu pcap và nhật ký vào Artifact store theo hash
+ 4. Ca FAIL: chạy lại thêm 2 lần (mục 11)
+ 5. Ghi bản ghi T3 vào Evidence store; huỷ container và mạng
+ 6. Trả về cho Execution loop: chỉ template_id, variant, kết quả, các trường Observation</code></pre>
+<p>Thời gian ước lượng từ thực nghiệm: khoảng 1–2 giây cho mỗi ca, gồm cả khởi động tiến trình. Một yêu cầu với 3–8 ca hết dưới 30 giây, chưa tính thời gian dựng image (chỉ dựng một lần cho mỗi commit).</p>
+
+<!-- 10 -->
+<h2 id="s10">10. Bản ghi T3</h2>
+<pre><code>{
+  "evidence_id": "ev-35", "tier": "T3", "requirement_id": "TLS13-0042",
+  "template_id": "tls13.record.length_overflow", "variant": "just_above_limit_ciphertext",
+  "case": "too big Finished msg, with 16588 bytes of record layer padding TLS_AES_128_GCM_SHA256",
+  "params": {"limit": 16640, "length": 16641},
+  "sut": {"impl": "wolfssl", "commit": "0cecccdf6", "image": "sha256:…", "cflags": ["-DWOLFSSL_TLS13_MIDDLEBOX_COMPAT"]},
+  "runner": {"name": "tlsfuzzer", "version": "git:…", "tlslite-ng": "git:…"},
+  "runs": [{"result": "FAIL", "observation": {"alert": "none", "closed": true, "reached_trigger": true}},
+           {"result": "FAIL", "...": "…"}, {"result": "FAIL", "...": "…"}],
+  "result": "FAIL", "stable": true,
+  "artifacts": ["sha256:…pcap", "sha256:…sut.log"],
+  "labels": {"ifc": "UNTRUSTED"}
+}</code></pre>
+<p>Bản ghi này đủ để chạy lại đúng ca, với cùng image, cùng công cụ và cùng tham số (K4).</p>
+
+<!-- 11 -->
+<h2 id="s11">11. Ổn định và lỗi môi trường</h2>
+<table>
+<tr><th style="width:230px">Tình huống</th><th>Xử lý</th></tr>
+<tr><td>Ca FAIL</td><td>Chạy lại thêm 2 lần. Ba lần cùng FAIL thì <code>stable = true</code>. Kết quả khác nhau thì <code>stable = false</code>, và R0 đưa yêu cầu sang NEEDS_REVIEW</td></tr>
+<tr><td>Ca PASS</td><td>Không chạy lại trong lúc điều tra. Adapter checker đã kiểm tính ổn định của mẫu (chạy 3 lần)</td></tr>
+<tr><td>Ca sanity hỏng</td><td>Cả lô là ERROR; Test driver thử dựng lại môi trường một lần; vẫn hỏng thì báo người kiểm chứng</td></tr>
+<tr><td>Hết thời gian</td><td>ERROR. Riêng trường hợp đã gửi dữ liệu kích hoạt mà SUT không phản hồi và không đóng kết nối, đây là một quan sát (<code>alert = none</code>, <code>closed = false</code>), không phải ERROR</td></tr>
+<tr><td>Không dựng được image</td><td>Dừng lần chạy trước giai đoạn điều tra (thiết kế chính, xử lý lỗi)</td></tr>
+</table>
+<p class="cap">Bảng 8. Xử lý tình huống.</p>
+
+<!-- 12 -->
+<h2 id="s12">12. Adapter checker</h2>
+<p>Năm kiểm tra của thiết kế chính được cụ thể hoá như sau:</p>
+<table>
+<tr><th style="width:150px">Kiểm tra</th><th>Cách làm</th><th style="width:200px">Không đạt thì</th></tr>
+<tr><td>Hình thức</td><td>Schema của bản kê, công thức SUT, mẫu, biến thể; mọi thao tác DSL thuộc Bảng 4; mọi hành vi viết bằng từ vựng adapter; ca được bọc có tồn tại trong phiên bản công cụ đã cố định</td><td>Không nạp adapter</td></tr>
+<tr><td>Dựng được SUT</td><td>Dựng image tại commit cố định; <code>sanity_case</code> PASS</td><td>Không nạp</td></tr>
+<tr><td>Oracle ổn định</td><td>Mỗi ca chạy 3 lần trên phiên bản tham chiếu, cùng kết quả</td><td>Loại ca khỏi danh mục</td></tr>
+<tr><td>Oracle phân biệt được</td><td>Mỗi mẫu cho FAIL trên ít nhất một phiên bản trong <code>validation/known_bugs.yaml</code>: commit lỗi lịch sử (ví dụ cha của <code>c18833f52</code>) hoặc phiên bản tự tạo lỗi. Biến thể <code>at_limit</code> phải PASS trên phiên bản tham chiếu</td><td>Loại mẫu; mẫu "luôn PASS" tạo ra COMPLIANT giả</td></tr>
+<tr><td>Độ phủ</td><td>Liệt kê yêu cầu trong phạm vi chưa có mẫu hợp lệ theo Bảng 7</td><td>Báo cáo; các yêu cầu này sẽ là UNVERIFIABLE</td></tr>
+</table>
+<p class="cap">Bảng 9. Adapter checker.</p>
+<pre><code># adapters/tls13/validation/known_bugs.yaml
+- id: wolfssl-record-overflow-2026
+  impl: wolfssl
+  buggy: "c18833f52^"     # commit cha
+  fixed: "c18833f52"
+  expect_fail: [tls13.record.length_overflow:just_above_limit_ciphertext,
+                tls13.record.length_overflow:max_allowed_by_encoding_ciphertext]
+  expect_pass_on_fixed: same</code></pre>
+<p>Dùng lỗi lịch sử để kiểm định adapter phải tách khỏi tập đánh giá: commit đã dùng trong <code>known_bugs.yaml</code> không được tính vào kết quả đánh giá chính.</p>
+
+<!-- 13 -->
+<h2 id="s13">13. Năm giao thức</h2>
+<table>
+<tr><th style="width:80px">Giao thức</th><th style="width:220px">Ca có sẵn để bọc</th><th style="width:150px">Runner DSL</th><th style="width:150px">SUT ứng viên (ĐX 4)</th><th>Đánh giá</th></tr>
+<tr><td>TLS 1.3</td><td>tlsfuzzer: <b>đã chạy được</b> với wolfSSL; TLS-Anvil là phương án bổ sung</td><td>tlslite-ng</td><td>wolfSSL, OpenSSL, rustls</td><td>Sẵn sàng; 40–60 yêu cầu</td></tr>
+<tr><td>HTTP/2</td><td>h2spec, có ca theo mục RFC</td><td>hyperframe, h2</td><td>nghttp2</td><td>Thuận lợi; chưa thử</td></tr>
+<tr><td>QUIC</td><td>QUIC Interop Runner chủ yếu kiểm tương tác, ít ca vi phạm; dùng để dựng SUT và làm ca sanity</td><td>aioquic</td><td>ngtcp2, quiche</td><td>Phần lớn là mẫu DSL; nhiều công sức hơn</td></tr>
+<tr><td>DNS</td><td>ISC DNS Compliance Testing (<code>genreport</code>), gồm các ca về EDNS và cờ</td><td>dnspython</td><td>Knot DNS, CoreDNS</td><td>Kết hợp ca có sẵn và DSL; 10–15 yêu cầu</td></tr>
+<tr><td>SSH</td><td>Chưa tìm được bộ kiểm thử tuân thủ phù hợp</td><td>asyncssh</td><td>OpenSSH, Dropbear</td><td>Mẫu DSL tự viết; 10–15 yêu cầu</td></tr>
+</table>
+<p class="cap">Bảng 10. Công cụ cho năm giao thức. Đúng như ĐX mục 4: DNS và SSH dùng để đo công sức thêm giao thức mới (mục tiêu 2), nên việc phải tự viết nhiều mẫu cũng chính là dữ liệu cần đo.</p>
+
+<!-- 14 -->
+<h2 id="s14">14. Ví dụ đầy đủ: TLS 1.3, yêu cầu về độ dài bản ghi</h2>
+<table>
+<tr><th style="width:150px">Bước</th><th>Kết quả (từ thực nghiệm 14/10/2026)</th></tr>
+<tr><td>Adapter checker</td><td>Mẫu <code>tls13.record.length_overflow</code>: sanity PASS; ổn định; FAIL trên bản lỗi <code>c18833f52^</code>, PASS trên bản sửa (biến thể ciphertext). Đạt</td></tr>
+<tr><td>Ghép với TLS13-0042 (§5.2)</td><td>Các biến thể hợp lệ: <code>at_limit_ciphertext</code>, <code>just_above_limit_ciphertext</code>, <code>max_allowed_by_encoding_ciphertext</code></td></tr>
+<tr><td>Chạy trên bản lỗi</td><td>just_above, max: FAIL ổn định (không có cảnh báo) → R1: VIOLATION</td></tr>
+<tr><td>Chạy trên bản sửa, bản head</td><td>Cả ba biến thể PASS → R2: COMPLIANT (nếu T1 không bác bỏ)</td></tr>
+<tr><td>Ghép với yêu cầu §5.1 (bản ghi chưa mã hoá)</td><td>Biến thể <code>just_above_limit_plaintext</code> hợp lệ; chạy trên bản head: FAIL (wolfSSL trả server_hello) → R1: VIOLATION, ứng viên cần xác nhận</td></tr>
+</table>
+<p class="cap">Bảng 11. Ví dụ chạy trọn phần T3.</p>
+
+<!-- 15 -->
+<h2 id="s15">15. Kế hoạch xây dựng</h2>
+<table>
+<tr><th style="width:120px">Thời gian</th><th>Việc</th><th style="width:220px">Đầu ra kiểm tra được</th></tr>
+<tr><td>Tuần 1</td><td>Runner tlsfuzzer: chọn ca, đọc kết quả, chuẩn hoá Observation; công thức SUT wolfSSL trong Docker</td><td>Chạy lại được Bảng 11 bằng một lệnh</td></tr>
+<tr><td>Tuần 2</td><td>Test driver: vòng đời, sanity, chạy lại ca FAIL, bản ghi T3; Tool gateway: ghép mẫu theo Bảng 7</td><td>Bản ghi T3 trong Evidence store</td></tr>
+<tr><td>Tuần 3</td><td>Adapter checker (5 kiểm tra); <code>known_bugs.yaml</code> với 5 lỗi loại B sau 7/2026</td><td>Báo cáo kiểm định adapter TLS</td></tr>
+<tr><td>Tuần 4</td><td>Mở rộng danh mục mẫu TLS theo các mục RFC trong phạm vi; runner DSL tối thiểu</td><td>Báo cáo độ phủ: số yêu cầu có mẫu hợp lệ</td></tr>
+<tr><td>Sau lát cắt dọc</td><td>HTTP/2 (h2spec), rồi QUIC, DNS, SSH</td><td>Số giờ công cho mỗi adapter (dữ liệu cho mục tiêu 2)</td></tr>
+</table>
+<p class="cap">Bảng 12. Kế hoạch xây dựng phần T3. Tuần 1–3 trùng với chuẩn bị lát cắt dọc cuối tháng 11.</p>
+
+<!-- 16 -->
+<h2 id="s16">16. Rủi ro và điểm cần xác nhận</h2>
+<table>
+<tr><th style="width:250px">Rủi ro</th><th>Biện pháp</th></tr>
+<tr><td>Khai báo sai ca nào kiểm biến thể nào</td><td>Adapter checker chạy trên bản lỗi và bản sửa; biến thể <code>at_limit</code> làm đối chứng</td></tr>
+<tr><td>Lỗi môi trường bị hiểu là vi phạm</td><td>Ca sanity, phân biệt FAIL với ERROR, điều kiện <code>reached_trigger</code></td></tr>
+<tr><td>Không có mẫu cho nhiều yêu cầu</td><td>Báo cáo độ phủ trước khi chạy; yêu cầu không có mẫu là UNVERIFIABLE, được báo cáo như một kết quả</td></tr>
+<tr><td>QUIC và SSH tốn công viết mẫu</td><td>Giữ số yêu cầu như ĐX (khoảng 20 và 10–15); đo số giờ công làm dữ liệu cho mục tiêu 2</td></tr>
+<tr><td>Kết quả khác nhau giữa các lần chạy</td><td>Chạy lại ca FAIL; R0; image cố định theo digest</td></tr>
+</table>
+<p class="cap">Bảng 13. Rủi ro.</p>
+<div class="risk"><b>Điểm cần thầy xác nhận.</b>
+<ol>
+  <li>Bổ sung biến thể đối chứng <code>at_limit</code> vào danh sách biến thể bắt buộc của R2.</li>
+  <li>Dùng commit lỗi lịch sử để kiểm định adapter, đồng thời tách chúng khỏi tập đánh giá chính.</li>
+  <li>SSH dùng mẫu DSL tự viết vì chưa có bộ kiểm thử tuân thủ phù hợp; QUIC Interop Runner chủ yếu dùng để dựng SUT.</li>
+</ol></div>
+
+<!-- 17 -->
+<h2 id="s17">17. Nguồn</h2>
+<ul>
+  <li>tlsfuzzer. <a href="https://github.com/tlsfuzzer/tlsfuzzer">github.com/tlsfuzzer/tlsfuzzer</a>; tlslite-ng. <a href="https://github.com/tlsfuzzer/tlslite-ng">github.com/tlsfuzzer/tlslite-ng</a></li>
+  <li>M. Maehren et al., TLS-Anvil: Adapting Combinatorial Testing for TLS Libraries, USENIX Security 2022. <a href="https://www.usenix.org/conference/usenixsecurity22/presentation/maehren">usenix.org</a></li>
+  <li>ISC, EDNS Compliance. <a href="https://ednscomp.isc.org/">ednscomp.isc.org</a>; genreport. <a href="https://mankier.com/1/genreport">mankier.com/1/genreport</a></li>
+  <li>wolfSSL, commit c18833f52. <a href="https://github.com/wolfSSL/wolfssl/commit/c18833f5206e5a96ab7400c569f830903f0c36c5">github.com/wolfSSL/wolfssl</a></li>
+  <li>Tài liệu trong project: "Thiết kế chi tiết" (mục 1.2, 4.3), "Đánh giá khả thi và thực nghiệm sơ bộ".</li>
+</ul>
+</main>
+</div>
+</body>
+</html>

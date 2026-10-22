@@ -1,0 +1,20 @@
+# Công thức dựng SUT wolfSSL (tài liệu adapter, mục 4). Image dựng một lần cho mỗi commit, cố định theo digest.
+implementation: wolfssl
+repo: https://github.com/wolfSSL/wolfssl
+build:
+  steps:
+    - ./autogen.sh
+    - ./configure --enable-tls13 --disable-shared --enable-static
+    - make examples/server/server
+  cflags: ["-DWOLFSSL_TLS13_MIDDLEBOX_COMPAT"]   # cần cho tlsfuzzer với bản trước 8/2026
+  coverage_cflags: ["-fprofile-instr-generate", "-fcoverage-mapping"]
+roles:
+  server:
+    cmd: "./examples/server/server -v 4 -d -g -i -p {port}"
+    certs: certs/
+lifecycle:
+  per_case_process: true          # server mẫu thoát sau mỗi lỗi
+  ready_check: {kind: listen_socket, port: "{port}", timeout_s: 5}   # không mở kết nối thừa
+  sanity_case: "tlsfuzzer:sanity"
+  stop_signal: SIGTERM            # để llvm-cov ghi .profraw; SIGKILL làm mất dữ liệu độ phủ
+resources: {cpus: 1, memory: 512m, pids: 128, timeout_s: 60}

@@ -1,0 +1,25 @@
+# Mẫu bọc ca có sẵn của tlsfuzzer (tài liệu adapter, mục 5.2). Thư viện ví dụ cho Test Agent.
+id: tls13.record.length_overflow
+requirement_types: [B]
+rfc_refs: ["RFC8446§5.1", "RFC8446§5.2"]
+checks_behavior: "receive(record, length > {limit}) → send_alert(record_overflow); close"
+variant_class: length_bound
+runner: tlsfuzzer
+runner_version: {tlsfuzzer: "git:<sha>", tlslite-ng: "git:<sha>"}
+cases:
+  - variant: at_limit_ciphertext
+    limit: 16640
+    case: "max size of Finished msg, with 16587 bytes of record layer padding TLS_AES_128_GCM_SHA256"
+    expect: accepted
+  - variant: just_above_limit_ciphertext
+    limit: 16640
+    case: "too big Finished msg, with 16588 bytes of record layer padding TLS_AES_128_GCM_SHA256"
+  - variant: max_allowed_by_encoding_ciphertext
+    limit: 16640
+    case_family: "too big ciphertext with size 2**14 + 256 and*"
+    sample: 5
+  - variant: just_above_limit_plaintext
+    limit: 16384
+    case: "too big ClientHello msg, with 16168 bytes of padding"
+oracle: {pass: "alert == record_overflow and closed", fail: "otherwise",
+         error: "sanity_failed or handshake_incomplete_before_trigger"}

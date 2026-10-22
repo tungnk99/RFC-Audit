@@ -1,0 +1,7 @@
+role: code_reader
+zone: quarantine
+context_fields: [requirement.structured, rfc.sentence, rfc.context_pack, task.focus, task.recheck_location, adapter.build_flags]
+tools: [locator.suggest, code.list_dir, code.file_outline, code.search_text, code.search_symbol, code.read_function, code.read_range, code.get_definition, code.find_references, code.callees, code.explore]
+output_schema: LocationClaim@1
+prompt: prompt.md
+budget_per_task: {llm_calls: 12, tool_calls: 30, tokens: 250000, seconds: 900}

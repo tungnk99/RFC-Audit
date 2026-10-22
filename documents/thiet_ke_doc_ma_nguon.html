@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thiết kế khám phá mã nguồn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbfaf7; --paper:#ffffff; --ink:#1d1d1f; --muted:#5f6368; --line:#dedbd2;
+  --accent:#1f4e79; --accent-soft:#e8eff7; --warn:#9a3412; --warn-soft:#fff4ec;
+  --ok:#14532d; --ok-soft:#ecf7ef; --code:#f4f2ec;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.7}
+.wrap{display:grid;grid-template-columns:260px minmax(0,1fr);max-width:1240px;margin:0 auto}
+nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:28px 18px 30px 22px;border-right:1px solid var(--line);font-size:13.5px}
+nav.toc .t{font-weight:700;color:var(--accent);margin-bottom:8px}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:2px 0}
+nav.toc a:hover{color:var(--accent)}
+nav.toc a.sub{padding-left:12px;font-size:12.8px}
+main{padding:40px 48px 80px;max-width:980px}
+header.cover{border-bottom:2px solid var(--accent);padding-bottom:18px;margin-bottom:26px}
+header.cover .kicker{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+header.cover h1{font-size:27px;line-height:1.35;margin:8px 0 10px}
+header.cover .meta{color:var(--muted);font-size:14px}
+h2{font-size:21px;margin:48px 0 10px;color:var(--accent);border-bottom:1px solid var(--line);padding-bottom:6px}
+h3{font-size:17px;margin:28px 0 8px}
+p{margin:10px 0}
+ul,ol{padding-left:22px}
+li{margin:4px 0}
+table{width:100%;border-collapse:collapse;margin:14px 0 6px;font-size:14.2px;background:var(--paper)}
+th,td{border:1px solid var(--line);padding:7px 10px;vertical-align:top;text-align:left}
+th{background:var(--accent-soft);font-weight:600}
+td.c,th.c{text-align:center}
+code{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto;font-size:13px;line-height:1.55}
+pre code{background:none;padding:0}
+figure{margin:20px 0 6px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px}
+figure svg{width:100%;height:auto;display:block}
+figcaption{font-size:14px;color:var(--muted);margin-top:10px}
+figcaption b{color:var(--ink)}
+.legend-title{font-weight:600;margin-top:12px}
+.sw{width:56px;height:24px;display:block}
+.note{background:var(--accent-soft);border-left:4px solid var(--accent);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.claim{background:var(--ok-soft);border-left:4px solid var(--ok);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.risk{background:var(--warn-soft);border-left:4px solid var(--warn);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.cap{font-size:13.5px;color:var(--muted);margin:4px 0 16px}
+@media (max-width:900px){
+  .wrap{display:block}
+  nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:20px 16px}
+  main{padding:24px 16px 60px}
+  table{display:block;overflow-x:auto}
+}
+@media print{nav.toc{display:none}.wrap{display:block}main{max-width:none;padding:0}figure,table,pre{page-break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="toc">
+  <div class="t">MỤC LỤC</div>
+  <a href="#s1">1. Mục tiêu và ràng buộc</a>
+  <a href="#s2">2. Cơ sở lựa chọn</a>
+  <a href="#s3">3. Kiến trúc tổng thể</a>
+  <a href="#s4">4. Hai chế độ khám phá</a>
+  <a class="sub" href="#s4-1">4.1 Tự khám phá: explore</a>
+  <a class="sub" href="#s4-2">4.2 Chín công cụ bổ trợ</a>
+  <a href="#s5">5. Sandbox</a>
+  <a href="#s6">6. Định dạng đầu ra và ghi vết</a>
+  <a href="#s7">7. Chiến lược khám phá</a>
+  <a href="#s8">8. Kiểm tra ở Schema gate</a>
+  <a href="#s9">9. Vai trò hỗ trợ</a>
+  <a href="#s10">10. Đặc thù C, Rust, Go</a>
+  <a href="#s11">11. Ví dụ</a>
+  <a href="#s12">12. Hiện thực</a>
+  <a href="#s13">13. Đo lường</a>
+  <a href="#s14">14. Rủi ro, điểm cần xác nhận</a>
+  <a href="#s15">15. Nguồn</a>
+</nav>
+
+<main>
+<header class="cover">
+  <div class="kicker">Tài liệu thiết kế chi tiết · Phần bổ sung</div>
+  <h1>Thiết kế khả năng khám phá mã nguồn của AI Agent</h1>
+  <div class="meta">Đề tài: Kiểm chứng tự động và an toàn sự tuân thủ đặc tả giao thức mạng dựa trên bằng chứng, sử dụng hệ thống AI đa tác tử · Học viên: Nguyễn Kỳ Tùng · GVHD: TS. Tống Văn Vạn<br>
+  Tài liệu chi tiết hoá Code gate, Locator, Code Indexer Agent và Code Reader Agent của bản đề xuất; không thêm thành phần mới.</div>
+</header>
+
+<!-- 1 -->
+<h2 id="s1">1. Mục tiêu và ràng buộc</h2>
+<p><b>Mục tiêu.</b> Cung cấp cho agent khả năng khám phá mã nguồn gần với cách một lập trình viên làm việc: tự định hướng trong kho mã, tự tìm kiếm, đọc và lần theo quan hệ giữa các đoạn mã cho tới khi hiểu được đoạn xử lý một yêu cầu RFC. Agent có thể khám phá theo hai chế độ:</p>
+<ul>
+  <li><b>Tự khám phá:</b> tự viết lệnh tìm kiếm và đọc mã theo ý mình, bằng một công cụ linh hoạt.</li>
+  <li><b>Dùng công cụ bổ trợ:</b> gọi các công cụ chuyên dụng cho những thao tác thường gặp, trả kết quả gọn và có cấu trúc.</li>
+</ul>
+<p>Cả hai chế độ phải đồng thời thoả bốn ràng buộc:</p>
+<table>
+<tr><th style="width:50px">Mã</th><th>Ràng buộc</th><th style="width:240px">Nguồn</th></tr>
+<tr><td>C1</td><td><b>Hiệu quả:</b> định vị đúng hàm và đúng dòng với chi phí token hợp lý</td><td>Mục tiêu cụ thể 1</td></tr>
+<tr><td>C2</td><td><b>An toàn:</b> không ghi tệp, không gọi mạng, không chạy mã của kho mã, không đọc ngoài phạm vi</td><td>ĐX mục 2.4 và 3 (A1, A3, A4, A6)</td></tr>
+<tr><td>C3</td><td><b>Truy vết:</b> mọi vị trí agent chỉ ra phải đối chiếu được với kho mã tại commit cố định</td><td>Định nghĩa T1 ở ĐX mục 2.4</td></tr>
+<tr><td>C4</td><td><b>Đa ngôn ngữ:</b> chạy được trên C, Rust và Go, kể cả mã giao thức dùng nhiều macro và con trỏ hàm</td><td>Kho mã ứng viên ở ĐX mục 4</td></tr>
+</table>
+<p class="cap">Bảng 1. Ràng buộc của cơ chế khám phá mã.</p>
+
+<!-- 2 -->
+<h2 id="s2">2. Cơ sở lựa chọn</h2>
+<p>Các coding agent và công trình nghiên cứu hiện nay cho thấy năm điều mà thiết kế này dựa vào:</p>
+<table>
+<tr><th style="width:250px">Phát hiện</th><th>Bằng chứng</th><th style="width:240px">Áp dụng vào thiết kế</th></tr>
+<tr><td>Tìm kiếm bằng công cụ tốt hơn RAG vector cho bài toán đọc mã</td><td>Nhóm Claude Code từng dùng RAG kèm cơ sở dữ liệu vector, sau đó chuyển sang tìm kiếm bằng công cụ vì "agentic search generally works better"</td><td>Không dùng RAG vector</td></tr>
+<tr><td>Công cụ thiết kế riêng tốt hơn shell trần</td><td>SWE-agent: agent chỉ có shell giải được 11% SWE-bench Lite; có bộ công cụ tìm và đọc riêng giải được 18%</td><td>Có bộ công cụ bổ trợ, không chỉ cho lệnh</td></tr>
+<tr><td>Kết quả tìm phải có giới hạn, cửa sổ đọc vừa phải</td><td>SWE-agent: tìm lần lượt từng kết quả đạt 12,0%, kém cả không có công cụ tìm (15,7%); cửa sổ 100 dòng đạt 18,0%, đọc cả tệp đạt 12,7%</td><td>Tối đa 50 kết quả; đọc 100 dòng mỗi lần</td></tr>
+<tr><td>Biết cấu trúc mã giúp định vị tốt hơn grep thuần</td><td>LocAgent (đồ thị mã): đúng hàm trong top 10 đạt 77,4%, so với 64,6% của SWE-agent. AutoCodeRover (công cụ theo AST): chi phí khoảng 0,43 USD mỗi bài so với 2,51 USD của SWE-agent</td><td>Có công cụ theo cấu trúc: ký hiệu, tham chiếu, định nghĩa</td></tr>
+<tr><td>Trên mã giao thức viết bằng C, truy xuất theo quan hệ gọi hàm và tự kiểm tra là then chốt</td><td>RFCAudit: precision 81,9%; bỏ truy xuất caller/callee còn 44,7%; bỏ bước tự phê bình còn 35,7%</td><td>Có <code>find_references</code>, <code>callees</code>; có bước tự kiểm tra trong vòng khám phá</td></tr>
+</table>
+<p class="cap">Bảng 2. Cơ sở lựa chọn. Số liệu SWE-agent, LocAgent, AutoCodeRover đo trên mã Python; RFCAudit đo trên mã giao thức viết bằng C.</p>
+<div class="claim"><b>Lựa chọn thiết kế.</b> Agent đọc mã theo <b>hai cách</b>: <b>theo văn bản</b> (tìm và đọc như grep) và <b>theo cấu trúc</b> (hàm, ký hiệu, tham chiếu, quan hệ gọi). Agent được dùng hai cách này qua <b>hai chế độ</b>: một công cụ linh hoạt để tự khám phá, và chín công cụ bổ trợ. Mọi lệnh đều chạy trong sandbox chỉ đọc, sau Tool gateway. Cách phối hợp này giống SWE-agent, vốn vừa có bộ công cụ riêng vừa cho agent chạy lệnh.</div>
+
+<!-- 3 -->
+<h2 id="s3">3. Kiến trúc tổng thể</h2>
+<figure>
+<svg viewBox="0 0 960 400" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, system-ui, sans-serif">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#14532d"/></marker>
+  </defs>
+  <rect x="15" y="120" width="160" height="110" rx="6" fill="#fdecea" stroke="#c62828" stroke-dasharray="5 3"/>
+  <text x="95" y="145" font-size="12.5" font-weight="700" text-anchor="middle">Code Reader</text>
+  <text x="95" y="166" font-size="11" text-anchor="middle">agent cách ly</text>
+  <text x="95" y="190" font-size="10.5" text-anchor="middle">explore(cmd)</text>
+  <text x="95" y="207" font-size="10.5" text-anchor="middle">+ 9 công cụ bổ trợ</text>
+  <rect x="215" y="135" width="140" height="80" rx="6" fill="#f5f5f5" stroke="#757575"/>
+  <text x="285" y="160" font-size="12.5" font-weight="700" text-anchor="middle">Tool gateway</text>
+  <text x="285" y="180" font-size="10.5" text-anchor="middle">quyền, danh sách</text>
+  <text x="285" y="196" font-size="10.5" text-anchor="middle">lệnh, tham số</text>
+  <rect x="395" y="135" width="150" height="80" rx="6" fill="#f5f5f5" stroke="#757575"/>
+  <text x="470" y="160" font-size="12.5" font-weight="700" text-anchor="middle">Lớp bọc Code gate</text>
+  <text x="470" y="180" font-size="10.5" text-anchor="middle">giới hạn, chuẩn hoá</text>
+  <text x="470" y="196" font-size="10.5" text-anchor="middle">file:line, nhãn</text>
+  <rect x="585" y="40" width="360" height="300" rx="10" fill="#fdf6ec" stroke="#b26a00" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="600" y="60" font-size="11.5" font-weight="700" fill="#8a5300">SANDBOX code-index-worker</text>
+  <g font-size="11.5" text-anchor="middle">
+    <rect x="605" y="75" width="155" height="58" rx="5" fill="#fff" stroke="#555"/><text x="682" y="98" font-weight="700">mcp-server-tree-sitter</text><text x="682" y="117" font-size="10.5">ký hiệu, tham chiếu, tệp</text>
+    <rect x="775" y="75" width="155" height="58" rx="5" fill="#fff" stroke="#555"/><text x="852" y="98" font-weight="700">Chỉ mục SQLite</text><text x="852" y="117" font-size="10.5">ký hiệu, lời gọi, macro</text>
+    <rect x="605" y="148" width="155" height="58" rx="5" fill="#fff" stroke="#555"/><text x="682" y="171" font-weight="700">rg, ast-grep</text><text x="682" y="190" font-size="10.5">tìm văn bản, cấu trúc</text>
+    <rect x="775" y="148" width="155" height="58" rx="5" fill="#fff" stroke="#555"/><text x="852" y="171" font-weight="700">find, sed -n, head…</text><text x="852" y="190" font-size="10.5">lệnh đọc cho explore</text>
+    <rect x="605" y="225" width="325" height="96" rx="5" fill="#fdecea" stroke="#c62828" stroke-dasharray="4 3"/><text x="767" y="252" font-weight="700">Kho mã @commit</text><text x="767" y="272" font-size="10.5">gắn chỉ đọc, chỉ phần code_scope</text><text x="767" y="290" font-size="10.5">không mạng · không khoá · user không phải root</text><text x="767" y="308" font-size="10.5">giới hạn CPU, bộ nhớ, thời gian</text>
+  </g>
+  <rect x="215" y="275" width="140" height="60" rx="6" fill="#f5f5f5" stroke="#212121" stroke-width="2.5"/>
+  <text x="285" y="300" font-size="12.5" font-weight="700" text-anchor="middle">Schema gate</text><text x="285" y="318" font-size="10.5" text-anchor="middle">kiểm tra LocationClaim</text>
+  <rect x="395" y="275" width="150" height="60" rx="6" fill="#f5f5f5" stroke="#757575"/>
+  <text x="470" y="300" font-size="12.5" font-weight="700" text-anchor="middle">Trace log</text><text x="470" y="318" font-size="10.5" text-anchor="middle">mọi lệnh và đầu ra</text>
+  <g stroke="#333" stroke-width="1.5" fill="none">
+    <path d="M175 165 H213" marker-end="url(#a1)"/>
+    <path d="M355 175 H393" marker-end="url(#a1)"/>
+    <path d="M545 175 H583" marker-end="url(#a1)"/>
+    <path d="M583 195 H555 V200 H175" stroke-dasharray="5 3" marker-end="url(#a1)"/>
+    <path d="M470 215 V273" stroke-dasharray="2 3" marker-end="url(#a1)"/>
+    <path d="M95 230 V305 H213" marker-end="url(#a1)"/>
+    <path d="M395 305 H357" stroke-dasharray="2 3" marker-end="url(#a1)"/>
+  </g>
+  <path d="M285 335 V385 H330" fill="none" stroke="#14532d" stroke-width="1.6" stroke-dasharray="6 3" marker-end="url(#a2)"/>
+  <g font-size="10.5" fill="#333">
+    <text x="182" y="155">lời gọi</text>
+    <text x="262" y="215" fill="#555">kết quả đã chuẩn hoá</text>
+    <text x="102" y="295">LocationClaim</text>
+    <text x="338" y="389" fill="#14532d">T1</text>
+    <text x="362" y="296" font-size="9.5">đối chiếu</text>
+  </g>
+</svg>
+<figcaption><b>Hình 1.</b> Kiến trúc khám phá mã: Code Reader gọi công cụ qua Tool gateway và lớp bọc Code gate; mọi lệnh chạy trong SANDBOX code-index-worker; Schema gate đối chiếu kết luận với Trace log trước khi ghi T1.</figcaption>
+<div class="legend-title">Ký hiệu sử dụng trong Hình 1:</div>
+<table>
+<tr><th style="width:90px">Ký hiệu</th><th>Ý nghĩa</th></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#fdecea" stroke="#c62828" stroke-dasharray="5 3"/></svg></td><td>Thành phần không tin cậy: agent cách ly đọc mã, và chính kho mã</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#f5f5f5" stroke="#757575"/></svg></td><td>Thành phần tất định của harness</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="3" y="4" width="50" height="16" rx="4" fill="#f5f5f5" stroke="#212121" stroke-width="2.5"/></svg></td><td>Điểm kiểm tra cuối trước khi ghi bằng chứng</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#fdf6ec" stroke="#b26a00" stroke-width="1.5" stroke-dasharray="5 3"/></svg></td><td>SANDBOX: container không mạng, kho mã chỉ đọc</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#fff" stroke="#555"/></svg></td><td>Công cụ và dữ liệu bên trong sandbox</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="l1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" marker-end="url(#l1)"/></svg></td><td>Lời gọi công cụ hoặc kết luận của agent</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="l2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#l2)"/></svg></td><td>Kết quả đã chuẩn hoá trả về cho agent</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="l3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" stroke-dasharray="2 3" marker-end="url(#l3)"/></svg></td><td>Ghi vết và đối chiếu với Trace log</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="l4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#14532d"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#14532d" stroke-width="1.6" stroke-dasharray="6 3" marker-end="url(#l4)"/></svg></td><td>Ghi bằng chứng T1 vào Evidence store</td></tr>
+</table>
+</figure>
+<p>Agent không có shell và không kết nối trực tiếp tới MCP server. Mọi lời gọi đi theo một đường duy nhất:</p>
+<ol>
+  <li><b>Tool gateway</b> kiểm tra quyền của vai trò, danh sách lệnh cho phép và miền tham số.</li>
+  <li><b>Lớp bọc của Code gate</b> chuyển lời gọi vào sandbox, áp giới hạn đầu ra, chuẩn hoá về <code>file:line</code>, gắn nhãn UNTRUSTED và ghi Trace log.</li>
+  <li>Kết quả mới được trả lại cho agent.</li>
+</ol>
+
+<!-- 4 -->
+<h2 id="s4">4. Hai chế độ khám phá</h2>
+
+<h3 id="s4-1">4.1. Tự khám phá: công cụ <code>explore(command)</code></h3>
+<p>Agent tự viết lệnh tìm kiếm và đọc mã như một lập trình viên trên terminal, nhưng chỉ được dùng các lệnh đọc trong danh sách cho phép. Công cụ này dành cho những việc mà bộ công cụ bổ trợ không làm gọn được: tìm theo mẫu cấu trúc phức tạp, thống kê nhanh, ghép nhiều bước tìm kiếm, theo dấu một bảng con trỏ hàm.</p>
+<table>
+<tr><th style="width:200px">Lệnh được phép</th><th>Cờ và dạng được phép</th><th style="width:230px">Dùng để</th></tr>
+<tr><td><code>rg</code>, <code>grep</code></td><td>Tìm theo regex, lọc tệp (<code>-g</code>, <code>-t</code>), ngữ cảnh (<code>-A</code>, <code>-B</code>, <code>-C</code>), số dòng (<code>-n</code>), chỉ tên tệp (<code>-l</code>), đếm (<code>-c</code>)</td><td>Tìm văn bản</td></tr>
+<tr><td><code>ast-grep</code> (<code>sg</code>)</td><td>Chỉ chế độ tìm: <code>-p</code>, <code>-l</code>, <code>--json</code>; không có <code>-r</code> (rewrite) và <code>-U</code> (update)</td><td>Tìm theo mẫu cấu trúc, ví dụ <code>sg -p 'if ($A > $B) { $$$ }' -l c</code></td></tr>
+<tr><td><code>find</code>, <code>ls</code>, <code>tree</code></td><td><code>find</code> chỉ với <code>-name</code>, <code>-path</code>, <code>-type</code>, <code>-maxdepth</code></td><td>Khám phá cấu trúc thư mục</td></tr>
+<tr><td><code>sed</code>, <code>head</code>, <code>tail</code>, <code>cat</code></td><td><code>sed</code> chỉ dạng <code>-n 'A,Bp'</code>; <code>cat</code> chỉ với <code>-n</code></td><td>Đọc theo khoảng dòng</td></tr>
+<tr><td><code>wc</code>, <code>sort</code>, <code>uniq</code>, <code>cut</code></td><td>Tuỳ chọn thông thường, không ghi tệp</td><td>Đếm, lọc, thống kê</td></tr>
+<tr><td>Dấu <code>|</code></td><td>Chỉ nối các lệnh trong bảng này</td><td>Ghép bước</td></tr>
+</table>
+<p class="cap">Bảng 3. Danh sách lệnh cho phép của <code>explore</code>.</p>
+<table>
+<tr><th style="width:280px">Bị chặn</th><th>Lý do</th></tr>
+<tr><td><code>rg --pre</code>, <code>--pre-glob</code></td><td>Chạy một chương trình tuỳ ý trên từng tệp</td></tr>
+<tr><td><code>find -exec</code>, <code>-execdir</code>, <code>-ok</code>, <code>-delete</code>, <code>-fprint</code></td><td>Chạy lệnh, xoá hoặc ghi tệp</td></tr>
+<tr><td><code>sed -i</code>, lệnh <code>e</code>, <code>w</code>, <code>r</code> của sed; <code>ast-grep -r</code>, <code>-U</code></td><td>Ghi tệp hoặc chạy lệnh</td></tr>
+<tr><td><code>awk</code>, <code>xargs</code>, <code>bash</code>, <code>sh</code>, <code>python</code>, <code>perl</code>, <code>env</code>, <code>git</code>, <code>make</code>, mọi lệnh ngoài Bảng 3</td><td>Có thể chạy mã tuỳ ý, kể cả mã của kho mã</td></tr>
+<tr><td><code>&gt;</code>, <code>&gt;&gt;</code>, <code>&lt;</code>, <code>;</code>, <code>&amp;&amp;</code>, <code>||</code>, <code>$( )</code>, backtick, <code>&amp;</code>, biến môi trường</td><td>Chuyển hướng, ghép lệnh, chạy nền, thay thế lệnh</td></tr>
+</table>
+<p class="cap">Bảng 4. Những gì bị chặn trong <code>explore</code>.</p>
+<p><b>Cách kiểm tra.</b> Tool gateway kiểm tra theo ba bước, và từ chối ngay khi một bước không qua:</p>
+<ol>
+  <li>Tách lệnh theo <code>|</code> và phân tích từng đoạn bằng <code>shlex</code>.</li>
+  <li>So tên lệnh và từng cờ với Bảng 3.</li>
+  <li>Giải mọi đường dẫn về đường dẫn thật (kể cả qua symlink) và kiểm tra chúng nằm trong <code>code_scope</code>.</li>
+</ol>
+<p>Lệnh hợp lệ được chạy trực tiếp bằng <code>execve</code>, không qua shell. Phân tích cú pháp do harness làm, nên không có cách nào chèn thêm lệnh.</p>
+<p><b>Giới hạn.</b> Mỗi lệnh tối đa 10 giây và tối đa 200 dòng hoặc 16 KB đầu ra. Quá giới hạn thì công cụ không trả kết quả mà báo agent thu hẹp lệnh, theo cách của SWE-agent. Mỗi lần gọi tính vào ngân sách của Code Reader.</p>
+
+<h3 id="s4-2">4.2. Chín công cụ bổ trợ</h3>
+<p>Các công cụ bổ trợ phục vụ những thao tác thường gặp nhất. Chúng nhanh, tiết kiệm token, và luôn trả kết quả có <code>file:line</code>. Lời nhắc hệ thống của Code Reader hướng agent dùng các công cụ này trước, và chỉ dùng <code>explore</code> khi cần.</p>
+<table>
+<tr><th style="width:100px">Nhóm</th><th style="width:230px">Công cụ</th><th>Trả về</th><th style="width:85px">Cách đọc</th><th style="width:150px">Giới hạn</th></tr>
+<tr><td rowspan="2"><b>Định hướng</b></td><td><code>list_dir(path, depth≤2)</code></td><td>Cây thư mục, số dòng mỗi tệp</td><td>Cấu trúc</td><td>200 mục</td></tr>
+<tr><td><code>file_outline(file)</code></td><td>Chữ ký hàm, struct, macro trong tệp, kèm dòng; không có thân hàm</td><td>Cấu trúc</td><td>200 ký hiệu</td></tr>
+<tr><td rowspan="2"><b>Tìm</b></td><td><code>search_text(regex, path_glob?)</code></td><td>Dòng khớp, ±2 dòng ngữ cảnh, tên hàm chứa dòng đó</td><td>Văn bản</td><td>50 kết quả</td></tr>
+<tr><td><code>search_symbol(name, kind?)</code></td><td>Ký hiệu khớp tên: loại, tệp, dòng, chữ ký</td><td>Cấu trúc</td><td>50 kết quả</td></tr>
+<tr><td rowspan="3"><b>Đọc</b></td><td><code>read_function(symbol, page?)</code></td><td>Thân hàm có số dòng; hàm dài trả chữ ký, danh sách khối lệnh và trang đầu</td><td>Cấu trúc</td><td>100 dòng mỗi trang</td></tr>
+<tr><td><code>read_range(file, start, end)</code></td><td>Đoạn mã bất kỳ có số dòng, kể cả ngoài hàm (bảng con trỏ hàm, khai báo, <code>#ifdef</code>)</td><td>Văn bản</td><td>100 dòng mỗi lần</td></tr>
+<tr><td><code>get_definition(name)</code></td><td>Định nghĩa macro, hằng, struct, kiểu</td><td>Cấu trúc</td><td>1 định nghĩa, hoặc danh sách nếu trùng tên</td></tr>
+<tr><td rowspan="2"><b>Lần theo</b></td><td><code>find_references(symbol)</code></td><td>Mọi chỗ dùng ký hiệu (hàm, biến, trường struct), kèm hàm chứa và loại tham chiếu (gọi, đọc, ghi, gán vào con trỏ)</td><td>Cấu trúc</td><td>50 kết quả</td></tr>
+<tr><td><code>callees(function)</code></td><td>Các hàm được gọi trong thân hàm, kèm dòng</td><td>Cấu trúc</td><td>100 kết quả</td></tr>
+</table>
+<p class="cap">Bảng 5. Chín công cụ bổ trợ. <code>find_references</code> thay cho <code>callers</code>: nơi gọi một hàm là một loại tham chiếu tới hàm đó, và công cụ này còn theo dấu được biến và trường dữ liệu.</p>
+<div class="note"><b>Agent có đọc được toàn bộ một tệp không?</b> Có, bằng cách gọi <code>read_range</code> hoặc <code>sed -n</code> liên tiếp, mỗi lần 100 dòng. Không có công cụ nào trả cả tệp trong một lần, vì theo SWE-agent, đọc cả tệp làm hiệu quả giảm từ 18,0% xuống 12,7%. Tổng số lần đọc bị chặn bởi ngân sách của Code Reader.</div>
+
+<!-- 5 -->
+<h2 id="s5">5. Sandbox</h2>
+<p>Mọi lệnh và mọi công cụ đều chạy trong container <code>code-index-worker</code> thuộc ANALYSIS ZONE ở kiến trúc triển khai. Không có lệnh nào chạy trên máy của harness.</p>
+<table>
+<tr><th style="width:220px">Thuộc tính</th><th>Cấu hình</th><th style="width:150px">Chặn rủi ro</th></tr>
+<tr><td>Mạng</td><td><code>--network none</code></td><td>A4 (lộ dữ liệu ra ngoài)</td></tr>
+<tr><td>Kho mã</td><td>Gắn chỉ đọc, chỉ các thư mục trong <code>code_scope</code>; tệp khoá, chứng chỉ bị loại khỏi lúc gắn</td><td>A4, ghi đè mã</td></tr>
+<tr><td>Hệ thống tệp còn lại</td><td><code>--read-only</code>; chỉ có <code>/tmp</code> nhỏ dạng tmpfs cho chỉ mục tạm</td><td>Ghi tệp</td></tr>
+<tr><td>Người dùng</td><td>Không phải root; bỏ mọi capability (<code>--cap-drop ALL</code>); <code>no-new-privileges</code></td><td>Leo thang quyền</td></tr>
+<tr><td>Bí mật</td><td>Không có khoá API, không có biến môi trường của harness</td><td>A4</td></tr>
+<tr><td>Tài nguyên</td><td>Giới hạn CPU, bộ nhớ, số tiến trình (<code>--pids-limit</code>), thời gian mỗi lệnh 10 giây</td><td>A6</td></tr>
+<tr><td>Chương trình có trong image</td><td>Chỉ các lệnh ở Bảng 3, mcp-server-tree-sitter và SQLite; không có trình biên dịch, không có trình thông dịch ngoài Python của MCP server</td><td>A3 (chạy mã của kho)</td></tr>
+<tr><td>Vòng đời</td><td>Một container cho mỗi lần chạy; huỷ khi kết thúc</td><td>Tồn dư trạng thái</td></tr>
+</table>
+<p class="cap">Bảng 6. Cấu hình sandbox.</p>
+
+<!-- 6 -->
+<h2 id="s6">6. Định dạng đầu ra và ghi vết</h2>
+<p>Mọi kết quả trả cho agent, dù từ <code>explore</code> hay công cụ bổ trợ, có cùng khuôn dạng: tiêu đề nêu nguồn, nội dung có số dòng, và đánh dấu rõ là dữ liệu không tin cậy.</p>
+<pre><code>[UNTRUSTED CODE] tool=read_function  src/internal.c  GetRecordHeader  lines 9100–9124  page 1/1
+9100  static int GetRecordHeader(WOLFSSL* ssl, word32* inOutIdx, RecordLayerHeader* rh, word16 *size)
+9101  {
+...
+9118      if (*size &gt; (MAX_RECORD_SIZE + MAX_COMP_EXTRA + MAX_MSG_EXTRA)) {
+9119          SendAlert(ssl, alert_fatal, record_overflow);
+
+[UNTRUSTED CODE] tool=explore  cmd="rg -n record_overflow src/"
+src/internal.c:9119:        SendAlert(ssl, alert_fatal, record_overflow);
+src/tls13.c:4410:           SendAlert(ssl, alert_fatal, record_overflow);</code></pre>
+<p>Lớp bọc ghi mỗi lần gọi vào Trace log, gồm vai trò, công cụ, lệnh hoặc tham số, thời gian và đầu ra. Từ đầu ra, lớp bọc trích tập <b>dòng đã hiển thị</b>, tức các cặp (tệp, dòng) xuất hiện kèm số dòng. Tập này được Schema gate dùng ở kiểm tra số 2 (mục 8). Đầu ra không kèm số dòng (ví dụ <code>rg -l</code>, <code>wc</code>) vẫn hữu ích để định hướng nhưng không đóng góp vào tập dòng đã hiển thị.</p>
+
+<!-- 7 -->
+<h2 id="s7">7. Chiến lược khám phá của Code Reader</h2>
+<p>Code Reader được tự do chọn công cụ và thứ tự. Lời nhắc hệ thống gợi ý một chiến lược sáu bước, tương tự cách RFCAudit và LocAgent tổ chức việc định vị, trong ngân sách của hồ sơ vai trò (khởi điểm 30 lời gọi công cụ, 12 lời gọi LLM).</p>
+<table>
+<tr><th style="width:130px">Bước</th><th>Việc làm</th><th style="width:240px">Công cụ thường dùng</th></tr>
+<tr><td>1. Định hướng</td><td>Xem gợi ý của Locator; nắm cấu trúc thư mục và các tệp ứng viên</td><td><code>locator.suggest</code>, <code>list_dir</code>, <code>file_outline</code></td></tr>
+<tr><td>2. Tìm điểm vào</td><td>Tìm theo thuật ngữ của yêu cầu: tên cảnh báo, tên trường, hằng số; tìm theo mẫu cấu trúc khi cần</td><td><code>search_text</code>, <code>search_symbol</code>, <code>explore</code> với <code>rg</code> hoặc <code>ast-grep</code></td></tr>
+<tr><td>3. Đọc</td><td>Đọc hàm ứng viên và đoạn mã xung quanh</td><td><code>read_function</code>, <code>read_range</code></td></tr>
+<tr><td>4. Lần theo</td><td>Tra định nghĩa hằng và macro; xem ai gọi hàm, hàm gọi ai; theo dấu biến độ dài hay trường trạng thái</td><td><code>get_definition</code>, <code>find_references</code>, <code>callees</code></td></tr>
+<tr><td>5. Kết luận</td><td>Soạn <code>LocationClaim</code>: tệp, dòng, ký hiệu, <code>check_kind</code>, <code>finding</code>, <code>call_path</code></td><td>Không gọi công cụ</td></tr>
+<tr><td>6. Tự kiểm tra</td><td>Đọc lại đúng các dòng sẽ dẫn; xác nhận điều kiện, ngưỡng, và hàm nằm trên luồng xử lý; sai thì quay lại bước 4</td><td><code>read_range</code></td></tr>
+</table>
+<p class="cap">Bảng 7. Chiến lược khám phá gợi ý. Bước 6 dựa trên RFCAudit: bỏ bước tự phê bình làm precision giảm từ 81,9% xuống 35,7%.</p>
+<p>Hết ngân sách mà chưa kết luận được, Code Reader trả <code>finding = UNCLEAR</code> kèm vị trí tốt nhất đã thấy. Với loại A–C, yêu cầu vẫn có thể được kết luận nhờ T3.</p>
+
+<!-- 8 -->
+<h2 id="s8">8. Kiểm tra ở Schema gate trước khi ghi T1</h2>
+<table>
+<tr><th style="width:40px">#</th><th>Kiểm tra</th><th style="width:250px">Mục đích</th></tr>
+<tr><td>1</td><td><code>symbol</code> có trong chỉ mục; khoảng dòng nằm trong thân ký hiệu đó</td><td>Vị trí có thật tại commit</td></tr>
+<tr><td>2</td><td>Mọi dòng được dẫn thuộc <b>tập dòng đã hiển thị</b> cho agent trong phiên (mục 6)</td><td>Agent không dẫn được dòng nó chưa từng đọc</td></tr>
+<tr><td>3</td><td>Mỗi cạnh của <code>call_path</code> có trong chỉ mục lời gọi, hoặc đã hiển thị cho agent trong một đầu ra có số dòng; cạnh thứ hai được đánh dấu <code>edge_kind = textual</code></td><td>Đường gọi hàm có căn cứ; xử lý được con trỏ hàm</td></tr>
+<tr><td>4</td><td><code>check_kind</code>, <code>finding</code> thuộc danh sách liệt kê; trường <code>note</code> tự do mang nhãn UNTRUSTED</td><td>Không có chuỗi tự do đi tới agent đặc quyền</td></tr>
+</table>
+<p class="cap">Bảng 8. Kiểm tra LocationClaim. Không qua thì Code Reader được làm lại tối đa hai lần trong ngân sách.</p>
+
+<!-- 9 -->
+<h2 id="s9">9. Vai trò hỗ trợ của Locator và Code Indexer</h2>
+<p>Locator và Code Indexer không phải là cách đọc mã riêng. Chúng dùng chỉ mục cấu trúc để giúp Code Reader biết nên bắt đầu từ đâu.</p>
+<ul>
+  <li><b>Code Indexer Agent</b> gán mỗi hàm trong phạm vi vào một thành phần của giao thức, chọn từ danh sách liệt kê của adapter (ví dụ <code>record_layer</code>, <code>handshake</code>). Nó dùng chính các công cụ ở mục 4.</li>
+  <li><b>Locator</b> chấm điểm hàm bằng một công thức cố định:
+<pre><code>score(f) = 3·kw(f) + 2·comp(f) + 2·near(f) + 1·hint(f)
+  kw    số từ khoá của yêu cầu và của adapter xuất hiện trong tên hoặc thân hàm
+  comp  1 nếu thành phần của f trùng thành phần của yêu cầu
+  near  1/(1+d), d là khoảng cách trên đồ thị gọi hàm tới điểm vào do adapter khai báo
+  hint  1 nếu f nằm trong đường dẫn gợi ý của adapter</code></pre>
+  Trọng số là giá trị khởi điểm, hiệu chỉnh trên 10 yêu cầu TLS 1.3 trước thực nghiệm chính.</li>
+  <li><b>Tóm tắt ngữ nghĩa</b> cho từng hàm (cách RFCAudit làm) là <b>tuỳ chọn</b>, mặc định tắt. Chỉ bật nếu ở mốc tháng 11 độ chính xác định vị chưa đạt. Khi bật, tóm tắt là chuỗi tự do nên mang nhãn UNTRUSTED và chỉ Code Reader đọc được.</li>
+</ul>
+
+<!-- 10 -->
+<h2 id="s10">10. Đặc thù của C, Rust và Go</h2>
+<table>
+<tr><th style="width:210px">Vấn đề</th><th>Cách xử lý</th></tr>
+<tr><td>Macro trong C</td><td><code>get_definition</code> trả thân macro; lời nhắc gợi ý tra định nghĩa khi gặp tên viết hoa trong điều kiện</td></tr>
+<tr><td>Con trỏ hàm, bảng xử lý theo loại thông điệp</td><td><code>find_references</code> báo loại tham chiếu "gán vào con trỏ"; dùng <code>explore</code> với <code>rg</code> theo tên hàm làm dự phòng; kiểm tra số 3 chấp nhận cạnh <code>textual</code></td></tr>
+<tr><td><code>#ifdef</code>, tuỳ chọn biên dịch</td><td><code>read_range</code> đọc được khối điều kiện; adapter khai báo cờ biên dịch của SUT để agent biết nhánh nào được bật</td></tr>
+<tr><td>Rust: trait, <code>macro_rules!</code></td><td><code>search_symbol</code> trả mọi phương thức trùng tên ở các kiểu; <code>ast-grep</code> tìm theo mẫu khi cần</td></tr>
+<tr><td>Go: interface, phương thức có bộ nhận</td><td>Như Rust; tree-sitter Go trích được bộ nhận của phương thức</td></tr>
+</table>
+<p class="cap">Bảng 9. Xử lý theo ngôn ngữ.</p>
+
+<!-- 11 -->
+<h2 id="s11">11. Ví dụ: RFC 8446 §5.2 trên wolfSSL</h2>
+<p>Tên hàm và số dòng là minh hoạ; sẽ thay bằng giá trị thật khi chạy ở mốc tháng 11. Ví dụ cho thấy agent kết hợp hai chế độ.</p>
+<pre><code>Yêu cầu : TLS13-0042, loại B — bản ghi dài hơn 2^14+256 byte → gửi record_overflow, đóng kết nối
+
+ 1 locator.suggest(TLS13-0042)                     → GetRecordHeader, ProcessReplyEx, ...
+ 2 explore("rg -n record_overflow src/")           → internal.c:9119, tls13.c:4410        [tự khám phá]
+ 3 read_function("GetRecordHeader")                → 9100–9124: so sánh *size với MAX_RECORD_SIZE + ...
+ 4 get_definition("MAX_RECORD_SIZE")               → 16384
+   get_definition("MAX_MSG_EXTRA")                 → phụ thuộc cấu hình
+ 5 find_references("GetRecordHeader")              → gọi từ ProcessReplyEx (internal.c:9530)
+ 6 explore("sg -p 'if ($S > MAX_RECORD_SIZE + $$$) { $$$ }' -l c src/")
+                                                   → thêm một chỗ ở tls13.c:4402           [tự khám phá]
+ 7 read_range("src/tls13.c", 4395, 4415)           → nhánh TLS 1.3 có ngưỡng riêng
+ 8 Tự kiểm tra: đọc lại tls13.c:4402–4410, đối chiếu ngưỡng với 2^14+256
+ 9 LocationClaim: src/tls13.c 4402–4410, check_kind LENGTH_BOUND, finding PRESENT,
+                  call_path [ProcessReplyEx → GetRecordHeader]</code></pre>
+<p>Bước 6 là ví dụ cho giá trị của tự khám phá: tìm theo mẫu cấu trúc giúp agent phát hiện thêm một nhánh xử lý riêng cho TLS 1.3, điều mà một lần tìm theo tên cảnh báo có thể bỏ sót. Schema gate kiểm tra các dòng 4402–4410 đã hiển thị ở bước 7, rồi ghi T1. Nhãn cuối cùng vẫn do T3 quyết định.</p>
+
+<!-- 12 -->
+<h2 id="s12">12. Hiện thực</h2>
+<table>
+<tr><th style="width:230px">Công cụ</th><th>Hiện thực</th></tr>
+<tr><td><code>list_dir</code></td><td><code>list_files</code> của mcp-server-tree-sitter</td></tr>
+<tr><td><code>file_outline</code>, <code>search_symbol</code></td><td><code>get_symbols</code> của mcp-server-tree-sitter</td></tr>
+<tr><td><code>read_function</code>, <code>read_range</code></td><td><code>get_file</code> theo khoảng dòng, ranh giới hàm lấy từ <code>get_symbols</code></td></tr>
+<tr><td><code>find_references</code></td><td><code>find_usage</code> của mcp-server-tree-sitter, bổ sung phân loại tham chiếu bằng <code>run_query</code></td></tr>
+<tr><td><code>get_definition</code>, <code>callees</code></td><td>Tự viết bằng <code>run_query</code> (truy vấn tree-sitter) và chỉ mục SQLite</td></tr>
+<tr><td><code>search_text</code>, <code>explore</code></td><td><code>rg</code> và <code>ast-grep</code> chạy bằng <code>execve</code> trong sandbox</td></tr>
+<tr><td>Lớp bọc Code gate</td><td>Tự viết bằng Python: MCP client, kiểm tra lệnh, giới hạn đầu ra, chuẩn hoá, ghi Trace log; ước lượng vài trăm dòng</td></tr>
+</table>
+<p class="cap">Bảng 10. Hiện thực. mcp-server-tree-sitter hỗ trợ đầy đủ C, Rust, Go và không cần biên dịch kho mã. Phiên bản của MCP server và các công cụ được cố định trong image sandbox, và ghi vào bản kê lần chạy. Serena (dùng language server) là tuỳ chọn về sau, cho <code>find_references</code> chính xác hơn khi SUT có <code>compile_commands.json</code>.</p>
+
+<!-- 13 -->
+<h2 id="s13">13. Đo lường trong luận văn</h2>
+<p>Bộ dữ liệu tạo lỗi ở ĐX mục 4 có sẵn vị trí lỗi, nên khả năng khám phá đo được trực tiếp trong thực nghiệm đã có.</p>
+<table>
+<tr><th style="width:240px">Chỉ số</th><th>Cách tính</th></tr>
+<tr><td>Định vị đúng hàm, đúng dòng</td><td>T1 so với <code>fault_location</code> của phiên bản tạo lỗi</td></tr>
+<tr><td>Tỉ lệ dùng <code>explore</code></td><td>Số lời gọi <code>explore</code> trên tổng số lời gọi; phân loại theo lệnh (<code>rg</code>, <code>ast-grep</code>, <code>find</code>…)</td></tr>
+<tr><td>Đóng góp của tự khám phá</td><td>So độ chính xác định vị giữa cấu hình đầy đủ và cấu hình tắt <code>explore</code> (chỉ còn 9 công cụ bổ trợ)</td></tr>
+<tr><td>Số lệnh bị từ chối</td><td>Theo lý do: lệnh ngoài danh sách, cờ bị chặn, đường dẫn ngoài phạm vi, quá giới hạn; đồng thời là số liệu cho rủi ro A3</td></tr>
+<tr><td>Chi phí</td><td>Số lời gọi công cụ, token và thời gian cho mỗi yêu cầu</td></tr>
+</table>
+<p class="cap">Bảng 11. Chỉ số đánh giá khả năng khám phá mã.</p>
+
+<!-- 14 -->
+<h2 id="s14">14. Rủi ro và điểm cần xác nhận</h2>
+<table>
+<tr><th style="width:250px">Rủi ro</th><th>Biện pháp</th></tr>
+<tr><td>Agent bị chỉ thị trong mã dẫn dắt chạy lệnh nguy hiểm qua <code>explore</code></td><td>Danh sách cho phép, chạy bằng <code>execve</code> không qua shell, sandbox không mạng và chỉ đọc; kịch bản A3 đo số lệnh bị chặn và số lệnh lọt qua (kỳ vọng 0)</td></tr>
+<tr><td>Agent lạm dụng <code>explore</code>, tốn ngân sách</td><td>Giới hạn đầu ra, ngân sách lời gọi; lời nhắc ưu tiên công cụ bổ trợ</td></tr>
+<tr><td>Lỗ hổng trong mcp-server-tree-sitter hoặc các lệnh đọc</td><td>Cố định phiên bản; chạy trong sandbox không mạng; agent không gọi MCP trực tiếp</td></tr>
+<tr><td>tree-sitter phân tích sai mã nhiều macro</td><td>Thử trên wolfSSL, OpenSSL trong tháng 10; <code>explore</code> với <code>rg</code> luôn là dự phòng</td></tr>
+</table>
+<p class="cap">Bảng 12. Rủi ro của cơ chế khám phá mã.</p>
+<div class="risk"><b>Điểm cần thầy xác nhận.</b> ĐX mục 2.4 ghi agent cách ly "không có công cụ nào gây tác động (chạy lệnh, ghi tệp, gọi mạng)". Công cụ <code>explore</code> có chạy lệnh, nhưng chỉ là lệnh đọc trong danh sách cho phép, trong sandbox chỉ đọc và không có mạng, nên không gây tác động. Thiết kế hiểu "chạy lệnh" trong bản đề xuất theo nghĩa lệnh gây tác động. Nếu thầy muốn giữ đúng nghĩa đen, có thể bỏ <code>explore</code> và thêm một công cụ bổ trợ <code>search_pattern(pattern, lang)</code> bọc riêng <code>ast-grep</code>; phần còn lại của thiết kế không đổi.</div>
+
+<!-- 15 -->
+<h2 id="s15">15. Nguồn</h2>
+<ul>
+  <li>J. Yang et al., SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering, NeurIPS 2024. <a href="https://arxiv.org/pdf/2405.15793">arXiv:2405.15793</a></li>
+  <li>Y. Zhang et al., AutoCodeRover: Autonomous Program Improvement, ISSTA 2024. <a href="https://arxiv.org/html/2404.05427v3">arXiv:2404.05427</a></li>
+  <li>Z. Chen et al., LocAgent: Graph-Guided LLM Agents for Code Localization, 2025. <a href="https://arxiv.org/html/2503.09089v1">arXiv:2503.09089</a></li>
+  <li>M. Zheng et al., RFCAudit (RFCScan): An LLM Agent for Functional Bug Detection in Network Protocols, ASE 2025. <a href="https://arxiv.org/abs/2506.00714">arXiv:2506.00714</a></li>
+  <li>Why Claude Code dropped vector DB-based RAG. <a href="https://smartscope.blog/en/ai-development/practices/rag-debate-agentic-search-code-exploration/">smartscope.blog</a></li>
+  <li>MCP Tree-sitter Server: Feature Matrix. <a href="https://glama.ai/mcp/servers/@wrale/mcp-server-tree-sitter/blob/a10571771f509d60ffff33752d97689bf18dd893/FEATURES.md">glama.ai</a></li>
+  <li>Serena MCP: Semantic Code Tools. <a href="https://mcp.directory/blog/serena-mcp-complete-guide-2026">mcp.directory</a></li>
+</ul>
+</main>
+</div>
+</body>
+</html>

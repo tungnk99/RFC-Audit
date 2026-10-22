@@ -1,0 +1,118 @@
+[project]
+name = "rfcv"
+version = "0.1.0"
+description = "Kiểm chứng tự động và an toàn sự tuân thủ RFC dựa trên bằng chứng, dùng hệ AI đa tác tử"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = "MIT"
+authors = [{ name = "Nguyễn Kỳ Tùng" }]
+dependencies = [
+    # Agent runtime: chỉ dùng Agent + output_type + tool tự định nghĩa + UsageLimits.
+    # Cố định phiên bản; không nâng trong giai đoạn đánh giá.
+    "pydantic-ai-slim[anthropic,openai]==2.59.0",
+    "pydantic>=2.11,<3",
+    "lark>=1.2,<2",
+    "pyyaml>=6.0,<7",
+    "rfc8785>=0.1.4,<0.2",
+    "typer>=0.15,<1",
+    "jinja2>=3.1,<4",
+    "pydantic-ai-harness[skills]==0.59.0",
+]
+
+[project.scripts]
+rfcv = "rfcv.ui.cli:app"
+rfcv-eval = "rfcv.eval.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "hypothesis>=6.120",
+    "import-linter>=2.1",
+    "ruff>=0.9",
+    "pyright>=1.1.390",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rfcv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003", "E501"]  # tiếng Việt trong chuỗi/chú thích; formatter lo độ dài dòng của mã
+
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+
+# Ranh giới kiến trúc = ranh giới quyền (thiết kế chính, mục 2.3). CI fail nếu vi phạm.
+[tool.importlinter]
+root_package = "rfcv"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Lõi không biết miền, backend, eval hay framework agent cụ thể"
+type = "forbidden"
+source_modules = [
+    "rfcv.core", "rfcv.gates", "rfcv.evidence", "rfcv.agents", "rfcv.adapters",
+    "rfcv.spi", "rfcv.plugins", "rfcv.manifest", "rfcv.common",
+]
+forbidden_modules = ["rfcv.domains", "rfcv.backends", "rfcv.eval", "rfcv.runtime"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Chỉ rfcv.runtime.pydantic_ai được nhập PydanticAI (cô lập khi framework đổi API)"
+type = "forbidden"
+source_modules = [
+    "rfcv.core", "rfcv.gates", "rfcv.evidence", "rfcv.agents", "rfcv.adapters", "rfcv.domains", "rfcv.backends",
+    "rfcv.ui", "rfcv.eval", "rfcv.spi", "rfcv.plugins", "rfcv.manifest", "rfcv.assembly", "rfcv.builtin", "rfcv.common",
+]
+forbidden_modules = ["pydantic_ai", "pydantic_ai_harness"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Miền không nhập runtime agent hay backend (chiều phụ thuộc: backend và runtime phụ thuộc miền, không ngược lại)"
+type = "forbidden"
+source_modules = ["rfcv.domains"]
+forbidden_modules = ["rfcv.runtime", "rfcv.backends"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "agents/ chỉ là schema: không chạm sandbox, kho bằng chứng hay tiến trình hệ thống"
+type = "forbidden"
+source_modules = ["rfcv.agents"]
+forbidden_modules = ["rfcv.domains.rfc_protocol.sandbox", "rfcv.evidence.store", "subprocess"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Không thành phần nào ngoài eval nhập eval/"
+type = "forbidden"
+source_modules = [
+    "rfcv.core", "rfcv.gates", "rfcv.evidence", "rfcv.agents", "rfcv.adapters", "rfcv.domains", "rfcv.backends",
+    "rfcv.runtime", "rfcv.ui", "rfcv.spi", "rfcv.plugins", "rfcv.assembly", "rfcv.builtin",
+]
+forbidden_modules = ["rfcv.eval"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Verdict engine và bộ quy tắc là hàm thuần: không LLM, không I/O lưu trữ"
+type = "forbidden"
+source_modules = ["rfcv.evidence.verdict_engine", "rfcv.domains.rfc_protocol.rules", "rfcv.core.advisor"]
+forbidden_modules = ["pydantic_ai", "rfcv.core.llm_gateway", "rfcv.evidence.store", "sqlite3", "subprocess"]
+allow_indirect_imports = true

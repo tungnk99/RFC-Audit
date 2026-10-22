@@ -1,0 +1,7 @@
+role: report
+zone: privileged
+context_fields: [verdict.record, evidence.cited, rfc.sentence, rfc.errata, rfc.version_diff]
+tools: [registry.read, evidence.read_summary, verdict.read]
+output_schema: Explanation@1
+prompt: prompt.md
+budget_per_task: {llm_calls: 3, tool_calls: 6, tokens: 60000, seconds: 120}

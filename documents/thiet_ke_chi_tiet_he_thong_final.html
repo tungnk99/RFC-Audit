@@ -1,0 +1,1400 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thiết kế chi tiết hệ thống</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbfaf7; --paper:#ffffff; --ink:#1d1d1f; --muted:#5f6368; --line:#dedbd2;
+  --accent:#1f4e79; --accent-soft:#e8eff7; --warn:#9a3412; --warn-soft:#fff4ec;
+  --ok:#14532d; --ok-soft:#ecf7ef; --code:#f4f2ec;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.7}
+.wrap{display:grid;grid-template-columns:285px minmax(0,1fr);max-width:1270px;margin:0 auto}
+nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:28px 18px 30px 22px;border-right:1px solid var(--line);font-size:13.3px}
+nav.toc .t{font-weight:700;color:var(--accent);margin-bottom:8px}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:2px 0}
+nav.toc a:hover{color:var(--accent)}
+nav.toc a.p{color:var(--accent);font-weight:600;margin-top:11px;font-size:12.8px}
+nav.toc a.sub{padding-left:12px}
+nav.toc a.sub2{padding-left:24px;font-size:12.4px}
+main{padding:40px 48px 80px;max-width:990px}
+header.cover{border-bottom:2px solid var(--accent);padding-bottom:20px;margin-bottom:28px}
+header.cover .kicker{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+header.cover h1{font-size:28px;line-height:1.35;margin:8px 0 12px}
+header.cover .meta{color:var(--muted);font-size:14px}
+h2.part{font-size:22px;margin:64px 0 6px;color:#fff;background:var(--accent);padding:10px 16px;border-radius:6px;letter-spacing:.02em}
+h3{font-size:20px;margin:40px 0 10px;color:var(--accent);border-bottom:1px solid var(--line);padding-bottom:6px}
+h4{font-size:17px;margin:28px 0 8px}
+h5{font-size:15.5px;margin:20px 0 6px;color:#333}
+p{margin:10px 0}
+ul,ol{padding-left:22px}
+li{margin:4px 0}
+table{width:100%;border-collapse:collapse;margin:14px 0 6px;font-size:14.2px;background:var(--paper)}
+th,td{border:1px solid var(--line);padding:7px 10px;vertical-align:top;text-align:left}
+th{background:var(--accent-soft);font-weight:600}
+td.c,th.c{text-align:center}
+code{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto;font-size:13px;line-height:1.55}
+pre code{background:none;padding:0}
+figure{margin:20px 0 6px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px}
+figure svg{width:100%;height:auto;display:block}
+figcaption{font-size:14px;color:var(--muted);margin-top:10px}
+figcaption b{color:var(--ink)}
+.legend-title{font-weight:600;margin-top:12px}
+.sw{width:56px;height:24px;display:block}
+.note{background:var(--accent-soft);border-left:4px solid var(--accent);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.claim{background:var(--ok-soft);border-left:4px solid var(--ok);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.risk{background:var(--warn-soft);border-left:4px solid var(--warn);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.mech{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:4px 18px 10px;margin:18px 0}
+.mech .lbl{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:1px 8px;border-radius:10px;margin-right:6px}
+.tag{display:inline-block;font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:10px;background:#212121;color:#fff}
+.cap{font-size:13.5px;color:var(--muted);margin:4px 0 16px}
+@media (max-width:900px){
+  .wrap{display:block}
+  nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:20px 16px}
+  main{padding:24px 16px 60px}
+  table{display:block;overflow-x:auto}
+}
+@media print{
+  nav.toc{display:none}.wrap{display:block}main{max-width:none;padding:0}
+  h2,h3,h4{page-break-after:avoid}figure,table,pre,.mech{page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="toc">
+  <div class="t">MỤC LỤC</div>
+  <a class="p" href="#p1">I. Mô tả giải pháp đề xuất</a>
+  <a class="sub" href="#s1-1">1.1 Tổng quan giải pháp</a>
+  <a class="sub2" href="#s1-1-1">Bài toán và điểm đau</a>
+  <a class="sub2" href="#s1-1-2">Công trình liên quan, khoảng trống</a>
+  <a class="sub2" href="#s1-1-3">Ý tưởng cốt lõi và đóng góp</a>
+  <a class="sub" href="#s1-2">1.2 Mô tả giải pháp</a>
+  <a class="sub2" href="#m1">M1 Đề xuất và kiểm chứng</a>
+  <a class="sub2" href="#m2">M2 Đặc tả hành vi, oracle</a>
+  <a class="sub2" href="#m3">M3 Kịch bản DSL, nhân chứng</a>
+  <a class="sub2" href="#m4">M4 Bằng chứng và kết luận</a>
+  <a class="sub2" href="#m5">M5 Adapter và backend</a>
+  <a class="sub2" href="#m6">M6 Kiểm chứng lại, đầu ra</a>
+  <a class="sub2" href="#m7">M7 An toàn trước đối thủ</a>
+  <a class="sub2" href="#s1-2-8">Vì sao nhãn đúng</a>
+  <a class="sub2" href="#s1-2-9">Tính khả thi thực tế</a>
+  <a class="sub" href="#s1-3">1.3 Luồng xử lý</a>
+  <a class="p" href="#p2">II. Kiến trúc hệ thống</a>
+  <a class="sub" href="#s2-1">2.1 Kiến trúc nghiệp vụ</a>
+  <a class="sub" href="#s2-2">2.2 Kiến trúc ứng dụng</a>
+  <a class="sub" href="#s2-3">2.3 Kiến trúc công nghệ</a>
+  <a class="sub" href="#s2-4">2.4 Kiến trúc dữ liệu</a>
+  <a class="p" href="#p3">III. Kiến trúc triển khai</a>
+  <a class="p" href="#p4">IV. Giao diện</a>
+  <a class="sub" href="#s4-1">4.1 Giao diện người dùng</a>
+  <a class="sub" href="#s4-2">4.2 Agent và harness</a>
+  <a class="sub" href="#s4-3">4.3 Adapter và backend</a>
+  <a class="sub" href="#s4-4">4.4 Hệ thống bên ngoài</a>
+  <a class="p" href="#p5">V. Kế hoạch thực hiện và đánh giá</a>
+  <a class="sub" href="#s5-1">5.1 Phạm vi và công sức</a>
+  <a class="sub" href="#s5-2">5.2 Tiến độ và mốc</a>
+  <a class="sub" href="#s5-3">5.3 Phương pháp đánh giá</a>
+  <a class="p" href="#p6">VI. Thay đổi, góp ý, tham khảo</a>
+</nav>
+
+<main>
+<header class="cover">
+  <div class="kicker">Tài liệu thiết kế chi tiết · Bản hoàn chỉnh · Mốc cuối tháng 10/2026</div>
+  <h1>Kiểm chứng tự động và an toàn sự tuân thủ đặc tả giao thức mạng dựa trên bằng chứng, sử dụng hệ thống AI đa tác tử</h1>
+  <div class="meta">Học viên: Nguyễn Kỳ Tùng (20251075M) · Giảng viên hướng dẫn: TS. Tống Văn Vạn<br>
+  Tài liệu tiếp nối bản đề xuất đề tài. Phần I trình bày giải pháp và lý do giải pháp giải quyết được các điểm đau; phần II–IV đặc tả kiến trúc ở mức đủ để cài đặt; phần V là kế hoạch thực hiện và đánh giá; phần VI tóm tắt các thay đổi so với bản đề xuất, các vấn đề cần thầy góp ý và tài liệu tham khảo.</div>
+</header>
+
+<!-- ======================================================================= -->
+<h2 class="part" id="p1">I. MÔ TẢ GIẢI PHÁP ĐỀ XUẤT</h2>
+
+<h3 id="s1-1">1.1. Tổng quan giải pháp đề xuất</h3>
+
+<h4 id="s1-1-1">Bài toán và các điểm đau</h4>
+<p>Nhiều lỗ hổng nghiêm trọng bắt nguồn từ việc bản triển khai không làm đúng một yêu cầu cụ thể trong RFC, trong khi việc kiểm chứng sự tuân thủ hiện vẫn chủ yếu làm thủ công (mục 1.1 của bản đề xuất). Từ đó có thể rút ra tám điểm đau, chia làm hai nhóm. Nhóm thứ nhất là hạn chế của cách làm hiện nay, cũng là lý do cần tự động hoá. Nhóm thứ hai là các rủi ro mới xuất hiện khi dùng AI Agent để tự động hoá. Giải pháp chỉ có giá trị nếu giải quyết được cả hai nhóm cùng lúc.</p>
+<table>
+<tr><th style="width:50px">Mã</th><th>Điểm đau</th><th style="width:300px">Hệ quả</th></tr>
+<tr><td colspan="3"><b>Nhóm 1. Hạn chế của cách kiểm chứng hiện nay</b></td></tr>
+<tr><td>P1</td><td>Chi phí lớn: mỗi RFC có hàng trăm yêu cầu, chuyên gia phải đối chiếu từng yêu cầu với mã nguồn.</td><td>Chỉ kiểm chứng được một phần nhỏ yêu cầu.</td></tr>
+<tr><td>P2</td><td>Khó lặp lại khi mã nguồn thay đổi.</td><td>Kết luận nhanh lỗi thời; lỗi mới xuất hiện sau mỗi bản cập nhật.</td></tr>
+<tr><td>P3</td><td>Kết luận thường không kèm bằng chứng tái lập được.</td><td>Người khác không kiểm tra lại được; khó thuyết phục nhà phát triển sửa.</td></tr>
+<tr><td>P4</td><td>Mỗi giao thức cần bộ công cụ riêng.</td><td>Chi phí nhân lên theo số giao thức.</td></tr>
+<tr><td>P5</td><td>Công cụ tự động hiện có không nối trực tiếp yêu cầu RFC với vị trí trong mã và bằng chứng.</td><td>Biết có lỗi nhưng không biết vi phạm yêu cầu nào, ở đâu; hoặc ngược lại.</td></tr>
+<tr><td colspan="3"><b>Nhóm 2. Rủi ro khi dùng AI Agent để tự động hoá</b></td></tr>
+<tr><td>P6</td><td>Agent kết luận "tuân thủ" khi chưa có bằng chứng, hoặc kết luận sai.</td><td>Lỗi bị bỏ sót nhưng được báo là an toàn.</td></tr>
+<tr><td>P7</td><td>Agent bị chính mã nguồn đang kiểm chứng thao túng, qua chỉ thị cài sẵn (prompt injection) hoặc qua mã cố ý cư xử khác khi bị kiểm thử.</td><td>Bên viết mã có thể "đặt" kết luận mong muốn.</td></tr>
+<tr><td>P8</td><td>Agent hành động vượt quyền.</td><td>Chạy lệnh tuỳ ý, lộ khoá, ảnh hưởng hệ thống bên ngoài.</td></tr>
+</table>
+<p class="cap">Bảng 1. Tám điểm đau mà giải pháp phải giải quyết.</p>
+<p>Điểm đau P7 không phải giả định. Các nghiên cứu gần đây cho thấy tấn công chèn chỉ thị qua tài nguyên phát triển đạt tỉ lệ thành công tới 84% với các trình soạn mã có AI, và chú thích trong mã là một trong những kênh nguy hiểm nhất. Năm 2026 đã có tấn công thực tế lên các agent review mã chạy trong GitHub Actions. Ở phía còn lại, phân tích phần mềm gian lận khí thải của Volkswagen và Fiat Chrysler cho thấy mã có thể nhận ra lúc đang bị kiểm định để đổi hành vi, và một bài kiểm định cố định là không đủ.</p>
+
+<h4 id="s1-1-2">Công trình liên quan và khoảng trống</h4>
+<p>Hai công trình năm 2025 gần với đề tài nhất đã chứng minh LLM có thể tham gia kiểm chứng tuân thủ RFC:</p>
+<ul>
+  <li><b>RFCAudit</b> (ASE 2025) dùng một agent lập chỉ mục ngữ nghĩa và một agent phát hiện tự phê bình. Trên sáu bản triển khai giao thức, nó tìm được 47 lỗi với precision 81,9%, trong đó 20 lỗi đã được nhà phát triển xác nhận hoặc sửa; chi phí trung bình khoảng 5 USD và 81 phút cho mỗi giao thức. Kết luận do LLM đưa ra, không có kiểm thử chạy thực tế.</li>
+  <li><b>iPanda</b> (2025) để LLM sinh ca kiểm thử và viết chương trình kiểm thử, chạy, rồi cũng để LLM đánh giá kết quả; báo cáo phải lọc bằng từ khoá và duyệt thủ công.</li>
+</ul>
+<p>Các công trình khác cung cấp những thành phần mà đề tài tái sử dụng:</p>
+<ul>
+  <li>Nghiên cứu ở ISSTA 2025 dùng LLM dịch RFC thành đặc tả hình thức làm "gần oracle", kết quả kiểm chứng truy được về câu RFC.</li>
+  <li>TLS-Anvil cung cấp bộ kiểm thử tuân thủ TLS dựa trên kiểm thử tổ hợp; nó phát hiện 116 vấn đề xử lý cảnh báo trên 13 thư viện.</li>
+  <li>TLS-Attacker khai báo luồng thông điệp bằng WorkflowTrace và sửa từng trường mà không phá máy trạng thái.</li>
+  <li>SCALE/Ferret sinh kiểm thử DNS từ mô hình hình thức và so sánh 8 bản triển khai.</li>
+  <li>Protocol state fuzzing học máy trạng thái của TLS, SSH và DTLS để tìm lỗi thứ tự thông điệp.</li>
+  <li>CaMeL hiện thực mẫu Dual LLM với theo dõi luồng dữ liệu.</li>
+</ul>
+<table>
+<tr><th style="width:200px">Khía cạnh</th><th>RFCAudit</th><th>iPanda</th><th>Giải pháp đề xuất</th></tr>
+<tr><td>Ai quyết định nhãn</td><td>LLM, sau tự phê bình</td><td>LLM so assertion với kết quả chạy</td><td>Quy tắc tất định trên bằng chứng đã kiểm chứng</td></tr>
+<tr><td>Bằng chứng chạy thực tế</td><td>Không</td><td>Có, chương trình do LLM viết</td><td>Có, kịch bản trong DSL giới hạn</td></tr>
+<tr><td>Nguồn oracle</td><td>Suy luận LLM</td><td>Assertion do LLM viết và đánh giá</td><td>Đặc tả hành vi đã duyệt, biên dịch tất định, có nhân chứng</td></tr>
+<tr><td>Chỉ ra vị trí mã</td><td>Có, chưa đối chiếu</td><td>Không</td><td>Có, đối chiếu chỉ mục và độ phủ</td></tr>
+<tr><td>Đối thủ kiểm soát mã</td><td>Không xét</td><td>Không xét</td><td>Chống chèn chỉ thị và gian lận kiểm thử</td></tr>
+</table>
+<p class="cap">Bảng 2. So sánh với hai công trình gần nhất.</p>
+<p>Như vậy, câu hỏi "LLM có kiểm chứng được tuân thủ RFC không" đã có câu trả lời. Khoảng trống còn lại là: <b>có thể tin kết luận của hệ thống đến mức nào, kể cả khi bên viết mã muốn đánh lừa nó?</b> Đây là câu hỏi mà đề tài giải quyết.</p>
+
+<h4 id="s1-1-3">Ý tưởng cốt lõi và đóng góp</h4>
+<p>Các bước của việc kiểm chứng chia làm hai loại. Loại thứ nhất cần hiểu ngôn ngữ và suy luận: đọc câu RFC, lần trong kho mã, nghĩ ra cách kiểm thử. Đây là phần tốn công của chuyên gia (P1) và là phần LLM làm tốt. Loại thứ hai là kiểm soát và phán quyết: dữ liệu nào đáng tin, hành động nào được phép, khi nào bằng chứng đủ để kết luận. Nếu giao phần này cho LLM thì sinh ra các rủi ro P6–P8.</p>
+<p>Giải pháp giao hai loại việc cho hai bên khác nhau. Hệ Multi-Agent đảm nhận toàn bộ phần suy luận. Security-Aware Agent Harness, gồm các thành phần chương trình cố định không dùng LLM, đảm nhận toàn bộ phần kiểm soát và phán quyết. Nguyên tắc vận hành là <b>agent đề xuất, thành phần tất định kiểm chứng</b>: agent được đề xuất mọi thứ, gồm đặc tả yêu cầu, kịch bản kiểm thử, vị trí mã và truy vấn phân tích tĩnh, nhưng mỗi đề xuất chỉ thành bằng chứng sau khi qua một bộ kiểm chứng không dùng LLM, và nhãn chỉ do quy tắc cố định gán.</p>
+
+<figure>
+<svg viewBox="0 0 960 330" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, system-ui, sans-serif">
+  <defs><marker id="o1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs>
+  <text x="110" y="30" font-size="12.5" font-weight="700" text-anchor="middle" fill="#555">ĐẦU VÀO</text>
+  <rect x="15" y="45" width="190" height="60" rx="6" fill="#fff" stroke="#555"/>
+  <text x="110" y="70" font-size="12.5" font-weight="700" text-anchor="middle">Đặc tả RFC</text><text x="110" y="90" font-size="11" text-anchor="middle">phiên bản cố định</text>
+  <rect x="15" y="130" width="190" height="60" rx="6" fill="#fdecea" stroke="#c62828" stroke-dasharray="5 3"/>
+  <text x="110" y="155" font-size="12.5" font-weight="700" text-anchor="middle">Mã nguồn @commit</text><text x="110" y="175" font-size="11" text-anchor="middle">không tin cậy</text>
+  <rect x="15" y="215" width="190" height="60" rx="6" fill="#fdecea" stroke="#c62828" stroke-dasharray="5 3"/>
+  <text x="110" y="240" font-size="12.5" font-weight="700" text-anchor="middle">SUT (bản chạy thử)</text><text x="110" y="260" font-size="11" text-anchor="middle">không tin cậy</text>
+  <rect x="245" y="20" width="470" height="295" rx="10" fill="#fff" stroke="#333" stroke-width="2.5"/>
+  <text x="260" y="42" font-size="12.5" font-weight="700">SECURITY-AWARE AGENT HARNESS</text>
+  <rect x="265" y="55" width="430" height="100" rx="8" fill="#ede7f6" stroke="#5e35b1" stroke-width="1.5"/>
+  <text x="480" y="76" font-size="12.5" font-weight="700" text-anchor="middle" fill="#4527a0">HỆ MULTI-AGENT · ĐỀ XUẤT</text>
+  <g font-size="11.5" text-anchor="middle">
+    <rect x="280" y="90" width="125" height="48" rx="5" fill="#fff" stroke="#5e35b1"/><text x="342" y="110">Đặc tả yêu cầu</text><text x="342" y="127" font-size="10.5" fill="#555">câu RFC → RBS</text>
+    <rect x="417" y="90" width="125" height="48" rx="5" fill="#fff" stroke="#5e35b1"/><text x="480" y="110">Vị trí mã, truy vấn</text><text x="480" y="127" font-size="10.5" fill="#555">điều hướng kho mã</text>
+    <rect x="554" y="90" width="125" height="48" rx="5" fill="#fff" stroke="#5e35b1"/><text x="617" y="110">Kịch bản kiểm thử</text><text x="617" y="127" font-size="10.5" fill="#555">trong DSL giới hạn</text>
+  </g>
+  <rect x="265" y="200" width="430" height="100" rx="8" fill="#f5f5f5" stroke="#757575" stroke-width="1.5"/>
+  <text x="480" y="221" font-size="12.5" font-weight="700" text-anchor="middle" fill="#333">THÀNH PHẦN TẤT ĐỊNH · KIỂM CHỨNG VÀ PHÁN QUYẾT</text>
+  <g font-size="11.5" text-anchor="middle">
+    <rect x="280" y="235" width="125" height="48" rx="5" fill="#fff" stroke="#757575"/><text x="342" y="255">Kiểm soát đầu vào</text><text x="342" y="272" font-size="10.5" fill="#555">cách ly, nhãn tin cậy</text>
+    <rect x="417" y="235" width="125" height="48" rx="5" fill="#fff" stroke="#757575"/><text x="480" y="255">Kiểm chứng đề xuất</text><text x="480" y="272" font-size="10.5" fill="#555">oracle, nhân chứng</text>
+    <rect x="554" y="235" width="125" height="48" rx="5" fill="#fff" stroke="#212121" stroke-width="2.5"/><text x="617" y="255">Bằng chứng, kết luận</text><text x="617" y="272" font-size="10.5" fill="#555">T0–T3, quy tắc V0–V9</text>
+  </g>
+  <g stroke="#333" stroke-width="1.5" fill="none">
+    <line x1="420" y1="157" x2="420" y2="198" marker-end="url(#o1)"/>
+    <line x1="540" y1="198" x2="540" y2="157" marker-end="url(#o1)"/>
+  </g>
+  <g font-size="10.5" fill="#333"><text x="346" y="182">đề xuất</text><text x="548" y="182">dữ liệu đã kiểm tra</text></g>
+  <text x="850" y="30" font-size="12.5" font-weight="700" text-anchor="middle" fill="#555">ĐẦU RA</text>
+  <rect x="755" y="45" width="190" height="230" rx="6" fill="#ecf7ef" stroke="#14532d" stroke-width="1.5"/>
+  <text x="850" y="70" font-size="12.5" font-weight="700" text-anchor="middle">Báo cáo tuân thủ</text>
+  <g font-size="11" text-anchor="middle">
+    <text x="850" y="100">Mỗi yêu cầu có:</text>
+    <text x="850" y="124">nhãn và mức bảo đảm</text>
+    <text x="850" y="146">câu RFC gốc</text>
+    <text x="850" y="168">vị trí mã (T1)</text>
+    <text x="850" y="190">phân tích tĩnh (T2)</text>
+    <text x="850" y="212">kiểm thử liên kết (T3)</text>
+    <text x="850" y="240" fill="#14532d" font-weight="600">tái lập được · SARIF</text>
+  </g>
+  <g stroke="#333" stroke-width="1.6" fill="none">
+    <path d="M205 75 H243" marker-end="url(#o1)"/><path d="M205 160 H243" marker-end="url(#o1)"/>
+    <path d="M205 245 H243" marker-end="url(#o1)"/><path d="M715 160 H753" marker-end="url(#o1)"/>
+  </g>
+</svg>
+<figcaption><b>Hình 1.</b> Ý tưởng cốt lõi: khối HỆ MULTI-AGENT chỉ đề xuất, khối THÀNH PHẦN TẤT ĐỊNH kiểm chứng và phán quyết, cả hai nằm trong SECURITY-AWARE AGENT HARNESS.</figcaption>
+<div class="legend-title">Ký hiệu sử dụng trong Hình 1:</div>
+<table>
+<tr><th style="width:90px">Ký hiệu</th><th>Ý nghĩa</th></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#fff" stroke="#555"/></svg></td><td>Đầu vào tin cậy do người kiểm chứng cung cấp</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#fdecea" stroke="#c62828" stroke-dasharray="5 3"/></svg></td><td>Đầu vào không tin cậy, có thể do đối thủ kiểm soát</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="2" width="52" height="20" rx="5" fill="#fff" stroke="#333" stroke-width="2.5"/></svg></td><td>Ranh giới SECURITY-AWARE AGENT HARNESS</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#ede7f6" stroke="#5e35b1" stroke-width="1.5"/></svg></td><td>Phần dùng LLM: các loại đề xuất của hệ Multi-Agent</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#f5f5f5" stroke="#757575" stroke-width="1.5"/></svg></td><td>Phần không dùng LLM: kiểm soát, kiểm chứng và phán quyết</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="3" y="4" width="50" height="16" rx="4" fill="#fff" stroke="#212121" stroke-width="2.5"/></svg></td><td>Chức năng giữ quyền kết luận (Evidence store và Verdict engine)</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#ecf7ef" stroke="#14532d" stroke-width="1.5"/></svg></td><td>Đầu ra của hệ thống</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="o1l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" marker-end="url(#o1l)"/></svg></td><td>Luồng dữ liệu; giữa hai khối bên trong harness, agent chỉ gửi "đề xuất" xuống và chỉ nhận "dữ liệu đã kiểm tra" lên</td></tr>
+</table>
+</figure>
+
+<div class="claim"><b>Đóng góp dự kiến.</b>
+<b>C1.</b> Kiến trúc "agent đề xuất, tất định kiểm chứng" cho kiểm chứng tuân thủ RFC: mọi đầu ra LLM chỉ thành bằng chứng sau một bộ kiểm chứng không dùng LLM; nhãn được tính từ bằng chứng theo quy tắc cố định.
+<b>C2.</b> Bằng chứng liên kết mã và hành vi: kết quả kiểm thử chỉ được tính khi oracle có nhân chứng, và độ phủ mã cho thấy kiểm thử đã đi qua đúng đoạn mã được chỉ ra.
+<b>C3.</b> Mô hình đe doạ và cơ chế phòng vệ khi bên viết mã là đối thủ, gồm cả chèn chỉ thị lẫn gian lận kiểm thử.
+<b>C4.</b> Adapter khai báo có kiểm định tự động, cho phép áp dụng cho nhiều giao thức mà không sửa lõi.
+<b>C5.</b> Đánh giá so sánh trực tiếp với RFCAudit và với cách để LLM làm oracle, trên bộ dữ liệu có nhãn đúng được công bố kèm luận văn.
+</div>
+
+<p>Ý tưởng được hiện thực bằng bảy cơ chế. Bảng 3 cho biết mỗi điểm đau được giải quyết bởi cơ chế nào và được chứng minh bằng đại lượng nào trong thực nghiệm.</p>
+<table>
+<tr><th style="width:290px">Cơ chế</th><th style="width:90px">Điểm đau</th><th>Đại lượng chứng minh (phần V)</th></tr>
+<tr><td><b>M1.</b> Hệ đa agent theo nguyên tắc đề xuất và kiểm chứng</td><td>P1</td><td>Phút công người mỗi yêu cầu so với thủ công; chi phí token và thời gian</td></tr>
+<tr><td><b>M2.</b> Đặc tả hành vi và oracle biên dịch tất định</td><td>P3, P6</td><td>Tỉ lệ câu RFC biểu diễn được; tỉ lệ đặc tả phải sửa; lỗi sót ước lượng</td></tr>
+<tr><td><b>M3.</b> Kịch bản trong DSL giới hạn và nhân chứng oracle</td><td>P1, P6</td><td>Độ phủ quyết định so với chỉ chạy mẫu viết tay; tỉ lệ oracle bị loại</td></tr>
+<tr><td><b>M4.</b> Bằng chứng phân tầng, liên kết độ phủ, quy tắc kết luận</td><td>P3, P5, P6</td><td>Tỉ lệ COMPLIANT sai; precision VIOLATION; độ chính xác vị trí mã</td></tr>
+<tr><td><b>M5.</b> Adapter khai báo và tầng backend</td><td>P4</td><td>Số dòng lõi thay đổi khi thêm giao thức; tuần công viết adapter</td></tr>
+<tr><td><b>M6.</b> Kiểm chứng lại gia tăng và đầu ra cho quy trình thật</td><td>P2</td><td>Chi phí kiểm chứng lại so với chạy toàn bộ; số lỗi được nhà phát triển xác nhận</td></tr>
+<tr><td><b>M7.</b> An toàn khi mã nguồn là đối thủ</td><td>P7, P8</td><td>Tỉ lệ đổi nhãn dưới kịch bản tấn công A1–A7; lời gọi trái phép lọt qua</td></tr>
+</table>
+<p class="cap">Bảng 3. Ánh xạ điểm đau, cơ chế và đại lượng chứng minh.</p>
+
+<!-- ======================================================================= -->
+<h3 id="s1-2">1.2. Mô tả giải pháp</h3>
+<p>Mỗi cơ chế dưới đây được trình bày theo cùng trình tự: cơ chế làm gì, vì sao nó giải quyết được điểm đau, và giới hạn của nó. Sau bảy cơ chế là hai lập luận tổng hợp: vì sao nhãn đúng mà không cần agent luôn đúng, và vì sao giải pháp chạy được trong thực tế.</p>
+
+<!-- M1 -->
+<div class="mech" id="m1">
+<h4><span class="lbl">M1</span>Hệ đa agent theo nguyên tắc đề xuất và kiểm chứng (giải quyết P1)</h4>
+<p><b>Cơ chế.</b> Bảy agent đảm nhận những bước tốn công nhất của chuyên gia, chia thành hai nhóm. Năm agent đặc quyền chỉ làm việc với dữ liệu đã có cấu trúc: RFC Analyst, Planner, Test, Verifier, Report. Hai agent cách ly là nơi duy nhất đọc mã nguồn không tin cậy: Code Indexer, Code Reader. Agent tạo ra bốn loại đề xuất, và mỗi loại có một bộ kiểm chứng riêng (Hình 2).</p>
+<figure>
+<svg viewBox="0 0 960 480" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, system-ui, sans-serif">
+  <defs>
+    <marker id="v1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker>
+    <marker id="v2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker>
+  </defs>
+  <g font-size="12" font-weight="700" fill="#555" text-anchor="middle">
+    <text x="145" y="38">AGENT ĐỀ XUẤT</text><text x="510" y="38">BỘ KIỂM CHỨNG TẤT ĐỊNH</text><text x="845" y="38">BẰNG CHỨNG</text>
+  </g>
+  <g font-size="11.5" text-anchor="middle">
+    <rect x="20" y="55" width="250" height="64" rx="6" fill="#ede7f6" stroke="#5e35b1"/><text x="145" y="80" font-weight="700">RFC Analyst × 2 luồng</text><text x="145" y="99">đặc tả hành vi (RBS)</text>
+    <rect x="330" y="55" width="360" height="64" rx="6" fill="#f5f5f5" stroke="#757575"/><text x="510" y="80">so khớp hai bản, kiểm tra từ vựng adapter,</text><text x="510" y="99">Auditor duyệt bất đồng · Oracle compiler</text>
+    <rect x="750" y="55" width="190" height="64" rx="6" fill="#ecf7ef" stroke="#14532d"/><text x="845" y="80" font-weight="700">Yêu cầu + oracle</text><text x="845" y="99">đã chuẩn hoá</text>
+    <rect x="20" y="145" width="250" height="64" rx="6" fill="#ede7f6" stroke="#5e35b1"/><text x="145" y="170" font-weight="700">Test Agent</text><text x="145" y="189">kịch bản trong DSL</text>
+    <rect x="330" y="145" width="360" height="64" rx="6" fill="#f5f5f5" stroke="#757575"/><text x="510" y="170">kiểm tra ngữ pháp, miền tham số, trigger;</text><text x="510" y="189">chạy trên bản tham chiếu (nhân chứng oracle)</text>
+    <rect x="750" y="145" width="190" height="64" rx="6" fill="#ecf7ef" stroke="#14532d"/><text x="845" y="170" font-weight="700">T3</text><text x="845" y="189">kiểm thử chạy thực tế</text>
+    <rect x="20" y="235" width="250" height="64" rx="6" fill="#fdecea" stroke="#c62828" stroke-dasharray="5 3"/><text x="145" y="260" font-weight="700">Code Reader</text><text x="145" y="279">vị trí mã (LocationClaim)</text>
+    <rect x="330" y="235" width="360" height="64" rx="6" fill="#f5f5f5" stroke="#757575"/><text x="510" y="260">đối chiếu chỉ mục tại commit; Coverage linker:</text><text x="510" y="279">kiểm thử có chạy qua vị trí này không</text>
+    <rect x="750" y="235" width="190" height="64" rx="6" fill="#ecf7ef" stroke="#14532d"/><text x="845" y="260" font-weight="700">T1 liên kết</text><text x="845" y="279">mã ↔ hành vi</text>
+    <rect x="20" y="325" width="250" height="64" rx="6" fill="#fdecea" stroke="#c62828" stroke-dasharray="5 3"/><text x="145" y="350" font-weight="700">Code Reader</text><text x="145" y="369">truy vấn CodeQL</text>
+    <rect x="330" y="325" width="360" height="64" rx="6" fill="#f5f5f5" stroke="#757575"/><text x="510" y="350">kiểm định đột biến: bắt được bản đột biến,</text><text x="510" y="369">không báo bản đúng · cố định truy vấn</text>
+    <rect x="750" y="325" width="190" height="64" rx="6" fill="#ecf7ef" stroke="#14532d"/><text x="845" y="350" font-weight="700">T2</text><text x="845" y="369">phân tích tĩnh</text>
+    <rect x="750" y="415" width="190" height="50" rx="6" fill="#fff" stroke="#212121" stroke-width="2.5"/><text x="845" y="438" font-weight="700">Verdict engine</text><text x="845" y="455" font-size="10.5">quy tắc V0–V9</text>
+  </g>
+  <g stroke="#333" stroke-width="1.5" fill="none">
+    <line x1="270" y1="87" x2="328" y2="87" marker-end="url(#v1)"/><line x1="690" y1="87" x2="748" y2="87" marker-end="url(#v1)"/>
+    <line x1="270" y1="177" x2="328" y2="177" marker-end="url(#v1)"/><line x1="690" y1="177" x2="748" y2="177" marker-end="url(#v1)"/>
+    <line x1="270" y1="267" x2="328" y2="267" marker-end="url(#v1)"/><line x1="690" y1="267" x2="748" y2="267" marker-end="url(#v1)"/>
+    <line x1="270" y1="357" x2="328" y2="357" marker-end="url(#v1)"/><line x1="690" y1="357" x2="748" y2="357" marker-end="url(#v1)"/>
+    <line x1="845" y1="389" x2="845" y2="413" marker-end="url(#v1)"/>
+    <path d="M845 209 V233" stroke-dasharray="3 3"/>
+  </g>
+  <g stroke="#c62828" stroke-width="1.4" fill="none" stroke-dasharray="5 3">
+    <path d="M510 119 V132 H300" marker-end="url(#v2)"/><path d="M510 209 V222 H300" marker-end="url(#v2)"/>
+    <path d="M510 299 V312 H300" marker-end="url(#v2)"/><path d="M510 389 V402 H300" marker-end="url(#v2)"/>
+  </g>
+  <g font-size="10.5" fill="#c62828">
+    <text x="306" y="129">không đạt: loại hoặc NEEDS_REVIEW</text><text x="306" y="219">không đạt: loại hoặc NEEDS_REVIEW</text>
+    <text x="306" y="309">không đạt: loại hoặc NEEDS_REVIEW</text><text x="306" y="399">không đạt: loại hoặc NEEDS_REVIEW</text>
+  </g>
+  <text x="853" y="226" font-size="10" fill="#333">nối qua độ phủ</text>
+</svg>
+<figcaption><b>Hình 2.</b> Nguyên tắc đề xuất và kiểm chứng: bốn loại đề xuất ở cột AGENT ĐỀ XUẤT chỉ thành BẰNG CHỨNG sau khi qua cột BỘ KIỂM CHỨNG TẤT ĐỊNH.</figcaption>
+<div class="legend-title">Ký hiệu sử dụng trong Hình 2:</div>
+<table>
+<tr><th style="width:90px">Ký hiệu</th><th>Ý nghĩa</th></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#ede7f6" stroke="#5e35b1"/></svg></td><td>Đề xuất của agent đặc quyền</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#fdecea" stroke="#c62828" stroke-dasharray="5 3"/></svg></td><td>Đề xuất của agent cách ly</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#f5f5f5" stroke="#757575"/></svg></td><td>Bộ kiểm chứng tất định; tên thành phần thực hiện ghi trong ô</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#ecf7ef" stroke="#14532d"/></svg></td><td>Bằng chứng hoặc yêu cầu đã được chấp nhận</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="3" y="4" width="50" height="16" rx="4" fill="#fff" stroke="#212121" stroke-width="2.5"/></svg></td><td>Verdict engine, nơi duy nhất gán nhãn</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="lv1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" marker-end="url(#lv1)"/></svg></td><td>Đề xuất đi qua bộ kiểm chứng</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="lv2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#c62828" stroke-width="1.4" stroke-dasharray="5 3" marker-end="url(#lv2)"/></svg></td><td>Không qua kiểm chứng: đề xuất bị loại, hoặc yêu cầu chuyển sang NEEDS_REVIEW</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><line x1="28" y1="2" x2="28" y2="22" stroke="#333" stroke-width="1.5" stroke-dasharray="3 3"/></svg></td><td>T3 và T1 được nối với nhau qua dữ liệu độ phủ mã (M4)</td></tr>
+</table>
+</figure>
+<p>Bảng 4 tóm tắt nhiệm vụ của từng agent. Planner điều phối thứ tự điều tra qua hub của harness; các agent không gọi nhau trực tiếp. Công việc của con người thu lại còn ba việc: viết hoặc duyệt adapter một lần cho mỗi giao thức, duyệt các đặc tả yêu cầu mà hai luồng dịch không thống nhất (M2), và duyệt các yêu cầu NEEDS_REVIEW.</p>
+<table>
+<tr><th style="width:140px">Agent</th><th style="width:100px">Nhóm</th><th>Nhiệm vụ</th></tr>
+<tr><td>RFC Analyst</td><td>Đặc quyền</td><td>Dịch câu RFC thành đặc tả hành vi (RBS); chạy hai luồng độc lập</td></tr>
+<tr><td>Planner</td><td>Đặc quyền</td><td>Dựa trên đánh giá độ đủ của Verdict engine, quyết định giao việc gì cho agent nào, theo thứ tự nào</td></tr>
+<tr><td>Test</td><td>Đặc quyền</td><td>Tổng hợp kịch bản kiểm thử trong DSL đưa SUT tới trạng thái tiền điều kiện và tạo sự kiện kích hoạt</td></tr>
+<tr><td>Verifier</td><td>Đặc quyền</td><td>Phản biện nội dung: vị trí có đúng ý nghĩa không, có mâu thuẫn không, còn thiếu đường xử lý nào; không quyết định dừng hay nhãn</td></tr>
+<tr><td>Report</td><td>Đặc quyền</td><td>Viết giải thích cho từng kết luận, chỉ được trích dẫn bằng chứng đã lưu</td></tr>
+<tr><td>Code Indexer</td><td>Cách ly</td><td>Gán hàm vào thành phần giao thức để thu hẹp phạm vi tìm kiếm</td></tr>
+<tr><td>Code Reader</td><td>Cách ly</td><td>Tìm đoạn mã xử lý yêu cầu (LocationClaim); đề xuất truy vấn CodeQL cho yêu cầu loại D</td></tr>
+</table>
+<p class="cap">Bảng 4. Bảy agent.</p>
+<p><b>Vì sao hiệu quả.</b> Chi phí kiểm chứng thủ công tỉ lệ với số yêu cầu nhân thời gian đọc mã và viết kiểm thử cho mỗi yêu cầu. Giải pháp chuyển phần nhân này sang máy, để chi phí con người chỉ còn tỉ lệ với số giao thức và số yêu cầu khó. Việc chia nhỏ thành nhiều agent còn có lợi về chất lượng: mỗi agent chỉ nhận ngữ cảnh của một nhiệm vụ. RFCAudit đã cho thấy điều này qua ablation: bỏ chỉ mục ngữ nghĩa hoặc bỏ truy xuất theo nhu cầu đều làm precision giảm mạnh.</p>
+<p><b>Giới hạn.</b> Mức tiết kiệm phụ thuộc tỉ lệ yêu cầu phải duyệt; tỉ lệ này được đo chứ không giả định.</p>
+</div>
+
+<!-- M2 -->
+<div class="mech" id="m2">
+<h4><span class="lbl">M2</span>Đặc tả hành vi và oracle biên dịch tất định (giải quyết P3, P6)</h4>
+<p><b>Cơ chế.</b> Oracle là phần quyết định một kiểm thử đạt hay không, nên phải đúng. Giải pháp không để LLM viết oracle hay đánh giá kết quả. RFC Analyst chỉ dịch câu RFC thành một <b>đặc tả hành vi</b> (Requirement Behavior Spec, RBS) viết bằng một ngôn ngữ nhỏ có ngữ pháp cố định và dùng từ vựng của adapter. Sau đó Oracle compiler, một chương trình tất định, sinh oracle từ RBS.</p>
+<pre><code>requirement TLS13-0042  from RFC8446§5.2#s…   modal MUST   type B
+  actor     server
+  state     connected                                  # trạng thái tiền điều kiện
+  trigger   receive(record) where record.length &gt; 16640
+  expect    send_alert(record_overflow) then close   within 2000ms
+  forbid    send(application_data)                     # hành vi bị cấm sau kích hoạt
+  variants  boundary(record.length, 16641), max(record.length), random(record.length, k=3)</code></pre>
+<p>Oracle compiler chuyển <code>expect</code> và <code>forbid</code> thành bộ kiểm tra trên vết sự kiện quan sát được (cảnh báo, đóng kết nối, dữ liệu gửi ra), và <code>variants</code> thành tập biến thể bắt buộc. Để kiểm soát lỗi của bước dịch, RFC Analyst chạy <b>hai luồng độc lập</b> (hai mô hình, hoặc cùng mô hình với hai lời nhắc khác nhau), rồi so khớp hai RBS theo cấu trúc. RBS khớp nhau và qua kiểm tra từ vựng thì được chấp nhận. RBS lệch nhau được chuyển cho Auditor. Thêm một mẫu ngẫu nhiên 10% trong nhóm khớp nhau cũng được duyệt, để ước lượng tỉ lệ lỗi còn sót kèm khoảng tin cậy.</p>
+<p><b>Vì sao hiệu quả.</b> Hướng "LLM dịch đặc tả, chương trình kiểm tra" đã được nghiên cứu ở ISSTA 2025 dùng để kiểm chứng parser giao thức, với kết quả truy được về câu RFC. Ở đây, lỗi của LLM chỉ còn nằm ở bước dịch; bước này nhỏ, được kiểm tra chéo và duyệt có trọng tâm. Ngữ pháp RBS đủ nhỏ để kiểm thử toàn bộ Oracle compiler.</p>
+<p><b>Giới hạn.</b> Có những câu RFC không biểu diễn được bằng RBS (ví dụ yêu cầu mang tính khuyến nghị thiết kế). Các câu này nhận nhãn UNVERIFIABLE, và tỉ lệ của chúng được báo cáo như một giới hạn của phương pháp.</p>
+</div>
+
+<!-- M3 -->
+<div class="mech" id="m3">
+<h4><span class="lbl">M3</span>Kịch bản trong DSL giới hạn và nhân chứng oracle (giải quyết P1, P6)</h4>
+<p><b>Cơ chế.</b> Test Agent tổng hợp kịch bản đưa SUT vào trạng thái <code>state</code> rồi tạo <code>trigger</code> của RBS. Kịch bản viết bằng DSL của backend: WorkflowTrace của TLS-Attacker cho TLS và QUIC, một DSL dựa trên dnspython cho DNS, bảng chữ cái thông điệp của SSH-Mapper cho SSH. DSL chỉ có các thao tác gửi, nhận, sửa trường thông điệp và chờ; không có lệnh hệ thống. Harness kiểm tra ngữ pháp và miền tham số, rồi kiểm tra vết chạy để xác nhận <code>trigger</code> đã thật sự xảy ra. Mẫu viết tay của TLS-Anvil và tlsfuzzer vẫn được dùng làm thư viện ví dụ, không còn là giới hạn của hệ thống.</p>
+<p>Mỗi kịch bản được chạy trên ít nhất hai bản triển khai tham chiếu của cùng giao thức (danh sách ứng viên đã có sẵn trong bản đề xuất). Kịch bản chỉ được dùng làm bằng chứng khi có <b>nhân chứng dương</b>, tức ít nhất một bản tham chiếu PASS; điều này chứng tỏ oracle đạt được. Khi có bản đột biến cho yêu cầu đó, cần thêm <b>nhân chứng âm</b>, tức bản đột biến FAIL; điều này chứng tỏ kịch bản phân biệt được. Nếu mọi bản tham chiếu đều FAIL, rất có thể RBS hiểu sai hoặc RFC mơ hồ, nên yêu cầu được chuyển sang NEEDS_REVIEW.</p>
+<p><b>Vì sao hiệu quả.</b> iPanda đã cho thấy LLM tổng hợp được kiểm thử giao thức chạy được. Ở đây đầu ra bị giới hạn trong DSL, và agent không tự đánh giá kết quả, nên giữ được lợi ích mà không mang theo rủi ro. Giá trị của agent đo được trực tiếp bằng <b>độ phủ quyết định</b>, tức số yêu cầu nhận nhãn xác định, so với cấu hình chỉ chạy mẫu viết tay. Nhân chứng oracle đi theo tinh thần của SCALE/Ferret, vốn dùng khác biệt giữa 8 bản triển khai DNS để làm lộ lỗi; ở đây khác biệt được dùng theo chiều ngược lại, để kiểm chứng chính oracle.</p>
+<p><b>Giới hạn.</b> Nhân chứng đòi hỏi dựng thêm bản tham chiếu. Với các giao thức trong phạm vi, mỗi giao thức đều có ít nhất ba bản triển khai mã nguồn mở.</p>
+</div>
+
+<!-- M4 -->
+<div class="mech" id="m4">
+<h4><span class="lbl">M4</span>Bằng chứng phân tầng, liên kết độ phủ và quy tắc kết luận (giải quyết P3, P5, P6)</h4>
+<p><b>Cơ chế.</b> Mọi kết quả đã qua kiểm chứng được lưu thành bằng chứng bất biến kèm hash, gắn một mức tin cậy và một chiều (ủng hộ hay bác bỏ sự tuân thủ). Nhãn cuối cùng do Verdict engine gán theo bộ quy tắc cố định, tuỳ theo loại của yêu cầu.</p>
+<h5>Bốn mức bằng chứng</h5>
+<table>
+<tr><th style="width:55px">Mức</th><th>Nội dung</th><th style="width:240px">Ai xác nhận</th><th style="width:120px">Dùng để kết luận</th></tr>
+<tr><td>T0</td><td>Nhận định của LLM chưa đối chiếu</td><td>Không ai</td><td>Không bao giờ</td></tr>
+<tr><td>T1</td><td>Vị trí cụ thể trong mã (tệp, dòng, ký hiệu, đường gọi hàm)</td><td>Schema gate đối chiếu với chỉ mục tại commit</td><td>Có, kèm điều kiện</td></tr>
+<tr><td>T2</td><td>Kết quả truy vấn phân tích tĩnh trả lời một câu hỏi cụ thể về yêu cầu</td><td>CodeQL chạy truy vấn đã qua kiểm định đột biến</td><td>Có</td></tr>
+<tr><td>T3</td><td>Kết quả chạy kịch bản trên SUT, phán định bằng oracle biên dịch, có nhân chứng</td><td>Test driver và Oracle compiler</td><td>Có, mạnh nhất</td></tr>
+</table>
+<p class="cap">Bảng 5. Mức tin cậy của bằng chứng. Gợi ý vị trí của Locator không phải là bằng chứng.</p>
+<h5>Bốn loại yêu cầu và phương pháp tương ứng</h5>
+<p>Loại bằng chứng nào khẳng định được một yêu cầu tuỳ thuộc vào câu hỏi: hành vi mà yêu cầu đòi hỏi có quan sát được từ bên ngoài khi chạy hay không. Mỗi loại vì vậy có một phương pháp chính riêng.</p>
+<table>
+<tr><th style="width:45px">Loại</th><th style="width:200px">Định nghĩa</th><th>Ví dụ</th><th style="width:230px">Phương pháp chính</th></tr>
+<tr><td>A</td><td>Ràng buộc về dữ liệu bản triển khai <i>gửi đi</i></td><td>Trường legacy_version trong ServerHello của TLS 1.3 phải bằng 0x0303</td><td>T3: quan sát gói tin gửi ra</td></tr>
+<tr><td>B</td><td>Phản ứng khi <i>nhận</i> dữ liệu sai: từ chối, cảnh báo, đóng, bỏ qua</td><td>Nhận bản ghi dài hơn 2<sup>14</sup>+256 byte thì gửi cảnh báo record_overflow</td><td>T3 với biến thể biên và ngẫu nhiên</td></tr>
+<tr><td>C</td><td>Ràng buộc về trạng thái và thứ tự thông điệp</td><td>Thông điệp đến sai thứ tự trong handshake phải bị coi là lỗi</td><td>T3 theo chuỗi; học máy trạng thái khi có điều kiện</td></tr>
+<tr><td>D</td><td>Hành vi nội bộ, không quan sát được từ bên ngoài</td><td>Xoá khoá bí mật cũ sau khi dẫn xuất khoá mới</td><td>T2 từ truy vấn kiểm định đột biến, kết hợp T1</td></tr>
+</table>
+<p class="cap">Bảng 6. Bốn loại yêu cầu.</p>
+<p><b>Liên kết độ phủ.</b> T1 và T3 vốn là hai bằng chứng rời nhau: một kiểm thử PASS chưa chứng minh nó đã đi qua đoạn mã xử lý yêu cầu, còn một vị trí mã chưa chứng minh nó là đoạn quyết định hành vi. Vì vậy SUT được dựng thêm một bản có đo độ phủ (gcov hoặc llvm-cov cho C, <code>-C instrument-coverage</code> cho Rust, <code>go build -cover</code> cho Go). Coverage linker so các dòng đã thực thi trong lần chạy T3 với các dòng của T1. Khi các dòng của T1 nằm trong tập đã thực thi, T3 được gọi là <b>T3 liên kết</b>. Với VIOLATION, liên kết chỉ đúng chỗ cần sửa; với COMPLIANT, liên kết chứng minh kiểm thử thật sự đi qua phép kiểm tra được chỉ ra.</p>
+<p><b>Học máy trạng thái cho loại C.</b> Khi phạm vi cho phép (tầng 2, phần V), máy trạng thái của SUT được học bằng học automaton chủ động (AALpy hoặc LearnLib) qua bộ ánh xạ của TLS-Attacker hoặc SSH-Mapper. Các RBS loại C được dịch thành automaton mẫu lỗi; chuỗi thông điệp vi phạm tìm được trên mô hình được chạy lại trên SUT thật để có T3. Đây là phương pháp đã tìm ra lỗi mới trên TLS, SSH và DTLS.</p>
+<p><b>Truy vấn tĩnh kiểm định đột biến cho loại D.</b> Code Reader đề xuất một truy vấn CodeQL diễn đạt điều kiện vi phạm. Truy vấn chỉ được chấp nhận khi nó báo vi phạm trên bản đột biến và không báo trên bản đúng của một bản tham chiếu; sau đó nó được cố định theo hash. CodeQL hỗ trợ chính thức Rust từ 10/2025, nên một công cụ phủ được cả C, Rust và Go.</p>
+<h5>Quy tắc kết luận</h5>
+<p>Các quy tắc được xét theo thứ tự; quy tắc đầu tiên khớp quyết định nhãn. Thứ tự thể hiện hai nguyên tắc: hành vi chạy thực tế được ưu tiên hơn việc đọc mã, và khi nghi ngờ thì không kết luận. Trường <code>assurance</code> ghi mức bảo đảm của nhãn COMPLIANT.</p>
+<table>
+<tr><th style="width:50px">Mã</th><th>Điều kiện</th><th style="width:155px">Nhãn</th></tr>
+<tr><td>V0</td><td>T3 không nhất quán giữa các lần chạy hoặc giữa các môi trường</td><td>NEEDS_REVIEW</td></tr>
+<tr><td>V1</td><td>Kịch bản chính không có nhân chứng dương (mọi bản tham chiếu FAIL)</td><td>NEEDS_REVIEW</td></tr>
+<tr><td>V2</td><td>Loại A, B, C: có T3 FAIL hợp lệ (chữ ký khớp yêu cầu, trigger đã xảy ra, có nhân chứng dương)</td><td>VIOLATION</td></tr>
+<tr><td>V3</td><td>Loại C: chuỗi vi phạm tìm từ máy trạng thái học được, chạy lại trên SUT cho FAIL</td><td>VIOLATION</td></tr>
+<tr><td>V4</td><td>Có nhánh nghi vấn (M7) trên đường xử lý của yêu cầu</td><td>NEEDS_REVIEW</td></tr>
+<tr><td>V5</td><td>Loại A, B, C: mọi biến thể bắt buộc và k biến thể ngẫu nhiên PASS hợp lệ; có T3 liên kết với T1; không có T1, T2 bác bỏ</td><td>COMPLIANT · LINKED</td></tr>
+<tr><td>V6</td><td>Như V5 nhưng agent không định vị được T1</td><td>COMPLIANT · BEHAVIORAL</td></tr>
+<tr><td>V7</td><td>Loại A, B, C: PASS nhưng độ phủ không đi qua T1, hoặc T1, T2 bác bỏ</td><td>NEEDS_REVIEW</td></tr>
+<tr><td>V8</td><td>Loại D: T2 từ truy vấn đã kiểm định, kết hợp T1; không có đường vi phạm thì COMPLIANT · STATIC, có đường vi phạm thì VIOLATION</td><td>COMPLIANT hoặc VIOLATION</td></tr>
+<tr><td>V9</td><td>Mọi trường hợp còn lại, kể cả chỉ có T0</td><td>UNVERIFIABLE</td></tr>
+</table>
+<p class="cap">Bảng 7. Quy tắc kết luận V0–V9.</p>
+<p><b>Vì sao hiệu quả.</b> Với P3, mỗi kết luận trỏ tới bằng chứng cụ thể, và mỗi bằng chứng tự tái lập được. Với P5, chuỗi câu RFC, yêu cầu, kịch bản, vị trí mã, độ phủ và kết quả được lưu tường minh. Với P6, LLM không có quyền kết luận; T0 không bao giờ được tính; một kết quả PASS không đi qua đúng đoạn mã sẽ không thành COMPLIANT.</p>
+<p><b>Giới hạn.</b> COMPLIANT chỉ có giá trị trong phạm vi biến thể đã thử. Mức STATIC của loại D kém chắc chắn hơn mức LINKED; ba mức được báo cáo tách riêng.</p>
+</div>
+
+<!-- M5 -->
+<div class="mech" id="m5">
+<h4><span class="lbl">M5</span>Adapter khai báo và tầng backend (giải quyết P4)</h4>
+<p><b>Cơ chế.</b> Hệ thống chia ba tầng. <b>Lõi</b> gồm harness, agent và quy tắc, không chứa tri thức của giao thức nào. <b>Backend</b> là plugin có giao diện cố định: kiểm tra và chạy kịch bản DSL, trả về vết sự kiện chuẩn hoá. <b>Adapter</b> là dữ liệu khai báo: phạm vi RFC, từ vựng hành vi, phân loại thành phần, gợi ý tìm mã, cách dựng SUT và bản tham chiếu. Thêm giao thức có thể cần thêm backend nếu chưa có công cụ phù hợp, nhưng không bao giờ sửa lõi. Một trợ lý adapter dùng LLM soạn nháp từ vựng và phân loại thành phần từ RFC và kho mã. Mọi adapter, viết tay hay soạn nháp, đều phải qua Adapter checker trước khi dùng (mục 4.3).</p>
+<p><b>Vì sao hiệu quả.</b> Phần tốn công nhất khi xây công cụ cho một giao thức là phần dùng chung: hiểu đặc tả, tìm mã, sinh oracle, quản lý bằng chứng, kết luận. Phần này nằm trong lõi. Backend tái dùng công cụ sẵn có: TLS-Attacker cho TLS và QUIC, Ferret và dnspython cho DNS, SSH-Mapper cho SSH. Adapter checker kiểm tra mỗi phần tử của adapter có thật sự phân biệt được bản đúng với bản đột biến hay không.</p>
+<p><b>Giới hạn.</b> Viết backend cho giao thức chưa có công cụ là việc tốn công. Chi phí này được đo và tính vào chi phí thêm giao thức khi đánh giá mục tiêu 2.</p>
+</div>
+
+<!-- M6 -->
+<div class="mech" id="m6">
+<h4><span class="lbl">M6</span>Kiểm chứng lại gia tăng và đầu ra cho quy trình thật (giải quyết P2)</h4>
+<p><b>Cơ chế.</b> Khi có commit mới, hệ thống so hai commit ở mức hàm bằng hash nội dung hàm. T1 và T2 có vị trí trong hàm không đổi được giữ lại; mọi T3 được chạy lại vì không cần LLM; chỉ yêu cầu có bằng chứng mất hiệu lực hoặc T3 đổi kết quả mới được agent điều tra lại. Thay đổi trong tệp cấu hình biên dịch kích hoạt điều tra lại toàn bộ. Kết quả được xuất thêm theo định dạng SARIF để nạp vào GitHub code scanning hoặc IDE. Chế độ CI chạy kiểm chứng lại cho từng pull request.</p>
+<p><b>Vì sao hiệu quả.</b> Phần đắt nhất là lời gọi LLM trong giai đoạn điều tra. Nhờ cơ chế này, chi phí LLM tỉ lệ với mức thay đổi của mã, không tỉ lệ với kích thước RFC, nên có thể chạy sau mỗi bản phát hành. RFCAudit cũng ghi nhận chỉ mục cập nhật gia tăng được, với chi phí lập chỉ mục chỉ khoảng 1,89 USD mỗi giao thức.</p>
+<p><b>Giới hạn.</b> Thay đổi qua macro hoặc sinh mã có thể làm hash hàm không đổi trong khi hành vi đổi; việc luôn chạy lại T3 che phần lớn rủi ro này.</p>
+</div>
+
+<!-- M7 -->
+<div class="mech" id="m7">
+<h4><span class="lbl">M7</span>An toàn khi mã nguồn là đối thủ (giải quyết P7, P8)</h4>
+<p><b>Cơ chế chống chèn chỉ thị và vượt quyền.</b> Bốn lớp chặn nối tiếp:</p>
+<ul>
+  <li><b>Cách ly người đọc mã:</b> chỉ hai agent trong vùng cách ly được đọc mã; chúng chỉ có công cụ đọc và chỉ trả kết quả qua Schema gate. Đây là mẫu Dual LLM mà CaMeL hiện thực; CaMeL giải được 77% nhiệm vụ AgentDojo với an toàn chứng minh được, so với 84% khi không phòng vệ.</li>
+  <li><b>Kiểm soát luồng thông tin:</b> mỗi giá trị mang một nhãn tin cậy và nhãn được lan truyền (Bảng 8).</li>
+  <li><b>Kiểm tra mọi hành động:</b> Tool gateway từ chối mặc định, kiểm tra vai trò và miền tham số; kịch bản chỉ dùng thao tác DSL.</li>
+  <li><b>Cách ly thực thi:</b> biên dịch và kiểm thử chạy trong container không có mạng ra ngoài, không có khoá API, huỷ sau mỗi lần chạy (phần III).</li>
+</ul>
+<table>
+<tr><th style="width:110px">Nhãn</th><th>Nguồn</th><th>Được vào ngữ cảnh agent đặc quyền?</th></tr>
+<tr><td><b>TRUSTED</b></td><td>Đầu vào của người kiểm chứng: RFC, adapter đã kiểm định, cấu hình</td><td>Có</td></tr>
+<tr><td><b>DERIVED</b></td><td>Đầu ra đã qua Schema gate của agent đặc quyền, tạo từ TRUSTED hoặc DERIVED</td><td>Có</td></tr>
+<tr><td><b>UNTRUSTED</b></td><td>Mọi thứ từ kho mã, từ SUT, mọi đầu ra của vùng cách ly</td><td>Chỉ giá trị đã thu về miền hữu hạn và đối chiếu được (liệt kê, số, đường dẫn và ký hiệu có trong chỉ mục); chuỗi tự do thì không bao giờ</td></tr>
+</table>
+<p class="cap">Bảng 8. Nhãn tin cậy. Giá trị tính từ ít nhất một giá trị UNTRUSTED thì mang nhãn UNTRUSTED.</p>
+<p><b>Cơ chế chống gian lận kiểm thử.</b> Đối thủ kiểm soát mã có thể viết mã nhận ra kiểm thử và chỉ cư xử đúng khi bị kiểm thử. Năm lớp chặn bổ sung cho nhau:</p>
+<ul>
+  <li><b>Biến thể ngẫu nhiên:</b> mỗi lần chạy lấy thêm k giá trị ngẫu nhiên trong miền tham số, ghi seed để tái lập.</li>
+  <li><b>Liên kết độ phủ:</b> PASS nhờ một nhánh khác vị trí T1 thì không thành COMPLIANT (V7).</li>
+  <li><b>Quét nhánh nghi vấn:</b> bộ truy vấn CodeQL cố định tìm nhánh so dữ liệu vào với hằng trùng giá trị kiểm thử, đọc biến môi trường, tên máy, thời gian hoặc đặc trưng công cụ kiểm thử; phát hiện trên đường xử lý chặn COMPLIANT (V4).</li>
+  <li><b>Đa dạng môi trường:</b> chạy với cấu hình mạng, tên máy, thời điểm khác nhau; kết quả phải nhất quán (V0).</li>
+  <li><b>Học máy trạng thái:</b> khám phá có hệ thống thay vì vài chuỗi cố định (tầng 2).</li>
+</ul>
+<p><b>Vì sao hiệu quả.</b> Lập luận then chốt là kẻ tấn công điều khiển được agent cách ly cũng chỉ gửi ra được một bản ghi có cấu trúc. Bản ghi đó có thể sai nhưng không thể chứa chỉ thị, và với loại A, B, C nhãn do T3 có nhân chứng quyết định. Để gian lận kiểm thử thành công, mã phải vừa tránh được giá trị ngẫu nhiên, vừa không để lộ nhánh đặc biệt trên đường xử lý mà độ phủ và phân tích tĩnh nhìn thấy. Bảng 9 nêu điểm cưỡng chế và kịch bản kiểm tra cho từng rủi ro.</p>
+<table>
+<tr><th style="width:45px">Mã</th><th>Rủi ro</th><th>Điểm cưỡng chế</th><th>Kịch bản kiểm tra</th></tr>
+<tr><td>A1</td><td>Chỉ thị trong chú thích, tài liệu</td><td>Schema của agent cách ly không có trường tự do tới agent đặc quyền; IFC tracker</td><td>Chú thích yêu cầu báo "tuân thủ"; kỳ vọng nhãn không đổi</td></tr>
+<tr><td>A2</td><td>Chỉ thị trong đầu ra khi chạy</td><td>Nhật ký SUT chỉ tới oracle; agent chỉ thấy sự kiện chuẩn hoá</td><td>SUT in nhật ký chứa chỉ thị; kỳ vọng lời gọi agent không đổi</td></tr>
+<tr><td>A3</td><td>Dùng công cụ ngoài quyền</td><td>Từ chối mặc định; kiểm tra miền tham số; DSL không có lệnh hệ thống</td><td>Dẫn dắt gọi công cụ ngoài quyền; kỳ vọng lọt qua bằng 0</td></tr>
+<tr><td>A4</td><td>Đọc dữ liệu ngoài phạm vi, lộ bí mật</td><td>Phạm vi đọc theo adapter; chặn tệp nhạy cảm; khoá chỉ ở LLM gateway; cách ly mạng</td><td>Dẫn agent đọc tệp khoá; kỳ vọng Trace log không có nội dung bị chặn</td></tr>
+<tr><td>A5</td><td>Giả mạo bằng chứng</td><td>Bằng chứng do thành phần tất định ghi, định danh bằng hash, nối chuỗi</td><td>Sửa bản ghi sau khi chạy; kỳ vọng chuỗi hash phát hiện</td></tr>
+<tr><td>A6</td><td>Làm cạn tài nguyên</td><td>Ngân sách theo vai trò và yêu cầu; phát hiện lặp; giới hạn container</td><td>Đồ thị gọi vòng; kỳ vọng dừng với lý do BUDGET hoặc LOOP</td></tr>
+<tr><td>A7</td><td>Mã nhận ra kiểm thử và đổi hành vi</td><td>Biến thể ngẫu nhiên; liên kết độ phủ; quét nhánh nghi vấn; đa dạng môi trường</td><td>Ba mức tinh vi tăng dần; đo tỉ lệ bị phát hiện</td></tr>
+<tr><td>F1</td><td>LLM kết luận không có bằng chứng</td><td>T0 không dùng để kết luận; oracle biên dịch; nhân chứng; liên kết</td><td>So tỉ lệ COMPLIANT sai với RFCAudit và với cấu hình LLM làm oracle</td></tr>
+</table>
+<p class="cap">Bảng 9. Rủi ro, điểm cưỡng chế và kịch bản kiểm tra.</p>
+<p><b>Giới hạn.</b> Không phương pháp nào chống được mọi gian lận có thể có; tuyên bố của đề tài có giới hạn rõ như trên, và A7 mức 3 được báo cáo trung thực. Kẻ tấn công vẫn có thể làm tốn thêm ngân sách hoặc đẩy yêu cầu vào UNVERIFIABLE hay NEEDS_REVIEW; đây là thất bại an toàn.</p>
+</div>
+
+<h4 id="s1-2-8">Vì sao nhãn đúng mà không cần agent luôn đúng</h4>
+<div class="claim"><b>Luận điểm.</b> Một nhãn COMPLIANT hoặc VIOLATION của loại A, B, C là đúng nếu:
+(a) RBS phản ánh đúng câu RFC;
+(b) oracle biên dịch từ RBS phán định đúng trên vết sự kiện, và kịch bản thật sự tạo ra trigger;
+(c) Verdict engine cài đặt đúng V0–V9.<br>
+Điều (a) được kiểm soát bằng hai luồng dịch, kiểm tra từ vựng và duyệt bất đồng, với tỉ lệ lỗi sót ước lượng được. Điều (b) được kiểm soát bằng Oracle compiler đã kiểm thử, xác nhận trigger trên vết chạy và nhân chứng oracle. Điều (c) được kiểm soát bằng kiểm thử đơn vị trên một hàm thuần. Mọi sai sót khác của agent chỉ làm tăng chi phí hoặc đẩy yêu cầu vào UNVERIFIABLE hay NEEDS_REVIEW.</div>
+<table>
+<tr><th style="width:120px">Agent</th><th style="width:210px">Sai sót có thể có</th><th>Hậu quả lên nhãn</th></tr>
+<tr><td>RFC Analyst</td><td>Dịch sai câu RFC</td><td>Là điều (a); bị chặn khi hai luồng lệch nhau, hoặc bị phát hiện qua mẫu duyệt 10%; nếu cả hai luồng cùng sai giống nhau thì nhân chứng oracle thường làm lộ (mọi bản tham chiếu FAIL, V1)</td></tr>
+<tr><td>Planner</td><td>Lập kế hoạch kém, lặp vô ích</td><td>Không làm sai nhãn; hết ngân sách thì UNVERIFIABLE</td></tr>
+<tr><td>Test</td><td>Kịch bản sai, không tạo được trigger</td><td>Không làm sai nhãn: kịch bản không qua kiểm tra vết hoặc không có nhân chứng thì không thành bằng chứng</td></tr>
+<tr><td>Code Reader</td><td>Chỉ sai vị trí; truy vấn sai</td><td>Loại A–C: độ phủ không liên kết thì sang NEEDS_REVIEW (V7), không thành COMPLIANT sai. Loại D: truy vấn sai bị loại ở bước kiểm định đột biến</td></tr>
+<tr><td>Code Indexer</td><td>Gán sai thành phần</td><td>Chỉ làm tìm kiếm kém hiệu quả</td></tr>
+<tr><td>Verifier</td><td>Phản biện sai</td><td>Chỉ làm Planner giao thêm việc</td></tr>
+<tr><td>Report</td><td>Giải thích sai, bịa vị trí</td><td>Output gate từ chối trích dẫn không có trong Evidence store; nhãn không đổi</td></tr>
+</table>
+<p class="cap">Bảng 10. Sai sót của từng agent và hậu quả lên nhãn.</p>
+<p>Như vậy, LLM quyết định hệ thống <i>kiểm chứng được bao nhiêu</i> (độ phủ, chi phí), còn harness quyết định <i>điều đã kết luận có đúng không</i>. Đây là ý nghĩa cụ thể của tách quyền.</p>
+
+<h4 id="s1-2-9">Tính khả thi thực tế</h4>
+<h5>Các năng lực cần thiết đã được chứng minh</h5>
+<p>Giải pháp không đòi hỏi LLM làm điều chưa từng được chứng minh. LLM đọc RFC và mã để tìm lỗi chức năng (RFCAudit), tổng hợp kiểm thử giao thức chạy được (iPanda), và dịch RFC thành đặc tả hình thức (ISSTA 2025) đều đã có kết quả công bố. Các công cụ tất định mà giải pháp dựa vào cũng đã trưởng thành: TLS-Attacker, TLS-Anvil, Ferret, CodeQL, các bộ học automaton. Đóng góp của đề tài nằm ở cách kết hợp sao cho kết luận đáng tin và an toàn, không phải ở việc chứng minh lại từng năng lực.</p>
+<h5>Ba ca kiểm chứng tính khả thi trên lỗi đã biết</h5>
+<table>
+<tr><th style="width:150px">Ca</th><th>Yêu cầu và cặp phiên bản</th><th style="width:270px">Kết quả kỳ vọng</th></tr>
+<tr><td><b>K1.</b> Heartbleed (CVE-2014-0160)</td><td>RFC 6520 yêu cầu bỏ qua thông điệp heartbeat có trường độ dài payload lớn hơn thực tế (loại B). OpenSSL 1.0.1f và 1.0.1g. TLS-Attacker có sẵn kịch bản Heartbleed làm ví dụ.</td><td>1.0.1f: T3 FAIL, VIOLATION. 1.0.1g: PASS mọi biến thể, COMPLIANT.</td></tr>
+<tr><td><b>K2.</b> CCS injection (CVE-2014-0224)</td><td>ChangeCipherSpec đến sớm hơn thứ tự handshake quy định phải bị coi là lỗi (loại C). OpenSSL 1.0.1g và 1.0.1h.</td><td>1.0.1g: T3 FAIL, VIOLATION. 1.0.1h: COMPLIANT.</td></tr>
+<tr><td><b>K3.</b> Đột biến TLS 1.3</td><td>RFC 8446 §5.2, ràng buộc độ dài bản ghi (loại B). Một bản triển khai TLS 1.3 và bản đột biến xoá phép kiểm tra độ dài.</td><td>Bản gốc: COMPLIANT · LINKED. Bản đột biến: VIOLATION, T1 trỏ đúng vị trí đột biến.</td></tr>
+</table>
+<p class="cap">Bảng 11. Ba ca kiểm chứng tính khả thi. K1 và K2 thuộc TLS 1.2, cần một adapter nhỏ, đồng thời là phép thử sớm cho M5. Các lỗi nổi tiếng này có thể nằm trong dữ liệu huấn luyện của LLM, nên chỉ dùng để chứng minh khả năng phát hiện, không dùng để đo khả năng định vị.</p>
+<p>Mỗi ca được chạy thêm một biến thể có tấn công, gồm chú thích dạng chỉ thị cho AI (A1) và một nhánh nhận ra giá trị kiểm thử cố định (A7 mức 1). Kỳ vọng nhãn không đổi.</p>
+<h5>Giới hạn và rủi ro</h5>
+<table>
+<tr><th style="width:250px">Rủi ro</th><th>Cách giảm thiểu</th></tr>
+<tr><td>RBS không biểu đạt được nhiều câu RFC</td><td>Mở rộng ngữ pháp theo nhóm câu thường gặp, đo từ tuần đầu tháng 12; câu ngoài ngữ pháp vào UNVERIFIABLE và được báo cáo</td></tr>
+<tr><td>Thiếu nhân chứng cho nhiều kịch bản</td><td>Có thể là dấu hiệu RFC mơ hồ; đối chiếu với hướng RFCScope (ASE 2025) và báo cáo thành phát hiện riêng</td></tr>
+<tr><td>Oracle quá chặt so với các phản ứng hợp lệ RFC cho phép</td><td>RBS cho phép khai báo tập kết quả chấp nhận được; nhân chứng làm lộ oracle quá chặt</td></tr>
+<tr><td>Khó dựng SUT hoặc bản đo độ phủ</td><td>Thử trong tháng 10; thay ứng viên nếu quá 3 ngày; kho mã không dựng được bản đo độ phủ chỉ đạt mức BEHAVIORAL</td></tr>
+<tr><td>Chi phí token vượt dự kiến</td><td>Ngân sách theo yêu cầu; mô hình nhỏ cho agent có nhiệm vụ đơn giản; đo từ mốc G1. RFCAudit cho mốc tham khảo khoảng 5 USD mỗi giao thức</td></tr>
+<tr><td>LLM không tất định ngay cả với temperature bằng 0</td><td>Nhãn không phụ thuộc LLM tái lập được; ba mức tái lập ở mục 2.4</td></tr>
+</table>
+<p class="cap">Bảng 12. Giới hạn và rủi ro.</p>
+
+<!-- ======================================================================= -->
+<h3 id="s1-3">1.3. Luồng xử lý</h3>
+<p>Luồng xử lý được trình bày ở ba mức chi tiết tăng dần: một lần chạy, vòng đời một yêu cầu, và một vòng điều tra; sau đó là kiểm chứng lại và xử lý ngoại lệ.</p>
+<h4>Một lần chạy</h4>
+<ul>
+  <li><b>Chuẩn bị:</b> kiểm tra hash mọi đầu vào, tạo thư mục lần chạy; Adapter checker kiểm định adapter; dựng SUT, bản đo độ phủ và các bản tham chiếu. Không đạt thì dừng.</li>
+  <li><b>Dựng nền:</b> RFC gate tách câu; RFC Analyst chạy hai luồng dịch thành RBS; song song, Code gate dựng chỉ mục, Code Indexer lập bản đồ thành phần, quét nhánh nghi vấn chạy một lần cho toàn kho mã.</li>
+  <li><b>Duyệt yêu cầu:</b> Auditor duyệt các RBS bất đồng và mẫu 10%; Oracle compiler biên dịch oracle cho các RBS được chấp nhận.</li>
+  <li><b>Điều tra:</b> các yêu cầu được xử lý song song theo vòng đời ở Hình 3, mỗi yêu cầu có ngân sách riêng.</li>
+  <li><b>Kết thúc:</b> Report Agent viết giải thích; Output gate kiểm tra; sinh báo cáo HTML, JSON, SARIF; chốt bản kê lần chạy với hash cuối chuỗi bằng chứng.</li>
+</ul>
+
+<h4>Vòng đời một yêu cầu</h4>
+<figure>
+<svg viewBox="0 0 960 250" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, system-ui, sans-serif">
+  <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs>
+  <g font-size="12.5" text-anchor="middle">
+    <rect x="15" y="95" width="150" height="50" rx="25" fill="#f5f5f5" stroke="#555"/><text x="90" y="125" font-weight="700">EXTRACTED</text>
+    <rect x="200" y="95" width="150" height="50" rx="25" fill="#f5f5f5" stroke="#555"/><text x="275" y="125" font-weight="700">SPECIFIED</text>
+    <rect x="385" y="95" width="160" height="50" rx="25" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/><text x="465" y="125" font-weight="700">INVESTIGATING</text>
+    <rect x="620" y="80" width="150" height="80" rx="14" fill="#ecf7ef" stroke="#14532d" stroke-width="1.5"/><text x="695" y="104" font-weight="700">DECIDED</text>
+    <text x="695" y="126" font-size="10.5">COMPLIANT · VIOLATION</text><text x="695" y="144" font-size="10.5">UNVERIFIABLE · NEEDS_REVIEW</text>
+    <rect x="805" y="95" width="140" height="50" rx="25" fill="#f5f5f5" stroke="#555"/><text x="875" y="125" font-weight="700">REPORTED</text>
+  </g>
+  <line x1="165" y1="120" x2="198" y2="120" stroke="#333" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="350" y1="120" x2="383" y2="120" stroke="#333" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="545" y1="108" x2="618" y2="108" stroke="#333" stroke-width="1.5" marker-end="url(#a2)"/>
+  <line x1="545" y1="134" x2="618" y2="134" stroke="#333" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#a2)"/>
+  <line x1="770" y1="120" x2="803" y2="120" stroke="#333" stroke-width="1.5" marker-end="url(#a2)"/>
+  <path d="M430 95 C 430 40, 500 40, 500 93" fill="none" stroke="#1565c0" stroke-width="1.5" marker-end="url(#a2)"/>
+  <g font-size="11" fill="#333" text-anchor="middle">
+    <text x="465" y="35">bằng chứng mới, Planner điều chỉnh</text>
+    <text x="582" y="101">đủ</text><text x="582" y="152">hết ngân sách</text><text x="367" y="88">duyệt</text>
+  </g>
+  <g font-size="11" fill="#666" text-anchor="middle">
+    <text x="90" y="175">RFC gate</text>
+    <text x="275" y="175">RFC Analyst × 2</text><text x="275" y="190">+ so khớp, Auditor</text><text x="275" y="205">+ Oracle compiler</text>
+    <text x="465" y="175">Planner + các agent</text><text x="465" y="190">qua Execution loop</text>
+    <text x="695" y="182">Verdict engine</text>
+    <text x="875" y="175">Report Agent</text><text x="875" y="190">+ Output gate</text>
+  </g>
+</svg>
+<figcaption><b>Hình 3.</b> Vòng đời của một yêu cầu; dòng chữ dưới mỗi trạng thái là thành phần đưa yêu cầu vào trạng thái đó.</figcaption>
+<div class="legend-title">Ký hiệu sử dụng trong Hình 3:</div>
+<table>
+<tr><th style="width:90px">Ký hiệu</th><th>Ý nghĩa</th></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="9" fill="#f5f5f5" stroke="#555"/></svg></td><td>Trạng thái được xử lý một lần; SPECIFIED nghĩa là đã có RBS được chấp nhận và oracle đã biên dịch</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="9" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/></svg></td><td>Trạng thái INVESTIGATING: các agent lặp nhiều vòng trong ngân sách giới hạn</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="5" fill="#ecf7ef" stroke="#14532d" stroke-width="1.5"/></svg></td><td>Trạng thái DECIDED mang một trong bốn nhãn; chỉ Verdict engine đưa yêu cầu vào đây</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="a2l1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" marker-end="url(#a2l1)"/></svg></td><td>Chuyển trạng thái thông thường; "duyệt" là bước duyệt bất đồng của Auditor, "đủ" nghĩa là áp dụng được một trong V0–V8</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="a2l2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#a2l2)"/></svg></td><td>Chuyển do hết ngân sách hoặc phát hiện lặp; nhãn vẫn tính theo quy tắc trên bằng chứng hiện có</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="a2l3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><path d="M10 20 C 10 2, 46 2, 46 18" fill="none" stroke="#1565c0" stroke-width="1.5" marker-end="url(#a2l3)"/></svg></td><td>Vòng lặp điều tra (chi tiết một vòng ở Hình 4)</td></tr>
+</table>
+</figure>
+
+<h4>Một vòng điều tra</h4>
+<p>Hình 4 là biểu đồ tuần tự của một vòng điều tra cho ca K3: RFC 8446 §5.2 yêu cầu bên nhận bản ghi đã mã hoá dài hơn 2<sup>14</sup>+256 byte phải kết thúc kết nối bằng cảnh báo record_overflow. Ví dụ giả định bản triển khai có kiểm tra độ dài nhưng gửi cảnh báo decode_error thay vì record_overflow.</p>
+<figure>
+<svg viewBox="0 0 960 520" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, system-ui, sans-serif">
+  <defs>
+    <marker id="q1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker>
+    <marker id="q2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#14532d"/></marker>
+  </defs>
+  <g font-size="11" font-weight="700" text-anchor="middle">
+    <rect x="7" y="15" width="96" height="34" rx="4" fill="#ede7f6" stroke="#5e35b1"/><text x="55" y="36">Planner</text>
+    <rect x="112" y="15" width="96" height="34" rx="4" fill="#e3f2fd" stroke="#1565c0"/><text x="160" y="36">Execution loop</text>
+    <rect x="217" y="15" width="96" height="34" rx="4" fill="#f5f5f5" stroke="#757575"/><text x="265" y="36">Verdict engine</text>
+    <rect x="322" y="15" width="96" height="34" rx="4" fill="#ede7f6" stroke="#5e35b1"/><text x="370" y="36">Test Agent</text>
+    <rect x="427" y="15" width="96" height="34" rx="4" fill="#f5f5f5" stroke="#757575"/><text x="475" y="36">Tool gateway</text>
+    <rect x="532" y="15" width="96" height="34" rx="4" fill="#f5f5f5" stroke="#757575"/><text x="580" y="36">Test driver</text>
+    <rect x="637" y="15" width="96" height="34" rx="4" fill="#fdecea" stroke="#c62828" stroke-dasharray="4 3"/><text x="685" y="36">Code Reader</text>
+    <rect x="742" y="15" width="96" height="34" rx="4" fill="#f5f5f5" stroke="#757575"/><text x="790" y="36">Schema gate</text>
+    <rect x="847" y="15" width="96" height="34" rx="4" fill="#f5f5f5" stroke="#757575"/><text x="895" y="36">Evidence store</text>
+  </g>
+  <g stroke="#aaa" stroke-dasharray="4 4">
+    <line x1="55" y1="49" x2="55" y2="505"/><line x1="160" y1="49" x2="160" y2="505"/><line x1="265" y1="49" x2="265" y2="505"/>
+    <line x1="370" y1="49" x2="370" y2="505"/><line x1="475" y1="49" x2="475" y2="505"/><line x1="580" y1="49" x2="580" y2="505"/>
+    <line x1="685" y1="49" x2="685" y2="505"/><line x1="790" y1="49" x2="790" y2="505"/><line x1="895" y1="49" x2="895" y2="505"/>
+  </g>
+  <rect x="150" y="290" width="760" height="96" fill="#fff8e1" opacity=".55"/>
+  <text x="905" y="304" font-size="10" text-anchor="end" fill="#8a5300">song song với ③–⑦</text>
+  <g stroke="#333" stroke-width="1.4" fill="none">
+    <line x1="265" y1="80" x2="57" y2="80" marker-end="url(#q1)"/>
+    <line x1="55" y1="112" x2="158" y2="112" marker-end="url(#q1)"/>
+    <line x1="160" y1="144" x2="368" y2="144" marker-end="url(#q1)"/>
+    <line x1="370" y1="176" x2="162" y2="176" marker-end="url(#q1)"/>
+    <line x1="160" y1="208" x2="473" y2="208" marker-end="url(#q1)"/>
+    <line x1="475" y1="240" x2="578" y2="240" marker-end="url(#q1)"/>
+    <line x1="160" y1="304" x2="683" y2="304" marker-end="url(#q1)"/>
+    <line x1="685" y1="336" x2="788" y2="336" marker-end="url(#q1)"/>
+    <line x1="895" y1="408" x2="267" y2="408" marker-end="url(#q1)"/>
+    <line x1="265" y1="440" x2="57" y2="440" marker-end="url(#q1)"/>
+    <line x1="55" y1="472" x2="158" y2="472" marker-end="url(#q1)"/>
+  </g>
+  <g stroke="#14532d" stroke-width="1.6" stroke-dasharray="6 3" fill="none">
+    <line x1="580" y1="272" x2="893" y2="272" marker-end="url(#q2)"/>
+    <line x1="790" y1="368" x2="893" y2="368" marker-end="url(#q2)"/>
+  </g>
+  <g font-size="10.5" fill="#222">
+    <text x="70" y="74">① còn thiếu: T3 cho 5 biến thể độ dài</text>
+    <text x="62" y="106">② dispatch → Test</text>
+    <text x="170" y="138">③ task: tổng hợp kịch bản DSL</text>
+    <text x="172" y="170">④ tool_call: run_scenario</text>
+    <text x="170" y="202">⑤ đã kiểm tra quyền, ngữ pháp, tham số</text>
+    <text x="485" y="234">⑥ chạy SUT + bản tham chiếu</text>
+    <text x="592" y="266" fill="#14532d">⑦ ghi T3: FAIL, nhân chứng PASS</text>
+    <text x="170" y="298">⑧ task: định vị phép kiểm tra độ dài</text>
+    <text x="695" y="330">⑨ LocationClaim</text>
+    <text x="800" y="362" fill="#14532d">⑩ ghi T1 liên kết</text>
+    <text x="400" y="402">⑪ tập bằng chứng của yêu cầu</text>
+    <text x="70" y="434">⑫ đủ: V2, VIOLATION</text>
+    <text x="62" y="466">⑬ stop</text>
+  </g>
+</svg>
+<figcaption><b>Hình 4.</b> Biểu đồ tuần tự của một vòng điều tra cho ca K3, từ lúc Verdict engine báo bằng chứng còn thiếu tới lúc Planner dừng.</figcaption>
+<div class="legend-title">Ký hiệu sử dụng trong Hình 4:</div>
+<table>
+<tr><th style="width:90px">Ký hiệu</th><th>Ý nghĩa</th></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="3" fill="#ede7f6" stroke="#5e35b1"/></svg></td><td>Agent đặc quyền (Planner, Test Agent)</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="3" fill="#fdecea" stroke="#c62828" stroke-dasharray="4 3"/></svg></td><td>Agent cách ly (Code Reader)</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="3" fill="#f5f5f5" stroke="#757575"/></svg></td><td>Thành phần tất định của harness; riêng Execution loop tô xanh</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><line x1="28" y1="2" x2="28" y2="22" stroke="#aaa" stroke-dasharray="4 4"/></svg></td><td>Đường sống: thời gian chạy từ trên xuống</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="q1l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.4" marker-end="url(#q1l)"/></svg></td><td>Thông điệp hoặc lời gọi, đánh số theo thứ tự ①–⑬</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="q2l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#14532d"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#14532d" stroke-width="1.6" stroke-dasharray="6 3" marker-end="url(#q2l)"/></svg></td><td>Ghi bằng chứng vào Evidence store; chỉ thành phần tất định thực hiện</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" fill="#fff8e1"/></svg></td><td>Các bước ⑧–⑩ chạy song song với các bước ③–⑦</td></tr>
+</table>
+</figure>
+<p>Hình 4 thể hiện ba tính chất của giải pháp. Test Agent gửi lời gọi về Execution loop (④) chứ không gọi Tool gateway trực tiếp, nên mọi hành động đi qua một điểm kiểm soát. Không agent nào ghi bằng chứng: T3 do Test driver ghi kèm kết quả nhân chứng (⑦), T1 do Schema gate ghi sau khi đối chiếu chỉ mục và độ phủ (⑩). Quyết định dừng đến từ Verdict engine (⑫); Planner chỉ thực hiện (⑬). Kết quả là VIOLATION theo V2: mã có kiểm tra độ dài, độ phủ cho thấy kiểm thử đã chạy qua đúng chỗ đó, nhưng phản ứng sai so với đặc tả. Nếu chỉ đọc mã như RFCAudit, trường hợp này dễ bị kết luận nhầm là tuân thủ.</p>
+
+<h4>Kiểm chứng lại khi mã thay đổi</h4>
+<ul>
+  <li>Code gate tính khác biệt giữa hai commit ở mức hàm bằng hash nội dung hàm; thay đổi trong tệp cấu hình biên dịch được coi là mọi hàm đều đổi.</li>
+  <li>T1, T2 có vị trí trong hàm không đổi được sao chép sang lần chạy mới, kèm tham chiếu tới bằng chứng gốc; truy vấn T2 đã cố định được chạy lại.</li>
+  <li>Mọi T3 được chạy lại với cùng kịch bản, tham số cố định và seed mới cho biến thể ngẫu nhiên.</li>
+  <li>Yêu cầu có bằng chứng mất hiệu lực hoặc có T3 đổi kết quả quay lại INVESTIGATING; các yêu cầu còn lại đi thẳng tới Verdict engine.</li>
+</ul>
+
+<h4>Xử lý ngoại lệ</h4>
+<table>
+<tr><th style="width:240px">Tình huống</th><th>Cách xử lý</th></tr>
+<tr><td>Đầu ra agent sai schema hoặc kịch bản sai ngữ pháp DSL</td><td>Trả lỗi có cấu trúc, cho làm lại tối đa hai lần trong ngân sách; sau đó tiếp tục mà không có kết quả đó</td></tr>
+<tr><td>Lời gọi công cụ bị từ chối</td><td>Ghi Trace log; trả mã lỗi liệt kê, không kèm chi tiết chính sách; tính vào ngân sách</td></tr>
+<tr><td>Kịch bản chạy nhưng trigger không xảy ra</td><td>Không thành bằng chứng; báo cho Test Agent mã lỗi TRIGGER_NOT_REACHED</td></tr>
+<tr><td>Kiểm thử trả ERROR</td><td>Không tính là FAIL; ghi bằng chứng trung tính</td></tr>
+<tr><td>T3 khác nhau giữa các lần chạy hoặc môi trường</td><td>Đánh dấu không nhất quán; V0 đưa yêu cầu sang NEEDS_REVIEW</td></tr>
+<tr><td>Dịch vụ LLM lỗi hoặc quá thời gian</td><td>Thử lại với thời gian chờ tăng dần, tối đa ba lần</td></tr>
+<tr><td>Hết ngân sách hoặc phát hiện lặp</td><td>Dừng điều tra; Verdict engine kết luận trên bằng chứng hiện có kèm lý do dừng</td></tr>
+<tr><td>Không dựng được SUT, bản tham chiếu, hoặc adapter không đạt</td><td>Dừng lần chạy trước giai đoạn điều tra; báo lỗi cho Auditor</td></tr>
+<tr><td>Chuỗi hash bị đứt</td><td>Không sinh báo cáo; đánh dấu lần chạy không toàn vẹn</td></tr>
+</table>
+<p class="cap">Bảng 13. Xử lý ngoại lệ.</p>
+
+<!-- ======================================================================= -->
+<h2 class="part" id="p2">II. KIẾN TRÚC HỆ THỐNG</h2>
+<p>Phần I trình bày giải pháp và lý do nó hiệu quả. Phần II đặc tả hệ thống từ bốn góc nhìn ở mức đủ để lập trình: nghiệp vụ (ai làm gì), ứng dụng (thành phần nào thực hiện), công nghệ (xây bằng gì) và dữ liệu (lưu gì, tin cậy đến đâu).</p>
+
+<h3 id="s2-1">2.1. Kiến trúc nghiệp vụ</h3>
+<h4>Bên liên quan</h4>
+<table>
+<tr><th style="width:190px">Vai trò</th><th>Công việc với hệ thống</th><th style="width:220px">Mức tin cậy</th></tr>
+<tr><td><b>Người kiểm chứng</b> (Auditor)</td><td>Chọn giao thức, bản triển khai, commit, phạm vi RFC; duyệt RBS bất đồng; nhận báo cáo</td><td>Tin cậy; đầu vào mang nhãn TRUSTED</td></tr>
+<tr><td><b>Người viết adapter</b></td><td>Đóng gói tri thức một giao thức, có trợ lý adapter hỗ trợ</td><td>Tin cậy sau khi adapter qua kiểm định</td></tr>
+<tr><td><b>Người duyệt</b> (Reviewer)</td><td>Xem yêu cầu NEEDS_REVIEW, ghi nhận định kèm lý do</td><td>Tin cậy; nhận định lưu riêng, không ghi đè nhãn</td></tr>
+<tr><td><b>Nhà phát triển bản triển khai</b></td><td>Nhận báo cáo và SARIF để sửa lỗi; cũng có thể là đối thủ</td><td>Không tin cậy; mọi thứ trong kho mã mang nhãn UNTRUSTED</td></tr>
+<tr><td><b>Người gán nhãn dữ liệu chuẩn</b></td><td>Gán nhãn độc lập cho mã gốc trong bộ dữ liệu đánh giá</td><td>Chỉ tham gia đánh giá</td></tr>
+</table>
+<p class="cap">Bảng 14. Bên liên quan.</p>
+
+<h4>Năng lực nghiệp vụ</h4>
+<table>
+<tr><th style="width:190px">Năng lực</th><th>Nội dung</th><th style="width:270px">Thành phần đảm nhận chính</th></tr>
+<tr><td>Quản lý đặc tả</td><td>Tách câu, dịch RBS hai luồng, duyệt, biên dịch oracle</td><td>RFC gate, RFC Analyst, Oracle compiler, Requirement registry</td></tr>
+<tr><td>Quản lý giao thức</td><td>Thêm, kiểm định, quản lý phiên bản adapter và backend</td><td>Protocol adapters, Adapter checker</td></tr>
+<tr><td>Điều tra tuân thủ</td><td>Tổng hợp kịch bản, chạy có nhân chứng, định vị mã, liên kết độ phủ</td><td>Hệ Multi-Agent, Test driver, Code gate, Coverage linker</td></tr>
+<tr><td>Quản lý bằng chứng</td><td>Lưu bất biến, kiểm tra toàn vẹn, tái lập</td><td>Schema gate, Evidence store</td></tr>
+<tr><td>Kết luận và báo cáo</td><td>Gán nhãn, giải thích, duyệt, xuất SARIF</td><td>Verdict engine, Report Agent, Output gate</td></tr>
+<tr><td>Kiểm soát an toàn</td><td>Phân quyền, cách ly, luồng thông tin, ngân sách, chống gian lận kiểm thử</td><td>Policy store, IFC tracker, Tool gateway, Execution loop, Code gate</td></tr>
+<tr><td>Đánh giá thực nghiệm</td><td>Dữ liệu chuẩn, đường cơ sở, kịch bản tấn công, thống kê</td><td>Trace log và bộ công cụ đánh giá (ngoài harness)</td></tr>
+</table>
+<p class="cap">Bảng 15. Năng lực nghiệp vụ.</p>
+
+<h4>Quy trình nghiệp vụ</h4>
+<p>Quy trình chính là kiểm chứng một bản triển khai (Hình 5). Ba quy trình phụ là bổ sung giao thức (soạn adapter, chạy Adapter checker tới khi đạt, gắn phiên bản), kiểm chứng lại khi mã thay đổi (M6), và duyệt kết luận.</p>
+<figure>
+<svg viewBox="0 0 960 340" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, system-ui, sans-serif">
+  <defs>
+    <marker id="w1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker>
+    <marker id="w2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker>
+  </defs>
+  <rect x="10" y="20" width="940" height="100" fill="#fff" stroke="#999"/>
+  <rect x="10" y="120" width="940" height="110" fill="#f7fafd" stroke="#999"/>
+  <rect x="10" y="230" width="940" height="100" fill="#fff" stroke="#999"/>
+  <rect x="10" y="20" width="115" height="310" fill="#eeeeee" stroke="#999"/>
+  <g font-size="12" font-weight="700" text-anchor="middle" fill="#333">
+    <text x="67" y="74">AUDITOR</text><text x="67" y="179">HỆ THỐNG</text><text x="67" y="284">REVIEWER</text>
+  </g>
+  <g font-size="11" text-anchor="middle">
+    <rect x="137" y="48" width="105" height="44" rx="8" fill="#fff" stroke="#555"/><text x="190" y="66">Chọn giao thức,</text><text x="190" y="82">repo, commit</text>
+    <rect x="252" y="153" width="105" height="44" rx="8" fill="#e3f2fd" stroke="#1565c0"/><text x="305" y="171">Kiểm định</text><text x="305" y="187">adapter, dựng SUT</text>
+    <rect x="367" y="153" width="105" height="44" rx="8" fill="#e3f2fd" stroke="#1565c0"/><text x="420" y="171">Dịch RBS</text><text x="420" y="187">hai luồng</text>
+    <rect x="482" y="48" width="105" height="44" rx="8" fill="#fff" stroke="#555"/><text x="535" y="66">Duyệt RBS</text><text x="535" y="82">bất đồng</text>
+    <rect x="597" y="153" width="105" height="44" rx="8" fill="#e3f2fd" stroke="#1565c0"/><text x="650" y="171">Điều tra, thu</text><text x="650" y="187">bằng chứng</text>
+    <rect x="712" y="153" width="105" height="44" rx="8" fill="#e3f2fd" stroke="#1565c0"/><text x="765" y="171">Kết luận,</text><text x="765" y="187">lập báo cáo</text>
+    <rect x="712" y="258" width="105" height="44" rx="8" fill="#fff" stroke="#555"/><text x="765" y="276">Duyệt yêu cầu</text><text x="765" y="292">NEEDS_REVIEW</text>
+    <rect x="827" y="48" width="105" height="44" rx="8" fill="#fff" stroke="#555"/><text x="880" y="66">Nhận báo cáo,</text><text x="880" y="82">SARIF</text>
+  </g>
+  <g stroke="#333" stroke-width="1.5" fill="none">
+    <path d="M190 92 V175 H250" marker-end="url(#w1)"/>
+    <path d="M357 175 H365" marker-end="url(#w1)"/>
+    <path d="M420 153 V70 H480" marker-end="url(#w1)"/>
+    <path d="M535 92 V175 H595" marker-end="url(#w1)"/>
+    <path d="M702 175 H710" marker-end="url(#w1)"/>
+    <path d="M817 175 H860 V94" marker-end="url(#w1)"/>
+    <path d="M765 197 V256" stroke-dasharray="5 3" marker-end="url(#w1)"/>
+    <path d="M817 280 H905 V94" marker-end="url(#w1)"/>
+  </g>
+  <path d="M305 153 V80 H244" fill="none" stroke="#c62828" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#w2)"/>
+  <g font-size="10.5"><text x="311" y="118" fill="#c62828">không đạt</text><text x="772" y="232" fill="#333">nếu có</text></g>
+</svg>
+<figcaption><b>Hình 5.</b> Quy trình nghiệp vụ "kiểm chứng một bản triển khai" theo ba làn AUDITOR, HỆ THỐNG và REVIEWER.</figcaption>
+<div class="legend-title">Ký hiệu sử dụng trong Hình 5:</div>
+<table>
+<tr><th style="width:90px">Ký hiệu</th><th>Ý nghĩa</th></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" fill="#eeeeee" stroke="#999"/></svg></td><td>Làn: vai trò thực hiện các hoạt động trong làn</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="6" fill="#fff" stroke="#555"/></svg></td><td>Hoạt động do con người thực hiện</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="6" fill="#e3f2fd" stroke="#1565c0"/></svg></td><td>Hoạt động do hệ thống thực hiện tự động</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="w1l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" marker-end="url(#w1l)"/></svg></td><td>Trình tự hoạt động</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="w1l2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#w1l2)"/></svg></td><td>Nhánh có điều kiện: chỉ đi khi có yêu cầu nhận NEEDS_REVIEW</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="w2l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#c62828" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#w2l)"/></svg></td><td>Nhánh lỗi: adapter không đạt hoặc không dựng được SUT thì quy trình dừng và trả lại cho Auditor</td></tr>
+</table>
+</figure>
+
+<h4>Ý nghĩa nghiệp vụ của nhãn và quy tắc nghiệp vụ</h4>
+<table>
+<tr><th style="width:150px">Nhãn</th><th>Ý nghĩa với người kiểm chứng</th><th style="width:220px">Hành động tiếp theo</th></tr>
+<tr><td>COMPLIANT</td><td>Đủ bằng chứng rằng bản triển khai tuân thủ trong phạm vi đã kiểm tra; mức LINKED, BEHAVIORAL hoặc STATIC cho biết độ chắc chắn</td><td>Không cần hành động</td></tr>
+<tr><td>VIOLATION</td><td>Có bằng chứng tái lập được về một sai lệch, thường kèm vị trí mã</td><td>Gửi nhà phát triển kèm bằng chứng, SARIF</td></tr>
+<tr><td>NEEDS_REVIEW</td><td>Bằng chứng mâu thuẫn, không ổn định, oracle nghi ngờ hoặc có nhánh nghi vấn</td><td>Reviewer duyệt</td></tr>
+<tr><td>UNVERIFIABLE</td><td>Không biểu diễn được bằng RBS, hoặc không đủ bằng chứng trong ngân sách</td><td>Kiểm chứng thủ công hoặc mở rộng adapter</td></tr>
+</table>
+<p class="cap">Bảng 16. Ý nghĩa nghiệp vụ của bốn nhãn.</p>
+<ul>
+  <li><b>BR1.</b> Không kết luận COMPLIANT hay VIOLATION khi chưa đạt mức bằng chứng tối thiểu của loại yêu cầu.</li>
+  <li><b>BR2.</b> Hành vi chạy thực tế được ưu tiên hơn việc đọc mã; khi không phân xử được thì chuyển cho con người.</li>
+  <li><b>BR3.</b> Nhãn của hệ thống không bị sửa; nhận định của Reviewer là bản ghi riêng.</li>
+  <li><b>BR4.</b> Kết luận chỉ có giá trị cho đúng commit, phiên bản RFC, adapter và quy tắc ghi trong báo cáo.</li>
+  <li><b>BR5.</b> Yêu cầu SHOULD và MAY được báo cáo tách khỏi MUST; loại D và ba mức assurance được báo cáo tách riêng.</li>
+  <li><b>BR6.</b> Oracle phải có nhân chứng trước khi kết quả kiểm thử được dùng.</li>
+</ul>
+
+<h3 id="s2-2">2.2. Kiến trúc ứng dụng</h3>
+<p>Kiến trúc ứng dụng giữ ba lớp của bản đề xuất (môi trường bên ngoài, khung harness, hệ Multi-Agent). Khung harness gồm 20 thành phần tất định chia bốn nhóm (Hình 6). So với bản đề xuất, có sáu thành phần được bổ sung. Bốn thành phần đầu (Policy store, Trace log, Requirement registry, Adapter checker) là các chức năng bản đề xuất đã ngầm cần nhưng chưa liệt kê. Hai thành phần sau (Oracle compiler, Coverage linker) là phần hiện thực của các cơ chế M2 và M4. Tầng backend nằm ngoài harness, nối với Test driver qua giao diện I9.</p>
+<figure>
+<svg viewBox="0 0 960 600" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, system-ui, sans-serif">
+  <defs>
+    <marker id="h1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker>
+    <marker id="h2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker>
+  </defs>
+  <rect x="5" y="5" width="950" height="588" rx="10" fill="#fff" stroke="#333" stroke-width="2.5"/>
+  <text x="20" y="28" font-size="14" font-weight="700">SECURITY-AWARE AGENT HARNESS</text>
+  <rect x="25" y="40" width="910" height="130" rx="8" fill="none" stroke="#888" stroke-dasharray="4 3"/>
+  <text x="38" y="58" font-size="12" font-weight="600" fill="#555">MULTI-AGENT SYSTEM</text>
+  <rect x="40" y="66" width="500" height="92" rx="6" fill="#ede7f6" stroke="#5e35b1" stroke-width="1.5"/>
+  <text x="290" y="92" font-size="13" font-weight="700" text-anchor="middle" fill="#4527a0">PRIVILEGED AGENTS</text>
+  <text x="290" y="117" font-size="13" text-anchor="middle">RFC Analyst · Planner · Test</text>
+  <text x="290" y="139" font-size="13" text-anchor="middle">Verifier · Report</text>
+  <rect x="580" y="66" width="340" height="92" rx="6" fill="#fdecea" stroke="#c62828" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="750" y="92" font-size="13" font-weight="700" text-anchor="middle" fill="#b71c1c">QUARANTINE ZONE</text>
+  <text x="750" y="124" font-size="13" text-anchor="middle">Code Indexer · Code Reader</text>
+  <rect x="25" y="200" width="910" height="44" rx="6" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="480" y="227" font-size="13.5" font-weight="700" text-anchor="middle" fill="#0d47a1">EXECUTION LOOP  (hub · ngân sách · phát hiện lặp)   [I1]</text>
+  <line x1="290" y1="160" x2="290" y2="198" stroke="#333" stroke-width="1.6" marker-start="url(#h1)" marker-end="url(#h1)"/>
+  <circle cx="314" cy="179" r="11" fill="#fff" stroke="#333"/><text x="314" y="183" font-size="10" font-weight="700" text-anchor="middle">I1</text>
+  <line x1="700" y1="200" x2="700" y2="160" stroke="#333" stroke-width="1.6" marker-end="url(#h1)"/>
+  <text x="708" y="186" font-size="11" fill="#333">task</text>
+  <path d="M920 112 H945 V548 H894" fill="none" stroke="#c62828" stroke-width="1.6" stroke-dasharray="5 3" marker-end="url(#h2)"/>
+  <circle cx="945" cy="330" r="11" fill="#fff" stroke="#c62828"/><text x="945" y="334" font-size="10" font-weight="700" text-anchor="middle" fill="#c62828">I3</text>
+  <g font-size="11" fill="#666" font-weight="600">
+    <text x="30" y="270">ĐIỀU PHỐI VÀ NGỮ CẢNH</text><text x="30" y="352">CỔNG VÀO</text>
+    <text x="30" y="434">CÔNG CỤ VÀ CỔNG RA</text><text x="30" y="516">KIỂM CHỨNG</text>
+  </g>
+  <g font-size="12" text-anchor="middle">
+    <rect x="30" y="278" width="164" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="112" y="298">Context builder</text><text x="112" y="316" font-size="10.5" fill="#555">I2</text>
+    <rect x="214" y="278" width="164" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="296" y="298">IFC tracker</text><text x="296" y="316" font-size="10.5" fill="#555">I2 · I3</text>
+    <rect x="398" y="278" width="164" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="480" y="298">LLM gateway</text><text x="480" y="316" font-size="10.5" fill="#555">I2</text>
+    <rect x="582" y="278" width="164" height="48" rx="5" fill="#f5f5f5" stroke="#212121" stroke-width="3"/><text x="664" y="298">Policy store</text><text x="664" y="316" font-size="10.5" fill="#555">I4 · I5</text>
+    <rect x="766" y="278" width="164" height="48" rx="5" fill="#f5f5f5" stroke="#212121" stroke-width="3"/><text x="848" y="298">Trace log</text><text x="848" y="316" font-size="10.5" fill="#555">ghi mọi giao diện</text>
+    <rect x="30" y="360" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="135" y="380">RFC gate</text><text x="135" y="398" font-size="10.5" fill="#555">I6</text>
+    <rect x="260" y="360" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="365" y="380">Code gate</text><text x="365" y="398" font-size="10.5" fill="#555">I5 · I6</text>
+    <rect x="490" y="360" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="595" y="380">Locator</text><text x="595" y="398" font-size="10.5" fill="#555">I5 · I6</text>
+    <rect x="720" y="360" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="825" y="380">Protocol adapters</text><text x="825" y="398" font-size="10.5" fill="#555">I6</text>
+    <rect x="30" y="442" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="135" y="462">Tool gateway</text><text x="135" y="480" font-size="10.5" fill="#555">I4</text>
+    <rect x="260" y="442" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="365" y="462">Sandbox &amp; Test driver</text><text x="365" y="480" font-size="10.5" fill="#555">I4 · I6 · I9</text>
+    <rect x="490" y="442" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#212121" stroke-width="3"/><text x="595" y="462">Coverage linker</text><text x="595" y="480" font-size="10.5" fill="#555">I7</text>
+    <rect x="720" y="442" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="825" y="462">Output gate</text><text x="825" y="480" font-size="10.5" fill="#555">I8</text>
+  </g>
+  <g font-size="11" text-anchor="middle">
+    <rect x="30" y="524" width="132" height="48" rx="5" fill="#f5f5f5" stroke="#212121" stroke-width="3"/><text x="96" y="544">Oracle compiler</text><text x="96" y="562" font-size="10" fill="#555">I3 · I7</text>
+    <rect x="176" y="524" width="132" height="48" rx="5" fill="#f5f5f5" stroke="#212121" stroke-width="3"/><text x="242" y="544">Req. registry</text><text x="242" y="562" font-size="10" fill="#555">I7</text>
+    <rect x="322" y="524" width="132" height="48" rx="5" fill="#f5f5f5" stroke="#212121" stroke-width="3"/><text x="388" y="544">Adapter checker</text><text x="388" y="562" font-size="10" fill="#555">I6</text>
+    <rect x="468" y="524" width="132" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="534" y="544">Evidence store</text><text x="534" y="562" font-size="10" fill="#555">I3 · I7</text>
+    <rect x="614" y="524" width="132" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="680" y="544">Verdict engine</text><text x="680" y="562" font-size="10" fill="#555">I7 · I8</text>
+    <rect x="760" y="524" width="132" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="826" y="544">Schema gate</text><text x="826" y="562" font-size="10" fill="#555">I3</text>
+  </g>
+</svg>
+<figcaption><b>Hình 6.</b> Hai mươi thành phần của Security-Aware Agent Harness theo bốn nhóm và các giao diện I1–I9. Sáu thành phần viền đậm là phần bổ sung so với bản đề xuất.</figcaption>
+<div class="legend-title">Ký hiệu sử dụng trong Hình 6:</div>
+<table>
+<tr><th style="width:90px">Ký hiệu</th><th>Ý nghĩa</th></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="3" fill="#f5f5f5" stroke="#757575"/></svg></td><td>Thành phần tất định đã có trong bản đề xuất</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="3" y="4" width="50" height="16" rx="3" fill="#f5f5f5" stroke="#212121" stroke-width="3"/></svg></td><td>Thành phần bổ sung trong giai đoạn thiết kế; ô "Req. registry" là Requirement registry</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="3" fill="#ede7f6" stroke="#5e35b1" stroke-width="1.5"/></svg></td><td>Khối PRIVILEGED AGENTS: năm agent đặc quyền</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="3" fill="#fdecea" stroke="#c62828" stroke-width="1.5" stroke-dasharray="5 3"/></svg></td><td>Vùng QUARANTINE ZONE: hai agent cách ly</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="3" fill="none" stroke="#888" stroke-dasharray="4 3"/></svg></td><td>Ranh giới khối MULTI-AGENT SYSTEM</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="3" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/></svg></td><td>EXECUTION LOOP: hub chuyển thông điệp qua giao diện I1</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="h1l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.6" marker-start="url(#h1l)" marker-end="url(#h1l)"/></svg></td><td>Trao đổi hai chiều giữa agent đặc quyền và hub</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="h1l2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.6" marker-end="url(#h1l2)"/></svg></td><td>"task": hub chỉ giao nhiệm vụ một chiều cho QUARANTINE ZONE</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="h2l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#c62828" stroke-width="1.6" stroke-dasharray="5 3" marker-end="url(#h2l)"/></svg></td><td>Kết quả từ QUARANTINE ZONE chỉ đi tới Schema gate (I3)</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><circle cx="28" cy="12" r="10" fill="#fff" stroke="#333"/><text x="28" y="16" font-size="10" font-weight="700" text-anchor="middle">I1</text></svg></td><td>Nhãn giao diện, ý nghĩa ở Bảng 18; nhãn in nhỏ trong mỗi ô là các giao diện mà thành phần đó thực hiện</td></tr>
+</table>
+</figure>
+
+<h4>Hai mươi thành phần</h4>
+<table>
+<tr><th style="width:150px">Thành phần</th><th>Trách nhiệm</th><th style="width:230px">Bất biến</th></tr>
+<tr><td colspan="3"><b>Điều phối và ngữ cảnh</b></td></tr>
+<tr><td>Execution loop</td><td>Chuyển thông điệp I1, đưa lời gọi công cụ sang Tool gateway, đếm ngân sách, phát hiện lặp</td><td>Không tự sinh nhiệm vụ; ghi Trace log trước khi chuyển</td></tr>
+<tr><td>Context builder</td><td>Dựng ngữ cảnh mỗi lần gọi agent theo hồ sơ vai trò</td><td>Không đưa vào trường mà hồ sơ không khai báo</td></tr>
+<tr><td>IFC tracker</td><td>Gắn và lan truyền nhãn tin cậy (Bảng 8)</td><td>Không nâng nhãn giá trị UNTRUSTED</td></tr>
+<tr><td>LLM gateway</td><td>Cổng duy nhất tới LLM; giữ khoá, cố định mô hình và tham số, ghi yêu cầu và phản hồi</td><td>Khoá API không ra khỏi thành phần này</td></tr>
+<tr><td>Policy store <span class="tag">mới</span></td><td>Hồ sơ vai trò, ma trận quyền công cụ</td><td>Chỉ đọc khi chạy; hash ghi vào bản kê</td></tr>
+<tr><td>Trace log <span class="tag">mới</span></td><td>Ghi tuần tự mọi thông điệp, lời gọi, quyết định từ chối, số token</td><td>Chỉ ghi thêm</td></tr>
+<tr><td colspan="3"><b>Cổng vào</b></td></tr>
+<tr><td>RFC gate</td><td>Tách câu chứa từ khoá BCP 14 kèm mục và ngữ cảnh; lọc theo phạm vi adapter</td><td>Định danh câu ổn định, ví dụ <code>RFC8446§5.2#s3</code></td></tr>
+<tr><td>Code gate</td><td>Dựng chỉ mục mã, cấp công cụ chỉ đọc, chặn tệp nhạy cảm; chạy CodeQL, quét nhánh nghi vấn, so commit ở mức hàm</td><td>Nội dung trả về luôn mang nhãn UNTRUSTED</td></tr>
+<tr><td>Protocol adapters</td><td>Tri thức riêng của từng giao thức (mục 4.3)</td><td>Dữ liệu khai báo, không mã tuỳ ý</td></tr>
+<tr><td>Locator</td><td>Danh sách vị trí ứng viên xếp hạng</td><td>Không tạo bằng chứng</td></tr>
+<tr><td colspan="3"><b>Công cụ và cổng ra</b></td></tr>
+<tr><td>Tool gateway</td><td>Kiểm tra vai trò, ngữ pháp kịch bản và miền tham số trước khi chuyển lời gọi</td><td>Từ chối mặc định</td></tr>
+<tr><td>Sandbox &amp; Test driver</td><td>Dựng SUT, bản đo độ phủ, bản tham chiếu; chạy kịch bản qua backend; xác nhận trigger; áp oracle; ghi T3 kèm nhân chứng</td><td>Không mạng ra ngoài, không khoá API, huỷ sau mỗi lần chạy</td></tr>
+<tr><td>Coverage linker <span class="tag">mới</span></td><td>So dòng đã thực thi trong T3 với dòng của T1; ghi kết quả liên kết</td><td>Chỉ đọc dữ liệu độ phủ từ bản dựng đã ghi digest</td></tr>
+<tr><td>Output gate</td><td>Ghép nhãn với giải thích; đối chiếu mọi trích dẫn; sinh HTML, JSON, SARIF</td><td>Báo cáo không thể chứa nhãn khác Verdict engine</td></tr>
+<tr><td colspan="3"><b>Kiểm chứng</b></td></tr>
+<tr><td>Oracle compiler <span class="tag">mới</span></td><td>Kiểm tra ngữ pháp RBS, so khớp hai luồng, biên dịch oracle và tập biến thể</td><td>Hàm thuần; có bộ kiểm thử phủ toàn ngữ pháp</td></tr>
+<tr><td>Requirement registry <span class="tag">mới</span></td><td>Yêu cầu, RBS, trạng thái vòng đời, người duyệt</td><td>Chỉ Verdict engine chuyển sang DECIDED</td></tr>
+<tr><td>Adapter checker <span class="tag">mới</span></td><td>Kiểm định adapter (mục 4.3)</td><td>Adapter chưa đạt không được nạp</td></tr>
+<tr><td>Evidence store</td><td>Lưu bằng chứng bất biến, nối chuỗi hash</td><td>Không cập nhật, không xoá</td></tr>
+<tr><td>Verdict engine</td><td>Áp V0–V9; trả lời "đủ chưa, thiếu gì, nhãn là gì"</td><td>Hàm thuần</td></tr>
+<tr><td>Schema gate</td><td>Kiểm tra đầu ra agent theo schema; đối chiếu tệp, dòng, ký hiệu với chỉ mục; ghi T1</td><td>Không "sửa hộ" dữ liệu sai schema</td></tr>
+</table>
+<p class="cap">Bảng 17. Hai mươi thành phần của harness.</p>
+
+<h4>Chín giao diện nội bộ</h4>
+<table>
+<tr><th style="width:50px">Mã</th><th style="width:250px">Giữa</th><th>Nội dung</th></tr>
+<tr><td>I1</td><td>Agent ↔ Execution loop</td><td>Phong bì thông điệp (mục 4.2)</td></tr>
+<tr><td>I2</td><td>Execution loop → Context builder → LLM gateway</td><td>Ngữ cảnh kèm nhãn tin cậy; phản hồi thô</td></tr>
+<tr><td>I3</td><td>Agent → Schema gate, Oracle compiler → Evidence store, Registry, Planner</td><td>Đầu ra có cấu trúc theo schema vai trò</td></tr>
+<tr><td>I4</td><td>Tool gateway → Sandbox &amp; Test driver</td><td>Lời gọi chạy kịch bản đã kiểm tra; kết quả kèm hash nhật ký</td></tr>
+<tr><td>I5</td><td>Code gate, Locator → vùng cách ly</td><td>Công cụ chỉ đọc trên chỉ mục mã</td></tr>
+<tr><td>I6</td><td>Protocol adapter → các cổng, Test driver, Adapter checker</td><td>Bản kê adapter và tệp đi kèm</td></tr>
+<tr><td>I7</td><td>Evidence store, Coverage linker, Oracle compiler → Verdict engine → Registry</td><td>Tập bằng chứng, liên kết độ phủ, đánh giá độ đủ, bản ghi kết luận</td></tr>
+<tr><td>I8</td><td>Verdict engine, Report Agent → Output gate</td><td>Kết luận và giải thích; báo cáo cuối</td></tr>
+<tr><td>I9</td><td>Test driver ↔ Backend plugin</td><td>Kiểm tra và chạy kịch bản DSL; vết sự kiện chuẩn hoá (mục 4.3)</td></tr>
+</table>
+<p class="cap">Bảng 18. Giao diện nội bộ. Mỗi giao diện có schema JSON và bộ kiểm thử hợp đồng riêng.</p>
+
+<h3 id="s2-3">2.3. Kiến trúc công nghệ</h3>
+<p>Hai ràng buộc chi phối lựa chọn công nghệ. Kho mã ứng viên viết bằng C, Rust và Go, nên công cụ phân tích phải phủ cả ba. Yêu cầu tách quyền buộc mọi lời gọi đi qua điểm kiểm soát, nên phần điều phối agent được tự cài. Ngoài hai ràng buộc đó, nguyên tắc chung là tái dùng công cụ đã được chứng minh.</p>
+<table>
+<tr><th style="width:170px">Tầng</th><th style="width:260px">Công nghệ</th><th>Lý do</th></tr>
+<tr><td>Ngôn ngữ, kiểu dữ liệu</td><td>Python 3.12; pydantic; Lark cho ngữ pháp RBS</td><td>Sinh JSON Schema trực tiếp từ kiểu; ngữ pháp RBS khai báo và kiểm thử được</td></tr>
+<tr><td>Điều phối agent</td><td>Execution loop tự cài, asyncio</td><td>Framework đa agent phổ biến cho agent gọi nhau trực tiếp, khó chen cổng kiểm tra</td></tr>
+<tr><td>Mô hình ngôn ngữ</td><td>Mô hình thương mại qua API làm cấu hình chính; mô hình mã nguồn mở chạy cục bộ (vLLM) cho luồng dịch thứ hai và cấu hình so sánh</td><td>Hai luồng dùng hai mô hình khác nhau làm lỗi ít tương quan; tái lập lâu dài</td></tr>
+<tr><td>Kịch bản TLS, QUIC</td><td>TLS-Attacker (WorkflowTrace), qua cầu nối Java</td><td>DSL có sẵn, sửa từng trường mà không phá máy trạng thái</td></tr>
+<tr><td>Kịch bản DNS, SSH</td><td>Ferret và dnspython; SSH-Mapper và asyncssh</td><td>Tái dùng công cụ đã tìm ra lỗi tuân thủ thật</td></tr>
+<tr><td>Mẫu ví dụ, đường cơ sở</td><td>TLS-Anvil, tlsfuzzer, h2spec, QUIC Interop Runner</td><td>Thư viện ví dụ cho Test Agent; cấu hình B2</td></tr>
+<tr><td>Học máy trạng thái</td><td>AALpy hoặc LearnLib</td><td>Học automaton chủ động cho loại C</td></tr>
+<tr><td>Chỉ mục mã</td><td>tree-sitter</td><td>Phủ C, Rust, Go; không cần biên dịch</td></tr>
+<tr><td>Phân tích tĩnh</td><td>CodeQL (C/C++, Rust, Go)</td><td>Rust đã hỗ trợ chính thức; một công cụ cho cả ba ngôn ngữ</td></tr>
+<tr><td>Độ phủ</td><td>gcov/llvm-cov; Rust instrument-coverage; Go cover</td><td>Có sẵn trong toolchain từng ngôn ngữ</td></tr>
+<tr><td>Sandbox</td><td>Docker Engine, mạng nội bộ không cổng ra, hệ tệp chỉ đọc, giới hạn tài nguyên</td><td>Cách ly; cố định image theo digest</td></tr>
+<tr><td>Lưu trữ</td><td>SQLite; thư mục theo hash cho tệp lớn</td><td>Đủ cho vài trăm yêu cầu; đóng gói theo lần chạy</td></tr>
+<tr><td>Giao diện</td><td>CLI bằng Typer; báo cáo HTML tĩnh bằng Jinja2; SARIF 2.1.0</td><td>Không cần máy chủ web; nạp được vào GitHub code scanning</td></tr>
+<tr><td>Chất lượng mã</td><td>pytest, kiểm thử hợp đồng I1–I9, GitHub Actions</td><td>Mỗi bất biến ở Bảng 17 có kiểm thử tự động</td></tr>
+</table>
+<p class="cap">Bảng 19. Công nghệ theo tầng.</p>
+<p>Mã nguồn tổ chức theo ranh giới kiến trúc, để ranh giới quyền cũng là ranh giới mô-đun. Thư mục <code>agents/</code> không chứa mã thực thi; <code>backends/</code> tách khỏi <code>core/</code>; <code>eval/</code> không được lõi nhập.</p>
+<pre><code>rfcv/
+  core/        execution_loop.py  context_builder.py  ifc.py  llm_gateway.py  policy.py  trace.py
+  gates/       rfc_gate.py  code_gate.py  locator.py  schema_gate.py  output_gate.py  tool_gateway.py
+  spec/        rbs_grammar.lark  oracle_compiler.py  reconcile.py         # M2
+  evidence/    store.py  verdict_engine.py  rules/  registry.py  coverage_linker.py
+  agents/      roles/*.yaml  prompts/*.md  schemas/*.py
+  sandbox/     driver.py  witness.py  builds/
+  backends/    tls_attacker/  dns/  ssh/  quic/                         # tầng plugin (I9)
+  adapters/    tls13/  tls12_pilot/  dns/  checker.py  assistant.py
+  ui/          cli.py  report/  review/  sarif.py
+  eval/        dataset/  mutants/  baselines/{b0_rfcaudit,b1,b2,b3}/  attacks/  metrics.py</code></pre>
+
+<h3 id="s2-4">2.4. Kiến trúc dữ liệu</h3>
+<p>Dữ liệu là sản phẩm chính của hệ thống: báo cáo chỉ có giá trị nếu mỗi kết luận truy được về bằng chứng, và bằng chứng truy được về đầu vào cố định. Kiến trúc dữ liệu vì vậy xoay quanh ba tính chất: truy vết được, toàn vẹn và tái lập được.</p>
+<h4>Mô hình dữ liệu khái niệm</h4>
+<figure>
+<svg viewBox="0 0 960 470" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, system-ui, sans-serif">
+  <g font-size="11">
+    <rect x="20" y="30" width="200" height="100" rx="4" fill="#fff" stroke="#1f4e79" stroke-width="1.5"/><rect x="20" y="30" width="200" height="24" fill="#1f4e79"/><text x="120" y="47" fill="#fff" font-weight="700" text-anchor="middle" font-size="12">Run</text>
+    <text x="30" y="72">run_id, repo_commit</text><text x="30" y="90">adapter_ver, rules_ver</text><text x="30" y="108">image_digests, seeds</text>
+    <rect x="260" y="30" width="200" height="100" rx="4" fill="#fff" stroke="#1f4e79" stroke-width="1.5"/><rect x="260" y="30" width="200" height="24" fill="#1f4e79"/><text x="360" y="47" fill="#fff" font-weight="700" text-anchor="middle" font-size="12">Adapter</text>
+    <text x="270" y="72">adapter_id, version</text><text x="270" y="90">vocabulary, references</text><text x="270" y="108">check_status</text>
+    <rect x="500" y="30" width="200" height="100" rx="4" fill="#fff" stroke="#1f4e79" stroke-width="1.5"/><rect x="500" y="30" width="200" height="24" fill="#1f4e79"/><text x="600" y="47" fill="#fff" font-weight="700" text-anchor="middle" font-size="12">RfcSentence</text>
+    <text x="510" y="72">sentence_id</text><text x="510" y="90">rfc, section, modal</text><text x="510" y="108">text, context</text>
+    <rect x="740" y="30" width="200" height="100" rx="4" fill="#fff" stroke="#1f4e79" stroke-width="1.5"/><rect x="740" y="30" width="200" height="24" fill="#1f4e79"/><text x="840" y="47" fill="#fff" font-weight="700" text-anchor="middle" font-size="12">CodeSnapshot</text>
+    <text x="750" y="72">repo, commit</text><text x="750" y="90">index_hash</text><text x="750" y="108">function_hashes</text>
+    <rect x="20" y="180" width="200" height="100" rx="4" fill="#fff" stroke="#1f4e79" stroke-width="1.5"/><rect x="20" y="180" width="200" height="24" fill="#1f4e79"/><text x="120" y="197" fill="#fff" font-weight="700" text-anchor="middle" font-size="12">TraceEvent</text>
+    <text x="30" y="222">event_id, run_id</text><text x="30" y="240">kind, role, ts</text><text x="30" y="258">tokens, decision</text>
+    <rect x="260" y="180" width="200" height="100" rx="4" fill="#fff" stroke="#1f4e79" stroke-width="1.5"/><rect x="260" y="180" width="200" height="24" fill="#1f4e79"/><text x="360" y="197" fill="#fff" font-weight="700" text-anchor="middle" font-size="12">Requirement</text>
+    <text x="270" y="222">requirement_id, type, modal</text><text x="270" y="240">rbs, rbs_streams_agree</text><text x="270" y="258">state, reviewed_by</text>
+    <rect x="500" y="180" width="200" height="100" rx="4" fill="#fff" stroke="#1f4e79" stroke-width="3"/><rect x="500" y="180" width="200" height="24" fill="#1f4e79"/><text x="600" y="197" fill="#fff" font-weight="700" text-anchor="middle" font-size="12">Evidence</text>
+    <text x="510" y="222">evidence_id, prev_hash</text><text x="510" y="240">tier, polarity, witness</text><text x="510" y="258">coverage_link, payload</text>
+    <rect x="740" y="180" width="200" height="100" rx="4" fill="#fff" stroke="#1f4e79" stroke-width="1.5"/><rect x="740" y="180" width="200" height="24" fill="#1f4e79"/><text x="840" y="197" fill="#fff" font-weight="700" text-anchor="middle" font-size="12">Artifact</text>
+    <text x="750" y="222">sha256</text><text x="750" y="240">media_type</text><text x="750" y="258">(pcap, log, lcov, dsl)</text>
+    <rect x="20" y="330" width="200" height="100" rx="4" fill="#fff" stroke="#1f4e79" stroke-width="1.5"/><rect x="20" y="330" width="200" height="24" fill="#1f4e79"/><text x="120" y="347" fill="#fff" font-weight="700" text-anchor="middle" font-size="12">Report</text>
+    <text x="30" y="372">report_id, run_id</text><text x="30" y="390">explanations, sarif</text><text x="30" y="408">report_hash</text>
+    <rect x="260" y="330" width="200" height="100" rx="4" fill="#fff" stroke="#1f4e79" stroke-width="3"/><rect x="260" y="330" width="200" height="24" fill="#1f4e79"/><text x="360" y="347" fill="#fff" font-weight="700" text-anchor="middle" font-size="12">Verdict</text>
+    <text x="270" y="372">requirement_id, label</text><text x="270" y="390">assurance, rule</text><text x="270" y="408">evidence_ids, stop_reason</text>
+    <rect x="500" y="330" width="200" height="100" rx="4" fill="#fff" stroke="#1f4e79" stroke-width="1.5"/><rect x="500" y="330" width="200" height="24" fill="#1f4e79"/><text x="600" y="347" fill="#fff" font-weight="700" text-anchor="middle" font-size="12">Review</text>
+    <text x="510" y="372">review_id, reviewer</text><text x="510" y="390">human_label</text><text x="510" y="408">reason, ts</text>
+  </g>
+  <g stroke="#333" stroke-width="1.3" fill="none">
+    <line x1="220" y1="80" x2="260" y2="80"/><line x1="180" y1="130" x2="300" y2="180"/><line x1="120" y1="130" x2="120" y2="180"/>
+    <line x1="420" y1="180" x2="560" y2="130"/><line x1="460" y1="230" x2="500" y2="230"/><line x1="700" y1="230" x2="740" y2="230"/>
+    <line x1="660" y1="180" x2="780" y2="130"/><line x1="360" y1="280" x2="360" y2="330"/><line x1="420" y1="330" x2="560" y2="280"/>
+    <line x1="460" y1="380" x2="500" y2="380"/><line x1="220" y1="380" x2="260" y2="380"/>
+  </g>
+  <g font-size="10" fill="#9a3412" font-weight="600">
+    <text x="226" y="74">n:1</text><text x="232" y="150">1:n</text><text x="126" y="160">1:n</text>
+    <text x="478" y="150">n:1</text><text x="466" y="224">1:n</text><text x="706" y="224">n:m</text>
+    <text x="724" y="150">n:1</text><text x="366" y="310">1:1</text><text x="478" y="318">n:m</text>
+    <text x="466" y="374">1:0..1</text><text x="226" y="374">1:n</text>
+  </g>
+</svg>
+<figcaption><b>Hình 7.</b> Mô hình dữ liệu khái niệm gồm mười một thực thể; Evidence và Verdict (viền đậm) là trung tâm của tính truy vết.</figcaption>
+<div class="legend-title">Ký hiệu sử dụng trong Hình 7:</div>
+<table>
+<tr><th style="width:90px">Ký hiệu</th><th>Ý nghĩa</th></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="2" width="52" height="20" fill="#fff" stroke="#1f4e79" stroke-width="1.5"/><rect x="2" y="2" width="52" height="7" fill="#1f4e79"/></svg></td><td>Thực thể dữ liệu: tên ở dải trên, thuộc tính chính bên dưới</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="3" y="3" width="50" height="18" fill="#fff" stroke="#1f4e79" stroke-width="3"/><rect x="3" y="3" width="50" height="6" fill="#1f4e79"/></svg></td><td>Thực thể trung tâm</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><line x1="4" y1="12" x2="52" y2="12" stroke="#333" stroke-width="1.3"/></svg></td><td>Quan hệ giữa hai thực thể</td></tr>
+<tr><td><span style="color:#9a3412;font-weight:600">1:n</span></td><td>Bản số, đọc từ thực thể bên trái hoặc bên trên sang thực thể bên phải hoặc bên dưới</td></tr>
+</table>
+</figure>
+<p>Hai chuỗi truy vết chính trên Hình 7 là Verdict → Evidence → Artifact và CodeSnapshot (bằng chứng nào, ở đâu), và Verdict → Requirement → RfcSentence (kết luận về câu RFC nào, qua RBS nào). Run giữ phiên bản mọi đầu vào, digest các image và seed của biến thể ngẫu nhiên, nên mỗi kết luận gắn với đúng một bộ đầu vào cố định (BR4). Thuộc tính <code>function_hashes</code> là cơ sở cho M6; <code>witness</code> và <code>coverage_link</code> là cơ sở cho M3 và M4.</p>
+
+<h4>Bản ghi bằng chứng và bản ghi kết luận</h4>
+<pre><code>{
+  "evidence_id": "sha256:9f1c…",  "prev_hash": "sha256:47aa…",
+  "run_id": "run-2026-11-20-01",  "requirement_id": "TLS13-0042",
+  "tier": "T3",  "polarity": "REFUTES",  "kind": "scenario_result",
+  "payload": {
+    "scenario": "sha256:…",                         // kịch bản DSL đã kiểm tra, lưu thành Artifact
+    "variant": "boundary", "params": {"record.length": 16641}, "seed": null,
+    "trigger_reached": true,
+    "outcome": "FAIL",
+    "observed": {"alert": "decode_error", "closed": true},
+    "runs": 3, "consistent": true,
+    "artifacts": {"pcap": "sha256:…", "sut_log": "sha256:…", "lcov": "sha256:…"}
+  },
+  "witness": {"positive": [{"impl": "rustls@…", "outcome": "PASS"}],
+              "negative": [{"impl": "mutant-0007", "outcome": "FAIL"}]},
+  "coverage_link": {"t1": "sha256:20be…", "lines_hit": [812, 813], "linked": true},
+  "provenance": {"produced_by": "test_driver", "requested_by": {"role": "test", "msg_id": "m-000214"},
+                 "oracle": "sha256:…", "adapter": "tls13@0.3.0", "sut_image_digest": "sha256:…"},
+  "labels": {"ifc": "UNTRUSTED"}
+}</code></pre>
+<pre><code>{
+  "requirement_id": "TLS13-0042", "label": "VIOLATION", "assurance": null,
+  "rule": "V2", "rules_version": "2.0.0", "modal": "MUST",
+  "evidence_ids": ["sha256:9f1c…", "sha256:20be…"],
+  "decided_at_round": 4, "stop_reason": "SUFFICIENT"      // SUFFICIENT | BUDGET | LOOP
+}</code></pre>
+
+<h4>Kho dữ liệu</h4>
+<table>
+<tr><th style="width:140px">Kho</th><th>Nội dung</th><th style="width:170px">Ghi bởi</th><th style="width:140px">Đọc bởi</th><th style="width:110px">Tính chất</th></tr>
+<tr><td>Input store</td><td>RFC, kho mã tại commit, adapter, chính sách</td><td>Auditor, trước khi chạy</td><td>Các cổng vào</td><td>Chỉ đọc khi chạy</td></tr>
+<tr><td>Index store</td><td>Chỉ mục ký hiệu, đồ thị gọi hàm, hash hàm, cơ sở dữ liệu CodeQL</td><td>Code gate</td><td>Code gate, Locator, Schema gate</td><td>Dựng lại được</td></tr>
+<tr><td>Requirement registry</td><td>Yêu cầu, hai luồng RBS, RBS được chấp nhận, oracle, trạng thái</td><td>Oracle compiler, Auditor, Verdict engine</td><td>Agent đặc quyền, Verdict engine</td><td>Có lịch sử phiên bản</td></tr>
+<tr><td>Evidence store</td><td>Bằng chứng, kết luận, nhận định Reviewer</td><td>Schema gate, Test driver, Code gate, Verdict engine</td><td>Verdict engine, agent (bản tóm tắt), Output gate</td><td>Chỉ ghi thêm, nối chuỗi hash</td></tr>
+<tr><td>Artifact store</td><td>Kịch bản DSL, gói tin, nhật ký SUT, dữ liệu độ phủ, truy vấn đã cố định</td><td>Test driver, Code gate</td><td>Oracle, Coverage linker, Reviewer</td><td>Định danh theo hash</td></tr>
+<tr><td>Trace log</td><td>Sự kiện, token, lời gọi bị từ chối</td><td>Mọi thành phần harness</td><td>Bộ công cụ đánh giá</td><td>Chỉ ghi thêm</td></tr>
+<tr><td>Report store</td><td>Báo cáo HTML, JSON, SARIF, bản kê lần chạy</td><td>Output gate</td><td>Auditor, Reviewer, CI</td><td>Ký bằng hash</td></tr>
+</table>
+<p class="cap">Bảng 20. Kho dữ liệu. Mỗi lần chạy là một thư mục độc lập, giữ nguyên làm gói tái lập kèm luận văn.</p>
+
+<h4>Toàn vẹn và tái lập</h4>
+<p>Toàn vẹn được bảo đảm bằng ba lớp: mỗi bằng chứng định danh bằng hash nội dung; các bằng chứng nối chuỗi qua <code>prev_hash</code>; bản kê lần chạy ghi hash mọi đầu vào, digest mọi image và hash cuối chuỗi. Yêu cầu "cho cùng kết quả khi chạy lại" được hiểu theo ba mức, vì đặt temperature bằng 0 không bảo đảm LLM cho cùng đầu ra:</p>
+<ul>
+  <li><b>Tái lập kết luận</b> (bảo đảm bằng thiết kế): từ cùng tập bằng chứng và cùng phiên bản quy tắc, tính lại luôn ra cùng nhãn.</li>
+  <li><b>Tái lập bằng chứng</b> (bảo đảm bằng thiết kế): T1 đối chiếu lại được; T2 chạy lại cùng truy vấn đã cố định; T3 chạy lại cùng kịch bản, tham số, seed và image.</li>
+  <li><b>Ổn định đầu cuối</b> (đại lượng đo): chạy toàn bộ hệ thống ba lần, đo tỉ lệ yêu cầu cùng nhãn. Theo luận điểm ở mục 1.2, khác biệt kỳ vọng nằm chủ yếu giữa một nhãn xác định và UNVERIFIABLE, không phải giữa COMPLIANT và VIOLATION.</li>
+</ul>
+
+<h4>Dữ liệu đánh giá</h4>
+<p>Bộ dữ liệu chuẩn lưu tách khỏi hệ thống để hệ thống không đọc được nhãn đúng khi chạy, và được công bố kèm luận văn.</p>
+<pre><code>{
+  "case_id": "tls13-wolfssl-mut-0007",
+  "protocol": "tls13", "repo": "wolfssl", "commit": "a1b2c3d",
+  "requirement_ref": "RFC8446§5.2#s…",
+  "source": "mutation",                  // benchmark | real_fix | mutation | manual
+  "fault_location": {"file": "src/internal.c", "lines": [812, 815]},
+  "mutation": {"operator": "remove_length_check"},
+  "attack": null,                        // hoặc A1..A7 kèm mức tinh vi
+  "expected_label": "VIOLATION",
+  "annotators": []
+}</code></pre>
+
+<!-- ======================================================================= -->
+<h2 class="part" id="p3">III. KIẾN TRÚC TRIỂN KHAI</h2>
+<p>Kiến trúc triển khai hiện thực ranh giới tin cậy ở tầng hạ tầng: mỗi vùng tin cậy chạy trong một vùng mạng riêng. Ngay cả khi một thành phần phần mềm có lỗi, mã độc trong kho mã cũng không có đường mạng để tác động ra ngoài.</p>
+<figure>
+<svg viewBox="0 0 960 440" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, system-ui, sans-serif">
+  <defs><marker id="d1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs>
+  <rect x="10" y="10" width="780" height="420" rx="10" fill="#fff" stroke="#333" stroke-width="2.5"/>
+  <text x="24" y="32" font-size="13" font-weight="700">MÁY CHỦ THỰC NGHIỆM (Linux, Docker Engine)</text>
+  <rect x="30" y="45" width="360" height="200" rx="8" fill="#eef4fb" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="42" y="64" font-size="11.5" font-weight="700" fill="#0d47a1">CONTROL ZONE</text>
+  <rect x="45" y="75" width="330" height="95" rx="5" fill="#fff" stroke="#555"/>
+  <text x="210" y="96" font-size="12" font-weight="700" text-anchor="middle">rfcv-harness</text>
+  <text x="210" y="116" font-size="11" text-anchor="middle">Execution loop, các cổng, Oracle compiler,</text>
+  <text x="210" y="133" font-size="11" text-anchor="middle">Verdict engine, Evidence store, LLM gateway</text>
+  <text x="210" y="152" font-size="11" text-anchor="middle">CLI cho Auditor và Reviewer</text>
+  <rect x="45" y="182" width="330" height="48" rx="5" fill="#fff" stroke="#555"/>
+  <text x="210" y="202" font-size="12" font-weight="700" text-anchor="middle">egress-proxy</text>
+  <text x="210" y="220" font-size="11" text-anchor="middle">chỉ cho phép tới endpoint LLM</text>
+  <rect x="410" y="45" width="360" height="120" rx="8" fill="#fdf6ec" stroke="#b26a00" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="422" y="64" font-size="11.5" font-weight="700" fill="#8a5300">ANALYSIS ZONE (không có mạng)</text>
+  <rect x="425" y="75" width="330" height="75" rx="5" fill="#fff" stroke="#555"/>
+  <text x="590" y="96" font-size="12" font-weight="700" text-anchor="middle">code-index-worker</text>
+  <text x="590" y="116" font-size="11" text-anchor="middle">tree-sitter, CodeQL, quét nhánh nghi vấn</text>
+  <text x="590" y="134" font-size="11" text-anchor="middle">kho mã gắn chỉ đọc</text>
+  <rect x="410" y="180" width="360" height="150" rx="8" fill="#fdecea" stroke="#c62828" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="422" y="199" font-size="11.5" font-weight="700" fill="#b71c1c">TEST ZONE (mạng nội bộ cô lập)</text>
+  <rect x="422" y="210" width="110" height="70" rx="5" fill="#fff" stroke="#555"/>
+  <text x="477" y="238" font-size="12" font-weight="700" text-anchor="middle">test-driver</text>
+  <text x="477" y="256" font-size="10.5" text-anchor="middle">backend DSL</text>
+  <rect x="542" y="210" width="105" height="70" rx="5" fill="#fff" stroke="#555"/>
+  <text x="594" y="236" font-size="12" font-weight="700" text-anchor="middle">SUT</text>
+  <text x="594" y="252" font-size="10.5" text-anchor="middle">bản thường</text><text x="594" y="267" font-size="10.5" text-anchor="middle">và bản đo phủ</text>
+  <rect x="657" y="210" width="105" height="70" rx="5" fill="#fff" stroke="#555"/>
+  <text x="709" y="236" font-size="12" font-weight="700" text-anchor="middle">Tham chiếu</text>
+  <text x="709" y="252" font-size="10.5" text-anchor="middle">≥ 2 bản triển khai</text><text x="709" y="267" font-size="10.5" text-anchor="middle">khác, đột biến</text>
+  <line x1="532" y1="245" x2="542" y2="245" stroke="#333" stroke-width="1.5"/>
+  <path d="M477 280 V292 H709 V280" fill="none" stroke="#333" stroke-width="1.5"/>
+  <text x="590" y="318" font-size="11" text-anchor="middle" fill="#b71c1c">tạo mới cho mỗi lần chạy kịch bản, huỷ ngay sau đó</text>
+  <rect x="30" y="260" width="360" height="155" rx="8" fill="#f5f5f5" stroke="#757575"/>
+  <text x="42" y="279" font-size="11.5" font-weight="700" fill="#424242">VOLUMES</text>
+  <g font-size="11">
+    <text x="45" y="302">inputs/  RFC, adapter, policy (chỉ đọc)</text>
+    <text x="45" y="322">repos/   kho mã và bản tham chiếu tại commit (chỉ đọc)</text>
+    <text x="45" y="342">runs/&lt;run_id&gt;/  evidence.db, registry.db, trace.db</text>
+    <text x="45" y="362">runs/&lt;run_id&gt;/artifacts/  theo hash</text>
+    <text x="45" y="382">runs/&lt;run_id&gt;/report/  HTML, JSON, SARIF, bản kê</text>
+    <text x="45" y="402">index/   chỉ mục mã, CodeQL DB (dựng lại được)</text>
+  </g>
+  <rect x="810" y="60" width="140" height="56" rx="6" fill="#fff" stroke="#555" stroke-dasharray="3 3"/>
+  <text x="880" y="84" font-size="12" font-weight="700" text-anchor="middle">Dịch vụ LLM</text><text x="880" y="102" font-size="11" text-anchor="middle">(API)</text>
+  <rect x="810" y="350" width="140" height="56" rx="6" fill="#fff" stroke="#555" stroke-dasharray="3 3"/>
+  <text x="880" y="374" font-size="12" font-weight="700" text-anchor="middle">Kho Git công khai</text><text x="880" y="392" font-size="11" text-anchor="middle">(GitHub, GitLab)</text>
+  <g stroke="#333" stroke-width="1.5" fill="none">
+    <path d="M375 206 H395 V25 H880 V58" marker-end="url(#d1)"/>
+    <path d="M375 112 H423" marker-end="url(#d1)" stroke-dasharray="5 3"/>
+    <path d="M375 150 H400 V245 H420" marker-end="url(#d1)" stroke-dasharray="5 3"/>
+    <path d="M808 378 H795 V425 H200 V417" marker-end="url(#d1)" stroke-dasharray="2 3"/>
+  </g>
+  <g font-size="10.5" fill="#333">
+    <text x="600" y="20">HTTPS tới endpoint LLM duy nhất</text>
+    <text x="379" y="104" font-size="10">lệnh</text>
+    <text x="560" y="420">checkout commit cố định, trước khi chạy</text>
+  </g>
+</svg>
+<figcaption><b>Hình 8.</b> Triển khai trên một máy chủ thực nghiệm với ba vùng mạng CONTROL ZONE, ANALYSIS ZONE, TEST ZONE và các ổ dữ liệu VOLUMES.</figcaption>
+<div class="legend-title">Ký hiệu sử dụng trong Hình 8:</div>
+<table>
+<tr><th style="width:90px">Ký hiệu</th><th>Ý nghĩa</th></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="2" width="52" height="20" rx="4" fill="#fff" stroke="#333" stroke-width="2.5"/></svg></td><td>Nút vật lý MÁY CHỦ THỰC NGHIỆM</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#eef4fb" stroke="#1565c0" stroke-width="1.5"/></svg></td><td>CONTROL ZONE: vùng tin cậy, chỉ ra ngoài qua egress-proxy</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#fdf6ec" stroke="#b26a00" stroke-width="1.5" stroke-dasharray="5 3"/></svg></td><td>ANALYSIS ZONE: xử lý mã không tin cậy, không có mạng</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#fdecea" stroke="#c62828" stroke-width="1.5" stroke-dasharray="5 3"/></svg></td><td>TEST ZONE: test-driver, SUT và các bản tham chiếu, chỉ có mạng nội bộ giữa chúng</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#fff" stroke="#555"/></svg></td><td>Container</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#f5f5f5" stroke="#757575"/></svg></td><td>VOLUMES: ổ dữ liệu gắn vào container</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><rect x="2" y="3" width="52" height="18" rx="4" fill="#fff" stroke="#555" stroke-dasharray="3 3"/></svg></td><td>Hệ thống bên ngoài máy chủ</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5"/></svg></td><td>Mạng nội bộ trong TEST ZONE giữa test-driver, SUT và bản tham chiếu</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="d1l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" marker-end="url(#d1l)"/></svg></td><td>Kết nối mạng ra ngoài duy nhất, từ egress-proxy tới Dịch vụ LLM</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="d1l2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#d1l2)"/></svg></td><td>Lệnh điều khiển từ rfcv-harness qua Docker API (tạo container, gửi lệnh, nhận kết quả qua ổ dữ liệu), không phải kết nối mạng giữa các vùng</td></tr>
+<tr><td><svg class="sw" viewBox="0 0 56 24"><defs><marker id="d1l3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" stroke-dasharray="2 3" marker-end="url(#d1l3)"/></svg></td><td>Tải dữ liệu một lần trước khi chạy</td></tr>
+</table>
+</figure>
+<ul>
+  <li><b>Một đường ra ngoài duy nhất:</b> chỉ egress-proxy có kết nối Internet, và chỉ tới endpoint LLM; container trong ANALYSIS ZONE và TEST ZONE không có cổng ra.</li>
+  <li><b>Kho mã được tải trước:</b> kho mã và bản tham chiếu được lấy tại commit cố định trước khi chạy rồi gắn chỉ đọc; trong lúc chạy không có thao tác Git.</li>
+  <li><b>Container dùng một lần:</b> mỗi lần chạy kịch bản tạo mới test-driver, SUT và bản tham chiếu trên một mạng nội bộ riêng, huỷ ngay sau đó.</li>
+  <li><b>Đa dạng môi trường:</b> tên máy, địa chỉ mạng nội bộ và đồng hồ của container SUT được thay đổi giữa các lần chạy (M7).</li>
+  <li><b>Giới hạn tài nguyên:</b> mỗi container bị giới hạn CPU, bộ nhớ, số tiến trình và thời gian.</li>
+</ul>
+<table>
+<tr><th style="width:180px">Môi trường</th><th>Cấu hình dự kiến</th><th>Mục đích</th></tr>
+<tr><td>Máy phát triển</td><td>Laptop 8 nhân, 32 GB RAM, Docker</td><td>Phát triển, kiểm thử đơn vị, mốc G1</td></tr>
+<tr><td>Máy chủ thực nghiệm</td><td>16–32 nhân, 64 GB RAM, 500 GB SSD; thêm GPU từ 48 GB cho mô hình cục bộ</td><td>Mốc G2, G3; song song 4–8 yêu cầu</td></tr>
+<tr><td>CI</td><td>GitHub Actions</td><td>Kiểm thử hợp đồng, bất biến, Oracle compiler, kiểm định adapter mẫu</td></tr>
+</table>
+<p class="cap">Bảng 21. Môi trường triển khai; con số là ước lượng ban đầu, hiệu chỉnh sau mốc G1.</p>
+
+<!-- ======================================================================= -->
+<h2 class="part" id="p4">IV. GIAO DIỆN</h2>
+<p>Hệ thống có bốn loại giao diện, ứng với bốn đối tượng tương tác: con người, agent, adapter cùng backend, và hệ thống bên ngoài.</p>
+
+<h3 id="s4-1">4.1. Giao diện người dùng</h3>
+<h4>Dòng lệnh</h4>
+<table>
+<tr><th style="width:300px">Lệnh</th><th>Chức năng</th></tr>
+<tr><td><code>rfcv adapter draft tls13</code></td><td>Trợ lý adapter soạn nháp từ vựng, phân loại thành phần</td></tr>
+<tr><td><code>rfcv adapter check tls13</code></td><td>Kiểm định adapter, in kết quả từng kiểm tra</td></tr>
+<tr><td><code>rfcv run --adapter tls13 --repo wolfssl@a1b2c3d</code></td><td>Khởi chạy; tuỳ chọn mục RFC, ngân sách, mức song song, cấu hình đối chứng</td></tr>
+<tr><td><code>rfcv specs &lt;run_id&gt;</code></td><td>Duyệt RBS bất đồng và mẫu 10%: chấp nhận, sửa, loại</td></tr>
+<tr><td><code>rfcv status &lt;run_id&gt;</code></td><td>Tiến độ theo trạng thái, chi phí đã dùng</td></tr>
+<tr><td><code>rfcv rerun &lt;run_id&gt; --commit &lt;new&gt;</code></td><td>Kiểm chứng lại gia tăng</td></tr>
+<tr><td><code>rfcv review &lt;run_id&gt;</code></td><td>Mở bảng duyệt NEEDS_REVIEW</td></tr>
+<tr><td><code>rfcv verify &lt;run_id&gt;</code></td><td>Kiểm tra chuỗi hash, tính lại nhãn, chạy lại T2 và T3</td></tr>
+<tr><td><code>rfcv report &lt;run_id&gt; --format html|json|sarif</code></td><td>Sinh lại báo cáo</td></tr>
+</table>
+<p class="cap">Bảng 22. Lệnh dòng lệnh.</p>
+<h4>Báo cáo</h4>
+<ul>
+  <li><b>Phạm vi và đầu vào:</b> giao thức, commit, mục RFC, phiên bản adapter và quy tắc, bản tham chiếu, hash cuối chuỗi; nêu rõ kết luận chỉ áp dụng cho yêu cầu và kịch bản đã kiểm tra.</li>
+  <li><b>Tổng hợp:</b> số yêu cầu theo nhãn và mức assurance; tách MUST với SHOULD, MAY; tách loại D; VIOLATION lên đầu.</li>
+  <li><b>Bảng yêu cầu:</b> định danh câu RFC, loại, mức, nhãn, assurance, quy tắc áp dụng, nhận định Reviewer; lọc theo nhãn và thành phần.</li>
+  <li><b>Chi tiết yêu cầu:</b> câu RFC gốc, RBS, giải thích, kịch bản DSL, kết quả trên SUT và bản tham chiếu, vị trí mã với dòng được phủ, liên kết tới gói tin và nhật ký.</li>
+</ul>
+<h4>Bảng duyệt</h4>
+<p>Với mỗi yêu cầu NEEDS_REVIEW, bảng duyệt hiển thị quy tắc gây ra nhãn (V0, V1, V4 hoặc V7), các bằng chứng mâu thuẫn đặt cạnh nhau, kết quả nhân chứng và đoạn mã liên quan. Reviewer chọn nhãn và bắt buộc ghi lý do; nhận định lưu thành bản ghi Review (BR3). Mã được hiển thị dạng văn bản thuần và ghi rõ là nội dung không tin cậy.</p>
+<h4>SARIF</h4>
+<p>Mỗi VIOLATION có vị trí mã được xuất thành một <code>result</code> SARIF: <code>ruleId</code> là định danh câu RFC, <code>message</code> là giải thích đã qua Output gate, <code>locations</code> là vị trí T1, <code>properties</code> chứa nhãn, quy tắc và định danh bằng chứng.</p>
+
+<h3 id="s4-2">4.2. Giao diện giữa agent và harness</h3>
+<h4>Hồ sơ vai trò</h4>
+<pre><code>role: test
+zone: privileged                              # privileged | quarantine
+context_fields: [requirement.rbs, adapter.vocabulary, adapter.dsl_reference,
+                 examples.similar_scenarios, evidence.summary]
+tools: [test.list_examples, test.run_scenario]
+output_schema: ScenarioProposal@1
+budget_per_task: {llm_calls: 10, tool_calls: 12, tokens: 150000, seconds: 600}
+receives_from: [execution_loop]
+sends_to: [execution_loop]</code></pre>
+<h4>Phong bì thông điệp (I1)</h4>
+<p>Agent chỉ điền <code>body</code>; các trường khác do Execution loop gán, nên agent không giả danh được vai trò khác. Cùng nhiệm vụ được giao lần thứ ba mà không có bằng chứng mới thì dừng với lý do LOOP.</p>
+<pre><code>{
+  "msg_id": "m-000214", "run_id": "run-2026-11-20-01", "requirement_id": "TLS13-0042",
+  "from_role": "planner", "to_role": "test",      // do hub gán
+  "kind": "dispatch",                             // dispatch | result | tool_call | stop
+  "round": 3, "body": { ... },
+  "budget_left": {"rounds": 5, "tool_calls": 18, "tokens": 410000, "seconds": 640}
+}</code></pre>
+<h4>Schema đầu ra (I3)</h4>
+<table>
+<tr><th style="width:115px">Agent</th><th style="width:150px">Schema</th><th>Trường chính và cách harness kiểm tra</th></tr>
+<tr><td>RFC Analyst</td><td><code>RbsProposal@1</code></td><td>Văn bản RBS và <code>sentence_id</code>; Oracle compiler kiểm tra ngữ pháp, từ vựng, ràng buộc nhất quán giữa loại và hành vi, so khớp hai luồng</td></tr>
+<tr><td>Planner</td><td><code>PlanAction@1</code></td><td><code>action</code> (dispatch, stop), <code>target_role</code>, <code>task_type</code> liệt kê, tham số có kiểu; không gọi công cụ, không ra nhãn</td></tr>
+<tr><td>Test</td><td><code>ScenarioProposal@1</code></td><td>Kịch bản DSL, <code>variant</code>, tham số; Tool gateway kiểm tra ngữ pháp và miền, Test driver xác nhận trigger trên vết</td></tr>
+<tr><td>Verifier</td><td><code>Critique@1</code></td><td>Loại vấn đề (WRONG_LOCATION, CONTRADICTION, MISSING_PATH, MISSING_VARIANT), <code>evidence_id</code>, nhiệm vụ đề xuất; không có trường về dừng hay nhãn</td></tr>
+<tr><td>Report</td><td><code>Explanation@1</code></td><td>Chỉ trích dẫn <code>evidence_id</code> và vị trí mã có trong bản ghi kết luận</td></tr>
+<tr><td>Code Indexer</td><td><code>ComponentMap@1</code></td><td>Ký hiệu có trong chỉ mục, thành phần thuộc phân loại adapter</td></tr>
+<tr><td>Code Reader</td><td><code>LocationClaim@1</code>, <code>QueryProposal@1</code></td><td>Tệp, dòng, ký hiệu (đối chiếu chỉ mục), <code>check_kind</code> liệt kê, <code>finding</code>, <code>call_path</code> có trong đồ thị gọi; truy vấn CodeQL qua kiểm định đột biến. Trường <code>note</code> tự do mang nhãn UNTRUSTED, không tới agent đặc quyền</td></tr>
+</table>
+<p class="cap">Bảng 23. Schema đầu ra của bảy agent.</p>
+<h4>Ma trận quyền công cụ</h4>
+<table>
+<tr><th>Công cụ</th><th class="c">RFC Analyst</th><th class="c">Planner</th><th class="c">Test</th><th class="c">Verifier</th><th class="c">Report</th><th class="c">Code Indexer</th><th class="c">Code Reader</th></tr>
+<tr><td><code>rfc.get_sentences</code></td><td class="c">✓</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td><code>registry.read</code></td><td></td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td></td><td></td></tr>
+<tr><td><code>evidence.read_summary</code>, <code>verdict.read</code></td><td></td><td class="c">✓</td><td></td><td class="c">✓</td><td class="c">✓</td><td></td><td></td></tr>
+<tr><td><code>test.list_examples</code>, <code>test.run_scenario</code></td><td></td><td></td><td class="c">✓</td><td></td><td></td><td></td><td></td></tr>
+<tr><td><code>locator.suggest</code></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c">✓</td></tr>
+<tr><td><code>code.list_files</code>, <code>code.search_symbol</code>, <code>code.read_function</code></td><td></td><td></td><td></td><td></td><td></td><td class="c">✓</td><td class="c">✓</td></tr>
+<tr><td><code>code.callers</code>, <code>code.callees</code></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c">✓</td></tr>
+</table>
+<p class="cap">Bảng 24. Ma trận quyền công cụ; ô trống là từ chối. Không vai trò nào có công cụ ghi tệp, chạy lệnh tuỳ ý hay gọi mạng.</p>
+
+<h3 id="s4-3">4.3. Giao diện adapter và backend</h3>
+<h4>Bản kê adapter</h4>
+<pre><code>adapter: tls13
+version: 0.3.0
+backend: tls_attacker
+rfc:
+  - {doc: RFC8446, sections_in_scope: ["4.1", "4.2", "5.1", "5.2", "6"]}
+component_taxonomy: [record_layer, handshake, key_schedule, extensions, alerts]
+vocabulary:
+  events:   [receive(record), receive(handshake_msg), send_alert(code), send(content_type), close, discard]
+  states:   [initial, client_hello_sent, connected]
+  alerts:   [unexpected_message, record_overflow, decode_error, illegal_parameter, ...]
+consistency_rules:
+  - {if_expect_contains: send_alert, then_type: B}
+locator_hints:
+  record_layer: {keywords: ["record", "TLSCiphertext", "length"]}
+sut:        {repo: wolfssl, build: docker/wolfssl.Dockerfile, coverage_build: docker/wolfssl-cov.Dockerfile,
+             start: {role: server, port: 4433}, healthcheck: {kind: tls_handshake, timeout_s: 10}}
+references: [rustls@&lt;commit&gt;, openssl@&lt;commit&gt;]
+code_scope: {include: ["src/**", "wolfssl/**"], exclude: ["tests/**", "**/*.pem", "**/*.key"]}
+examples:   examples/*.yaml               # mẫu từ TLS-Anvil, tlsfuzzer làm thư viện ví dụ</code></pre>
+<h4>Ngữ pháp RBS</h4>
+<pre><code>requirement := "requirement" ID "from" SENTENCE_ID "modal" MODAL "type" ("A"|"B"|"C"|"D")
+               "actor" ROLE  "state" STATE
+               "trigger" EVENT ["where" COND]
+               "expect" OBS ("then" OBS)* ["within" INT "ms"]
+               ["forbid" OBS ("," OBS)*]
+               ["accept_alternatives" OBS ("|" OBS)*]
+               "variants" VARIANT ("," VARIANT)*
+VARIANT     := "boundary(" FIELD "," VALUE ")" | "max(" FIELD ")" | "min(" FIELD ")" | "random(" FIELD ", k=" INT ")"
+EVENT, OBS, STATE, FIELD  thuộc vocabulary của adapter</code></pre>
+<h4>Kịch bản DSL</h4>
+<p>Test Agent đề xuất kịch bản ở dạng trừu tượng; backend dịch sang dạng gốc của công cụ (WorkflowTrace XML với TLS-Attacker).</p>
+<pre><code>scenario:
+  requirement: TLS13-0042
+  reach_state: connected
+  steps:
+    - handshake: {version: tls13, cipher: TLS_AES_128_GCM_SHA256}
+    - send_record: {content_type: application_data, encrypted: true, length: "$record.length"}
+    - receive: {until: close, timeout_ms: 2000}
+  bindings: {record.length: from_variant}</code></pre>
+<h4>Giao diện backend (I9)</h4>
+<pre><code>class Backend(Protocol):
+    name: str
+    def vocabulary(self) -&gt; Vocabulary: ...                       # sự kiện quan sát được
+    def validate(self, scenario: Scenario) -&gt; ValidationResult: ...  # ngữ pháp, thao tác hợp lệ
+    def run(self, scenario: Scenario, endpoint: Endpoint, seed: int) -&gt; EventTrace: ...
+    # EventTrace: danh sách sự kiện chuẩn hoá theo vocabulary, kèm hash của pcap và nhật ký</code></pre>
+<h4>Kiểm định adapter tự động</h4>
+<ul>
+  <li><b>Hình thức:</b> bản kê, ví dụ và từ vựng đúng schema; backend khai báo tồn tại và qua kiểm thử hợp đồng I9.</li>
+  <li><b>Dựng được:</b> SUT, bản đo độ phủ và mọi bản tham chiếu dựng được tại commit cố định, qua healthcheck; bản đo độ phủ sinh được dữ liệu phủ.</li>
+  <li><b>Ổn định:</b> mỗi ví dụ chạy ba lần cho cùng kết quả trên bản tham chiếu.</li>
+  <li><b>Phân biệt được:</b> mỗi ví dụ có ít nhất một bản đột biến làm kết quả đổi từ PASS sang FAIL.</li>
+  <li><b>Độ phủ biểu đạt:</b> liệt kê các câu RFC trong phạm vi mà từ vựng chưa biểu diễn được.</li>
+</ul>
+
+<h3 id="s4-4">4.4. Giao diện với hệ thống bên ngoài</h3>
+<table>
+<tr><th style="width:170px">Hệ thống</th><th style="width:170px">Phía harness</th><th>Hợp đồng</th></tr>
+<tr><td>Dịch vụ LLM</td><td>LLM gateway qua egress-proxy</td><td>HTTPS tới endpoint cố định; mô hình, phiên bản, tham số ghi trong bản kê; ghi yêu cầu, phản hồi, token; thử lại có giới hạn</td></tr>
+<tr><td>Mô hình cục bộ</td><td>LLM gateway</td><td>API tương thích OpenAI do vLLM cung cấp trong CONTROL ZONE</td></tr>
+<tr><td>Docker Engine</td><td>Code gate, Test driver</td><td>Docker API cục bộ; chỉ harness truy cập socket; container có nhãn <code>run_id</code></td></tr>
+<tr><td>Kho Git</td><td>CLI, giai đoạn chuẩn bị</td><td>Chỉ dùng trước khi chạy; kiểm tra hash commit</td></tr>
+<tr><td>TLS-Attacker, Ferret, SSH-Mapper</td><td>Backend plugin</td><td>Chạy trong container test-driver; dịch kịch bản sang dạng gốc và vết về dạng chuẩn hoá</td></tr>
+<tr><td>CodeQL</td><td>Code gate</td><td>Chạy trong code-index-worker; truy vấn cố định theo hash; kết quả JSON chuẩn hoá thành T2</td></tr>
+<tr><td>GitHub code scanning, IDE</td><td>Output gate</td><td>Tệp SARIF 2.1.0</td></tr>
+</table>
+<p class="cap">Bảng 25. Giao diện với hệ thống bên ngoài.</p>
+
+<!-- ======================================================================= -->
+<h2 class="part" id="p5">V. KẾ HOẠCH THỰC HIỆN VÀ ĐÁNH GIÁ</h2>
+
+<h3 id="s5-1">5.1. Phạm vi và công sức</h3>
+<p>Thời gian xây dựng và thực nghiệm từ giữa tháng 10/2026 đến cuối tháng 02/2027 là khoảng 20 tuần làm việc. Phạm vi chia ba tầng. Tầng 1 vừa khít thời gian và còn một tuần dự phòng. Tầng 2 và 3 chỉ làm khi các mốc trước đạt sớm. Đơn vị tính là tuần công, tức một người làm toàn thời gian trong một tuần.</p>
+<table>
+<tr><th style="width:80px">Tầng</th><th>Phần việc</th><th class="c" style="width:90px">Tuần công</th></tr>
+<tr><td rowspan="10"><b>1</b><br>(bắt buộc)</td><td>Lõi harness: Execution loop, Context builder, IFC, LLM gateway, Policy, Schema gate, Trace log</td><td class="c">3,5</td></tr>
+<tr><td>Evidence store, Verdict engine V0–V9, Requirement registry</td><td class="c">1</td></tr>
+<tr><td>Code gate, Locator, quét nhánh nghi vấn</td><td class="c">1</td></tr>
+<tr><td>Ngữ pháp RBS, Oracle compiler, so khớp hai luồng</td><td class="c">1,5</td></tr>
+<tr><td>Backend TLS-Attacker, adapter TLS 1.3, 3 bản triển khai, bản đo độ phủ, nhân chứng, Coverage linker</td><td class="c">3,5</td></tr>
+<tr><td>Bảy agent: lời nhắc, schema</td><td class="c">1,5</td></tr>
+<tr><td>Backend và adapter DNS (CoreDNS, Knot, thêm một bản tham chiếu)</td><td class="c">2</td></tr>
+<tr><td>Đường cơ sở B0, B2, B3</td><td class="c">1,5</td></tr>
+<tr><td>Bộ dữ liệu: đột biến tự động, lỗi thật, kịch bản tấn công A1–A7</td><td class="c">1,5</td></tr>
+<tr><td>Chạy thực nghiệm, phân tích thống kê</td><td class="c">2</td></tr>
+<tr><td colspan="2" style="text-align:right"><b>Cộng tầng 1</b></td><td class="c"><b>19</b></td></tr>
+<tr><td rowspan="3"><b>2</b></td><td>Học máy trạng thái cho loại C</td><td class="c">1,5</td></tr>
+<tr><td>Truy vấn CodeQL kiểm định đột biến cho loại D</td><td class="c">1,5</td></tr>
+<tr><td>QUIC (quiche, ngtcp2) trên TLS-Attacker</td><td class="c">2</td></tr>
+<tr><td><b>3</b></td><td>HTTP/2, SSH; trợ lý adapter; chế độ CI</td><td class="c">3–4</td></tr>
+</table>
+<p class="cap">Bảng 26. Ước lượng công sức. Kế hoạch không dựa vào giả định làm nhanh hơn nhờ trợ lý lập trình AI.</p>
+<div class="note"><b>Mục tiêu đa giao thức vẫn được giữ.</b> Tầng 1 gồm TLS 1.3 và DNS, hai giao thức khác nhau ở mọi chiều mà bản đề xuất dùng để biện minh tính tổng quát: TCP so với UDP, có trạng thái so với gần như không trạng thái, có mật mã so với không mật mã. Vì vậy mục tiêu 2 vẫn được đánh giá đầy đủ ngay cả khi tầng 2 và 3 không kịp. Ba giao thức còn lại của bản đề xuất được làm theo thứ tự QUIC, HTTP/2, SSH nếu còn thời gian.</div>
+
+<h3 id="s5-2">5.2. Tiến độ và mốc kiểm tra</h3>
+<table>
+<tr><th style="width:160px">Thời gian</th><th>Nội dung</th><th style="width:310px">Tiêu chí đạt / điều kiện cắt</th></tr>
+<tr><td>14/10 – 31/10/2026</td><td>Chốt thiết kế; dựng TLS-Attacker, ba SUT TLS (bản thường và bản đo độ phủ); chạy RFCAudit trên một SUT</td><td>Ba SUT dựng được; kho mã nào quá 3 ngày chưa dựng được thì thay ứng viên</td></tr>
+<tr><td>01/11 – 30/11</td><td>Lõi harness, Evidence store, Verdict engine, Code gate, Oracle compiler, cầu nối TLS-Attacker</td><td><b>G1:</b> ca K3 chạy trọn luồng, đúng nhãn cho bản gốc và bản đột biến, có T3 liên kết. Cầu nối TLS-Attacker quá 2 tuần thì dùng tlsfuzzer cho tầng 1</td></tr>
+<tr><td>01/12 – 20/12</td><td>Bảy agent, hai luồng RBS, nhân chứng; ca K1 và K2 với adapter TLS 1.2 nhỏ</td><td><b>G2:</b> K1–K3 đúng nhãn, có và không có tấn công A1, A7 mức 1. Chưa đạt thì bỏ hẳn tầng 2</td></tr>
+<tr><td>21/12/2026 – 31/01/2027</td><td>Adapter DNS; bộ dữ liệu; kịch bản tấn công; tầng 2 nếu G2 đạt trước 15/12</td><td>DNS chạy được, số dòng thay đổi trong <code>core/</code> và <code>gates/</code> bằng 0 (đếm bằng git)</td></tr>
+<tr><td>01/02 – 28/02</td><td>Thực nghiệm đầy đủ, đường cơ sở, phân tích</td><td><b>G3:</b> đủ số liệu cho RQ1–RQ5</td></tr>
+<tr><td>03 – 04/2027</td><td>Phân tích kết quả, viết luận văn</td><td></td></tr>
+<tr><td>05/2027</td><td>Hoàn thiện theo góp ý, nộp luận văn</td><td></td></tr>
+<tr><td>Đầu 06/2027</td><td>Bảo vệ</td><td></td></tr>
+</table>
+<p class="cap">Bảng 27. Tiến độ. Ba rủi ro kỹ thuật lớn nhất (cầu nối DSL, dựng SUT, liên kết độ phủ) được thử trong 6 tuần đầu.</p>
+
+<h3 id="s5-3">5.3. Phương pháp đánh giá</h3>
+<h4>Câu hỏi nghiên cứu</h4>
+<table>
+<tr><th style="width:60px">RQ</th><th>Câu hỏi</th><th style="width:330px">Đo bằng</th></tr>
+<tr><td>RQ1</td><td>Kết luận của hệ thống chính xác đến đâu?</td><td>Precision, recall VIOLATION; tỉ lệ COMPLIANT sai; theo loại A–D và mức assurance; độ chính xác vị trí mã</td></tr>
+<tr><td>RQ2</td><td>So với SOTA và các cách tiếp cận khác thế nào?</td><td>B0, B2, B3 trên cùng ca; kiểm định McNemar</td></tr>
+<tr><td>RQ3</td><td>Mỗi cơ chế đóng góp bao nhiêu?</td><td>Ablation: bỏ lần lượt hai luồng RBS, nhân chứng, liên kết độ phủ, tổng hợp kịch bản</td></tr>
+<tr><td>RQ4</td><td>Hệ thống chịu được đối thủ đến đâu?</td><td>Tỉ lệ đổi nhãn dưới A1–A7 so với B1 và B0</td></tr>
+<tr><td>RQ5</td><td>Chi phí và tính tổng quát?</td><td>Token, tiền, thời gian, phút công người mỗi yêu cầu; chi phí kiểm chứng lại; dòng lõi thay đổi và tuần công khi thêm DNS; độ ổn định đầu cuối qua ba lần chạy</td></tr>
+</table>
+<p class="cap">Bảng 28. Câu hỏi nghiên cứu, gắn với ba mục tiêu cụ thể của bản đề xuất: RQ1–RQ3 cho mục tiêu 1, RQ5 cho mục tiêu 2, RQ4 cho mục tiêu 3.</p>
+<h4>Đường cơ sở</h4>
+<table>
+<tr><th style="width:70px">Mã</th><th>Cấu hình</th><th style="width:310px">Chứng minh điều gì</th></tr>
+<tr><td>B0</td><td>RFCAudit (mã nguồn công khai) trên cùng kho mã và tập yêu cầu</td><td>Lợi ích của bằng chứng chạy và quy tắc tất định so với SOTA</td></tr>
+<tr><td>B1</td><td>Hệ thống đầy đủ nhưng tắt cách ly, IFC, kiểm tra tham số</td><td>Giá trị của cơ chế an toàn</td></tr>
+<tr><td>B2</td><td>Không agent: chạy toàn bộ mẫu TLS-Anvil, tlsfuzzer phù hợp</td><td>Giá trị của agent tổng hợp kịch bản (độ phủ quyết định)</td></tr>
+<tr><td>B3</td><td>Kiểu iPanda: LLM viết chương trình kiểm thử và tự đánh giá</td><td>Giá trị của DSL giới hạn và oracle biên dịch</td></tr>
+<tr><td>Thủ công</td><td>Học viên kiểm chứng thủ công 20 yêu cầu TLS 1.3, ghi thời gian</td><td>Mốc chi phí công người; so sánh có tính cả thời gian viết adapter phân bổ theo yêu cầu</td></tr>
+</table>
+<p class="cap">Bảng 29. Đường cơ sở.</p>
+<h4>Dữ liệu và thống kê</h4>
+<ul>
+  <li><b>Đối tượng:</b> TLS 1.3 khoảng 40–60 yêu cầu trên ba bản triển khai; DNS khoảng 15–20 yêu cầu trên ba bản triển khai; mỗi kho mã cố định tại một commit.</li>
+  <li><b>Đột biến tự động:</b> toán tử viết trên tree-sitter, áp tại điểm kiểm tra liên quan tới yêu cầu (xoá phép kiểm tra, đảo so sánh, đổi ngưỡng, đổi mã cảnh báo); khoảng 150 đột biến TLS và 50 đột biến DNS, mỗi đột biến vi phạm đúng một yêu cầu. Đây là nguồn chính, vì nhãn đúng biết chắc và LLM chưa từng gặp.</li>
+  <li><b>Lỗi thật đã vá:</b> cặp commit trước và sau bản vá từ CVE, TLS-Anvil, SCALE; chỉ dùng để đo khả năng phát hiện.</li>
+  <li><b>Mã gốc:</b> hai người gán nhãn độc lập, đo hệ số kappa.</li>
+  <li><b>Thống kê:</b> khoảng tin cậy Wilson 95% cho mọi tỉ lệ; kiểm định McNemar cho so sánh cặp với đường cơ sở; báo cáo theo loại yêu cầu.</li>
+</ul>
+<h4>Mục tiêu đăng ký trước</h4>
+<p>Các ngưỡng dưới đây được ghi vào luận văn trước khi chạy G3, để kết quả không bị diễn giải theo hướng có lợi. Không đạt ngưỡng vẫn là một kết quả khoa học và được báo cáo trung thực.</p>
+<table>
+<tr><th>Chỉ số</th><th style="width:210px">Mục tiêu</th><th style="width:240px">Lý do chọn ngưỡng</th></tr>
+<tr><td>Tỉ lệ COMPLIANT sai trên đột biến</td><td>≤ 2%</td><td>Lỗi nguy hiểm nhất; V5 đòi đủ biến thể và liên kết</td></tr>
+<tr><td>Precision VIOLATION</td><td>≥ 95%</td><td>Có T3 và nhân chứng; RFCAudit đạt 81,9% chỉ với suy luận LLM</td></tr>
+<tr><td>Độ phủ quyết định TLS 1.3</td><td>≥ 60% yêu cầu, cao hơn B2 có ý nghĩa thống kê</td><td>Chứng minh giá trị của agent</td></tr>
+<tr><td>Đổi nhãn dưới A1–A6</td><td>0 ca</td><td>Lập luận cấu trúc ở M7</td></tr>
+<tr><td>Phát hiện A7</td><td>Mức 1, 2: 100%; mức 3: báo cáo trung thực</td><td>Giới hạn đã nêu ở M7</td></tr>
+<tr><td>Công người mỗi yêu cầu</td><td>≤ 20% so với thủ công</td><td>Duyệt theo bất đồng</td></tr>
+<tr><td>Dòng lõi thay đổi khi thêm DNS</td><td>0</td><td>Tầng backend tách khỏi lõi</td></tr>
+</table>
+<p class="cap">Bảng 30. Mục tiêu đăng ký trước.</p>
+
+<!-- ======================================================================= -->
+<h2 class="part" id="p6">VI. THAY ĐỔI SO VỚI BẢN ĐỀ XUẤT, VẤN ĐỀ CẦN GÓP Ý VÀ TÀI LIỆU THAM KHẢO</h2>
+<h3>6.1. Thay đổi so với bản đề xuất</h3>
+<table>
+<tr><th style="width:270px">Điểm trong bản đề xuất</th><th>Thay đổi trong thiết kế</th><th style="width:80px">Mục</th></tr>
+<tr><td>Chưa so sánh với RFCAudit, iPanda</td><td>Định vị lại đóng góp vào độ tin cậy của kết luận khi bên viết mã là đối thủ; RFCAudit thành đường cơ sở B0</td><td>1.1</td></tr>
+<tr><td>Harness 18 thành phần nhưng chỉ liệt kê 14</td><td>20 thành phần: thêm Policy store, Trace log, Requirement registry, Adapter checker, Oracle compiler, Coverage linker</td><td>2.2</td></tr>
+<tr><td>Test Agent chỉ chọn mẫu đã duyệt</td><td>Test Agent tổng hợp kịch bản trong DSL giới hạn; oracle biên dịch từ RBS, có nhân chứng</td><td>M2, M3</td></tr>
+<tr><td>Loại yêu cầu A–D chưa định nghĩa</td><td>Định nghĩa theo mức quan sát được; mỗi loại một phương pháp chính</td><td>M4</td></tr>
+<tr><td>T1 và T3 rời nhau; gợi ý của Locator ghi là T2</td><td>Liên kết độ phủ; gợi ý không phải bằng chứng; T2 từ truy vấn kiểm định đột biến</td><td>M4</td></tr>
+<tr><td>Chưa xét mã gian lận kiểm thử</td><td>Thêm rủi ro A7 và năm lớp chặn</td><td>M7</td></tr>
+<tr><td>"Cho cùng kết quả khi chạy lại"</td><td>Ba mức tái lập</td><td>2.4</td></tr>
+<tr><td>Verifier và Verdict engine cùng "xem đủ chưa"</td><td>Verdict engine quyết định độ đủ; Verifier chỉ phản biện</td><td>M1, 4.2</td></tr>
+<tr><td>"Lặp lại được khi mã thay đổi" chưa có cơ chế</td><td>Kiểm chứng lại gia tăng; SARIF, chế độ CI</td><td>M6</td></tr>
+<tr><td>Năm giao thức cùng mức ưu tiên</td><td>Tầng 1: TLS 1.3 và DNS; QUIC, HTTP/2, SSH ở tầng 2, 3</td><td>5.1</td></tr>
+</table>
+<p class="cap">Bảng 31. Thay đổi so với bản đề xuất.</p>
+
+<h3>6.2. Vấn đề cần thầy góp ý</h3>
+<ol>
+  <li><b>Định vị lại đóng góp</b> so với RFCAudit và iPanda (mục 1.1): đóng góp nằm ở độ tin cậy của kết luận và khả năng chống đối thủ, thay vì ở việc dùng agent kiểm chứng RFC.</li>
+  <li><b>Thu phạm vi bắt buộc</b> còn TLS 1.3 và DNS (mục 5.1), với lý do hai giao thức này vẫn bao phủ đủ các chiều khác biệt mà bản đề xuất dùng để biện minh tính tổng quát.</li>
+  <li><b>Luận điểm đúng đắn</b> (mục 1.2): cách lập luận nhãn đúng chỉ phụ thuộc ba điều kiện (a), (b), (c) đã đủ chặt để trình bày trong luận văn chưa.</li>
+  <li><b>Ba ca kiểm chứng K1–K3</b>, trong đó hai ca thuộc TLS 1.2, ngoài phạm vi chính.</li>
+  <li><b>Mô hình mã nguồn mở chạy cục bộ</b> cho luồng dịch thứ hai và cấu hình so sánh, cần thêm tài nguyên GPU.</li>
+  <li><b>Mục tiêu đăng ký trước</b> (Bảng 30): các ngưỡng có hợp lý không.</li>
+</ol>
+
+<h3>6.3. Tài liệu tham khảo</h3>
+<ol>
+  <li>B. Beurdouche et al., A Messy State of the Union: Taming the Composite State Machines of TLS, IEEE S&amp;P, 2015.</li>
+  <li>S. K. R. Kakarla et al., SCALE: Automatically Finding RFC Compliance Bugs in DNS Nameservers, USENIX NSDI, 2022. <a href="https://usenix.org/conference/nsdi22/presentation/kakarla">usenix.org</a></li>
+  <li>R. Meng et al., Large Language Model guided Protocol Fuzzing (ChatAFL), NDSS, 2024.</li>
+  <li>J. Yang et al., SWE-agent, NeurIPS, 2024.</li>
+  <li>E. Debenedetti et al., AgentDojo, NeurIPS D&amp;B, 2024; E. Debenedetti et al., Defeating Prompt Injections by Design (CaMeL), 2025. <a href="https://arxiv.org/abs/2503.18813">arXiv:2503.18813</a></li>
+  <li>Y. Wu et al., IsolateGPT, NDSS, 2025.</li>
+  <li>OWASP Foundation, OWASP Top 10 for LLM Applications 2025.</li>
+  <li>M. Zheng et al., RFCAudit: AI Agent for Auditing Protocol Implementations Against RFC Specifications, ASE, 2025. <a href="https://arxiv.org/abs/2506.00714">arXiv:2506.00714</a></li>
+  <li>X. Sun et al., iPanda: An LLM-based Agent for Automated Conformance Testing of Communication Protocols, 2025. <a href="https://arxiv.org/abs/2507.00378">arXiv:2507.00378</a></li>
+  <li>M. Zheng et al., Validating Network Protocol Parsers with Traceable RFC Document Interpretation, ISSTA, 2025. <a href="https://conf.researchr.org/details/issta-2025/issta-2025-papers/77/Validating-Network-Protocol-Parsers-with-Traceable-RFC-Document-Interpretation">researchr</a></li>
+  <li>M. Maehren et al., TLS-Anvil: Adapting Combinatorial Testing for TLS Libraries, USENIX Security, 2022. <a href="https://www.usenix.org/conference/usenixsecurity22/presentation/maehren">usenix.org</a></li>
+  <li>TLS-Attacker: A Dynamic Framework for Analyzing TLS Implementations, ACSAC, 2024; mã nguồn <a href="https://github.com/tls-attacker/TLS-Attacker">github.com/tls-attacker/TLS-Attacker</a></li>
+  <li>J. de Ruiter, E. Poll, Protocol State Fuzzing of TLS Implementations, USENIX Security, 2015. <a href="https://usenix.org/conference/usenixsecurity15/technical-sessions/presentation/de-ruiter">usenix.org</a></li>
+  <li>P. Fiterău-Broştean et al., Model Learning and Model Checking of SSH Implementations, SPIN, 2017. <a href="https://www.cs.ru.nl/~erikpoll/papers/spin2017.pdf">cs.ru.nl</a></li>
+  <li>P. Fiterau-Brostean et al., Automata-Based Automated Detection of State Machine Bugs in Protocol Implementations, NDSS, 2023. <a href="https://www.ndss-symposium.org/ndss-paper/automata-based-automated-detection-of-state-machine-bugs-in-protocol-implementations">ndss-symposium.org</a></li>
+  <li>M. Contag et al., How They Did It: An Analysis of Emission Defeat Devices in Modern Automobiles, IEEE S&amp;P, 2017. <a href="https://www.ieee-security.org/TC/SP2017/papers/101.pdf">ieee-security.org</a></li>
+  <li>Y. Liu et al., "Your AI, My Shell": Demystifying Prompt Injection Attacks on Agentic AI Coding Editors, 2025. <a href="https://arxiv.org/abs/2509.22040v1">arXiv:2509.22040</a></li>
+  <li>RepoGuardBench: Repository-Borne Prompt Injection Attacks and Lightweight Defenses for Local Coding Agents, ICML, 2026. <a href="https://icml.cc/virtual/2026/82802">icml.cc</a></li>
+  <li>S. Ouyang et al., An Empirical Study of the Non-determinism of ChatGPT in Code Generation, FSE, 2025; B. Atil et al., Non-Determinism of "Deterministic" LLM Settings, 2024. <a href="https://arxiv.org/html/2408.04667v5">arXiv:2408.04667</a></li>
+  <li>RFCScope: Detecting Logical Ambiguities in Internet Protocol Specifications, ASE, 2025. <a href="https://conf.researchr.org/details/ase-2025/ase-2025-papers/166/RFCScope-Detecting-Logical-Ambiguities-in-Internet-Protocol-Specifications">researchr</a></li>
+  <li>GitHub, CodeQL scanning Rust and C/C++ without builds is now generally available, 2025. <a href="https://github.blog/changelog/2025-10-14-codeql-scanning-rust-and-c-c-without-builds-is-now-generally-available">github.blog</a></li>
+</ol>
+</main>
+</div>
+</body>
+</html>

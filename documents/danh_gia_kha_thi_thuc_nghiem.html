@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đánh giá khả thi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbfaf7; --paper:#ffffff; --ink:#1d1d1f; --muted:#5f6368; --line:#dedbd2;
+  --accent:#1f4e79; --accent-soft:#e8eff7; --warn:#9a3412; --warn-soft:#fff4ec;
+  --ok:#14532d; --ok-soft:#ecf7ef; --code:#f4f2ec;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.7}
+.wrap{display:grid;grid-template-columns:260px minmax(0,1fr);max-width:1240px;margin:0 auto}
+nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;padding:28px 18px 30px 22px;border-right:1px solid var(--line);font-size:13.5px}
+nav.toc .t{font-weight:700;color:var(--accent);margin-bottom:8px}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:2px 0}
+nav.toc a:hover{color:var(--accent)}
+nav.toc a.sub{padding-left:12px;font-size:12.8px}
+main{padding:40px 48px 80px;max-width:980px}
+header.cover{border-bottom:2px solid var(--accent);padding-bottom:18px;margin-bottom:26px}
+header.cover .kicker{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+header.cover h1{font-size:27px;line-height:1.35;margin:8px 0 10px}
+header.cover .meta{color:var(--muted);font-size:14px}
+h2{font-size:21px;margin:48px 0 10px;color:var(--accent);border-bottom:1px solid var(--line);padding-bottom:6px}
+h3{font-size:17px;margin:28px 0 8px}
+p{margin:10px 0}
+ul,ol{padding-left:22px}
+li{margin:4px 0}
+table{width:100%;border-collapse:collapse;margin:14px 0 6px;font-size:14.2px;background:var(--paper)}
+th,td{border:1px solid var(--line);padding:7px 10px;vertical-align:top;text-align:left}
+th{background:var(--accent-soft);font-weight:600}
+code{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:var(--code);padding:1px 5px;border-radius:4px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto;font-size:13px;line-height:1.55}
+pre code{background:none;padding:0}
+figure{margin:20px 0 6px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px}
+figure svg{width:100%;height:auto;display:block}
+figcaption{font-size:14px;color:var(--muted);margin-top:10px}
+figcaption b{color:var(--ink)}
+.legend-title{font-weight:600;margin-top:12px}
+.sw{width:56px;height:24px;display:block}
+.note{background:var(--accent-soft);border-left:4px solid var(--accent);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.claim{background:var(--ok-soft);border-left:4px solid var(--ok);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.risk{background:var(--warn-soft);border-left:4px solid var(--warn);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.cap{font-size:13.5px;color:var(--muted);margin:4px 0 16px}
+@media (max-width:900px){
+  .wrap{display:block}
+  nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line);padding:20px 16px}
+  main{padding:24px 16px 60px}
+  table{display:block;overflow-x:auto}
+}
+@media print{nav.toc{display:none}.wrap{display:block}main{max-width:none;padding:0}figure,table,pre{page-break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="toc">
+  <div class="t">MỤC LỤC</div>
+  <a href="#s1">1. Kết luận</a>
+  <a href="#s2">2. Luồng phối hợp</a>
+  <a class="sub" href="#s2-1">2.1 Chia nhỏ bài toán</a>
+  <a class="sub" href="#s2-2">2.2 Hai kênh giao tiếp</a>
+  <a class="sub" href="#s2-3">2.3 Luồng từ đầu đến cuối</a>
+  <a href="#s3">3. Lỗi thật làm dữ liệu chuẩn</a>
+  <a href="#s4">4. Thực nghiệm sơ bộ</a>
+  <a class="sub" href="#s4-1">4.1 Thiết lập</a>
+  <a class="sub" href="#s4-2">4.2 T3 trước handshake</a>
+  <a class="sub" href="#s4-3">4.3 T3 sau handshake</a>
+  <a class="sub" href="#s4-4">4.4 T1 và đối chiếu</a>
+  <a class="sub" href="#s4-5">4.5 Dòng được biên dịch</a>
+  <a class="sub" href="#s4-6">4.6 Áp quy tắc kết luận</a>
+  <a href="#s5">5. Đánh giá khả thi</a>
+  <a href="#s6">6. Điều chỉnh thiết kế</a>
+  <a href="#s7">7. Kế hoạch kiểm chứng thực tế</a>
+  <a href="#s8">8. Rủi ro còn lại</a>
+  <a href="#s9">9. Tái lập</a>
+  <a href="#s10">10. Nguồn</a>
+</nav>
+
+<main>
+<header class="cover">
+  <div class="kicker">Tài liệu thiết kế chi tiết · Phần bổ sung</div>
+  <h1>Đánh giá khả thi và thực nghiệm sơ bộ trên lỗi thật của wolfSSL</h1>
+  <div class="meta">Đề tài: Kiểm chứng tự động và an toàn sự tuân thủ đặc tả giao thức mạng dựa trên bằng chứng, sử dụng hệ thống AI đa tác tử · Học viên: Nguyễn Kỳ Tùng · GVHD: TS. Tống Văn Vạn<br>
+  Ngày thực nghiệm: 14/10/2026. Tài liệu đánh giá luồng đã thiết kế ở các tài liệu "Thiết kế chi tiết", "Thiết kế khám phá mã nguồn", "Thiết kế cung cấp RFC" và "Thiết kế phối hợp agent", không mở rộng phạm vi bản đề xuất.</div>
+</header>
+
+<!-- 1 -->
+<h2 id="s1">1. Kết luận</h2>
+<div class="claim"><b>Luồng khả thi, đánh giá 9/10.</b> Thực nghiệm chạy tay trên lỗi thật <code>c18833f52</code> của wolfSSL cho thấy ba điều:
+<ul>
+  <li>Luồng cho ra đúng kết luận VIOLATION ở phiên bản lỗi.</li>
+  <li>Hai nguồn bằng chứng độc lập (kiểm thử T3 và đọc mã T1) khớp nhau.</li>
+  <li>Luồng phát hiện thêm một ứng viên sai lệch còn tồn tại ở bản mới nhất mà test của nhà phát triển không phủ.</li>
+</ul>
+Hai rủi ro kỹ thuật lớn nhất trước đây đã được giải quyết bằng thực nghiệm: kiểm thử sau handshake và xử lý <code>#ifdef</code>.</div>
+<table>
+<tr><th style="width:240px">Câu hỏi</th><th style="width:120px">Trả lời</th><th>Căn cứ</th></tr>
+<tr><td>Luồng có dừng và ra nhãn trong mọi trường hợp?</td><td>Có</td><td>Ngân sách, phát hiện lặp; Verdict engine luôn gán nhãn (mục 2)</td></tr>
+<tr><td>Có lỗi thật đúng loại hệ thống nhắm tới?</td><td>Có</td><td>81 commit ứng viên của wolfSSL từ 2025 đến 10/2026, đủ loại A–D (mục 3)</td></tr>
+<tr><td>T3 có phân biệt được bản lỗi và bản đã sửa?</td><td>Có</td><td>Bản lỗi hỏng 55/67 ca tlsfuzzer; bản sửa hỏng 1/67 (mục 4.3)</td></tr>
+<tr><td>T1 có định vị và đọc đúng ngưỡng?</td><td>Có (khi người thực hiện đóng vai)</td><td>Ngưỡng đọc từ mã (16486) trùng ngưỡng đo bằng T3 (mục 4.4)</td></tr>
+<tr><td>Agent LLM có tự làm được?</td><td>Chưa đo</td><td>Đo ở lát cắt dọc cuối tháng 11 (mục 7)</td></tr>
+</table>
+<p class="cap">Bảng 1. Tóm tắt đánh giá.</p>
+
+<!-- 2 -->
+<h2 id="s2">2. Luồng phối hợp để giải bài toán</h2>
+<h3 id="s2-1">2.1. Bài toán được chia nhỏ thế nào</h3>
+<table>
+<tr><th style="width:120px">Tầng</th><th>Câu hỏi</th><th style="width:200px">Ai đặt ra</th></tr>
+<tr><td>Bài toán</td><td>Bản triển khai X tại commit C có tuân thủ RFC R trong phạm vi adapter không?</td><td>Người kiểm chứng</td></tr>
+<tr><td>Bài toán con</td><td>Với một yêu cầu, ví dụ TLS13-0042 (loại B, MUST): nhận bản ghi quá dài thì có gửi record_overflow rồi đóng kết nối không?</td><td>RFC Analyst; người kiểm chứng duyệt</td></tr>
+<tr><td>Câu hỏi cụ thể</td><td>Còn thiếu T3 cho biến thể nào? T1 có mâu thuẫn T3 không?</td><td>Verdict engine, sau mỗi vòng</td></tr>
+</table>
+<p class="cap">Bảng 2. Ba tầng của bài toán. Mỗi bài toán con có tiêu chí "giải xong" định sẵn: một trong các quy tắc R0–R6 áp dụng được.</p>
+
+<h3 id="s2-2">2.2. Hai kênh giao tiếp</h3>
+<p>Các agent không trò chuyện trực tiếp. Chúng giao tiếp qua hai kênh:</p>
+<table>
+<tr><th style="width:220px">Kênh</th><th>Nội dung</th><th style="width:230px">Mục đích</th></tr>
+<tr><td><b>Thông điệp qua hub</b> (Execution loop)</td><td><code>dispatch</code> (Planner giao nhiệm vụ có kiểu), <code>tool_call</code> (qua Tool gateway), <code>result</code> (qua Schema gate), <code>stop</code>. Agent chỉ điền <code>body</code>; hub gán người gửi, người nhận, vòng, ngân sách</td><td>Giao việc và nhận kết quả</td></tr>
+<tr><td><b>Trạng thái dùng chung</b></td><td>Requirement registry (đề bài), Evidence store (lời giải từng phần T1–T3, chỉ cổng ghi), báo cáo độ đủ của Verdict engine, Critique của Verifier</td><td>Chia sẻ hiểu biết; agent đọc bản tóm tắt có cấu trúc</td></tr>
+</table>
+<p class="cap">Bảng 3. Hai kênh giao tiếp. Cách làm gần với mô hình blackboard: các bên ghi kết quả lên kho dùng chung, Planner điều phối ai làm gì tiếp.</p>
+<p>Không cho agent trò chuyện tự do vì bốn lý do:</p>
+<ul>
+  <li><b>An toàn:</b> chuỗi tự do từ vùng cách ly có thể chở chỉ thị độc hại.</li>
+  <li><b>Kiểm tra được:</b> mỗi thông điệp có schema.</li>
+  <li><b>Không trôi:</b> câu hỏi "đủ chưa" do Verdict engine trả lời một cách tất định.</li>
+  <li><b>Tái lập được:</b> cùng bằng chứng thì cho cùng nhãn.</li>
+</ul>
+
+<h3 id="s2-3">2.3. Luồng từ đầu đến cuối</h3>
+<pre><code>GĐ0  Người kiểm chứng: chọn adapter, commit, RFC, cờ build → bản kê lần chạy
+
+GĐ1  Đặt đề bài
+     RFC gate ──câu + gói ngữ cảnh──▶ RFC Analyst ──Requirement──▶ Schema gate
+       ──▶ Requirement registry ──▶ người kiểm chứng duyệt
+     (song song) Code Indexer ──ComponentMap──▶ Schema gate ──▶ Index store
+
+GĐ2  Giải từng bài toán con (vòng lặp theo yêu cầu)
+     ┌▶ Planner đọc: yêu cầu + tóm tắt bằng chứng + báo cáo độ đủ + Critique + ngân sách
+     │    └─dispatch─▶ hub ─▶ Code Reader / Test / Locator / Verifier
+     │                         └─result─▶ cổng ─▶ Evidence store
+     │  Verdict engine ─▶ báo cáo độ đủ
+     └── chưa đủ và còn ngân sách: vòng mới  |  đủ, Planner dừng hoặc hết ngân sách: thoát
+
+GĐ3  Kết luận
+     Verdict engine gán nhãn R0–R7 ─▶ Report Agent ─▶ Output gate ─▶ báo cáo</code></pre>
+
+<!-- 3 -->
+<h2 id="s3">3. Lỗi thật làm dữ liệu chuẩn</h2>
+<p>Lọc lịch sử commit của wolfSSL theo các từ khoá tuân thủ TLS 1.3 (tên cảnh báo, "RFC 8446", "RFC 9846"…), từ 2025 đến 10/2026, thu được <b>81 commit ứng viên</b>. Trong đó 57 commit có kèm test, 47 commit từ tháng 7/2026 trở đi. Danh sách đầy đủ ở tệp <code>wolfssl_commit_ung_vien.csv</code>; cần lọc tay để bỏ commit thêm tính năng.</p>
+<table>
+<tr><th style="width:130px">Commit</th><th>Nội dung</th><th style="width:60px">Loại</th></tr>
+<tr><td><code>c18833f52</code></td><td>Fix to send record_overflow alert (lỗi dùng trong thực nghiệm)</td><td>B</td></tr>
+<tr><td><code>2d36eca90</code>, <code>e4007a895</code></td><td>Từ chối byte thừa trong CertificateRequest, EncryptedExtensions</td><td>B</td></tr>
+<tr><td><code>38d95618e</code>, <code>eae22ab37</code></td><td>Gửi đúng illegal_parameter thay vì cảnh báo khác</td><td>B</td></tr>
+<tr><td><code>1ce351469</code></td><td>Gửi unexpected_message khi nhận trùng thông điệp handshake</td><td>C</td></tr>
+<tr><td><code>789ecb1ff</code></td><td>RFC 8446 §6.2: không ghi gì sau cảnh báo fatal</td><td>C</td></tr>
+<tr><td><code>ba51fbd30</code></td><td>Xoá khoá traffic TLS 1.3 sau khi đẩy sang phần cứng</td><td>D</td></tr>
+</table>
+<p class="cap">Bảng 4. Một số lỗi thật tiêu biểu. Số commit liên quan năm 2026 (66) cao vượt so với các năm trước (1–6 mỗi năm). Nhiều commit mang mã "F-xxxx", gợi ý có một đợt rà soát hoặc công cụ tự động khác; cần tìm hiểu như công trình liên quan.</p>
+<p><b>Mỗi commit sửa lỗi tự cho đáp án:</b></p>
+<ul>
+  <li>Commit cha là phiên bản lỗi; hệ thống phải ra VIOLATION.</li>
+  <li>Commit sửa là phiên bản đúng; hệ thống không được ra VIOLATION cho yêu cầu đó.</li>
+  <li>Diff chỉ ra vị trí mã đúng, dùng để chấm T1.</li>
+  <li>Test đi kèm là oracle độc lập.</li>
+</ul>
+<p>Để tránh việc mô hình đã "học" đáp án từ dữ liệu huấn luyện, tập đánh giá chính lấy các commit sau mốc kiến thức của mô hình.</p>
+
+<!-- 4 -->
+<h2 id="s4">4. Thực nghiệm sơ bộ</h2>
+<h3 id="s4-1">4.1. Thiết lập</h3>
+<table>
+<tr><th style="width:170px">Mục</th><th>Giá trị</th></tr>
+<tr><td>Phiên bản SUT</td><td><b>bug</b> <code>0cecccdf6</code> (commit cha), <b>fix</b> <code>c18833f52</code> (26/6/2026), <b>head</b> <code>28bc7540d</code> (7/10/2026)</td></tr>
+<tr><td>Cấu hình build</td><td><code>./configure --enable-tls13 --disable-shared --enable-static</code>; bản bug và fix thêm <code>CFLAGS=-DWOLFSSL_TLS13_MIDDLEBOX_COMPAT</code> để tương thích với tlsfuzzer. Không bật <code>HAVE_MAX_FRAGMENT</code></td></tr>
+<tr><td>SUT</td><td><code>examples/server/server -v 4 -d -g -i</code> (chỉ TLS 1.3, không xác thực client, trả HTTP)</td></tr>
+<tr><td>Mẫu kiểm thử</td><td>(a) mẫu socket thô tự viết, trước handshake; (b) tlsfuzzer <code>test-tls13-record-layer-limits.py</code>, sau handshake</td></tr>
+<tr><td>Vai trò</td><td>Build, kiểm thử, oracle chạy thật. Người thực hiện đóng vai RFC Analyst, Planner, Code Reader</td></tr>
+</table>
+<p class="cap">Bảng 5. Thiết lập thực nghiệm.</p>
+
+<h3 id="s4-2">4.2. T3 trước handshake (mẫu socket thô)</h3>
+<p>Mẫu kiểm thử gửi header bản ghi handshake với trường length cho trước. Oracle là PASS nếu nhận được <code>15 03 03 00 02 02 16</code> (fatal, record_overflow); oracle này lấy đúng từ test mà nhà phát triển thêm vào commit sửa.</p>
+<table>
+<tr><th style="width:90px">length</th><th>Ý nghĩa</th><th>bug</th><th>fix</th><th>head</th></tr>
+<tr><td>16384</td><td>Bằng 2^14, đối chứng hợp lệ</td><td>unexpected_message</td><td>unexpected_message</td><td>unexpected_message</td></tr>
+<tr><td>16385</td><td>Vừa vượt 2^14 (giới hạn TLSPlaintext, §5.1)</td><td>unexpected_message</td><td>unexpected_message</td><td><b>unexpected_message</b></td></tr>
+<tr><td>16641</td><td>Vừa vượt 2^14+256</td><td>không cảnh báo</td><td>record_overflow</td><td>record_overflow</td></tr>
+<tr><td>65535</td><td>Lớn nhất theo mã hoá</td><td>không cảnh báo</td><td>record_overflow</td><td>record_overflow</td></tr>
+</table>
+<p class="cap">Bảng 6. Kết quả mẫu socket thô. Tìm nhị phân trên bản head: độ dài 16486 được chấp nhận, từ 16487 thì có record_overflow.</p>
+
+<h3 id="s4-3">4.3. T3 sau handshake (tlsfuzzer)</h3>
+<p>Script <code>test-tls13-record-layer-limits.py</code> của tlsfuzzer kiểm RFC 8446 §5.1, §5.2 và §5.4 bằng 67 ca. Các ca gồm:</p>
+<ul>
+  <li>bản ghi đã mã hoá dài 2^14+256 có fuzz tag;</li>
+  <li>Finished có padding;</li>
+  <li>app_data dài 2^14 và 2^14+1;</li>
+  <li>ClientHello dài lớn nhất cho phép và quá giới hạn.</li>
+</ul>
+<p>Mỗi ca chạy với một tiến trình SUT mới.</p>
+<table>
+<tr><th style="width:140px">Phiên bản</th><th style="width:70px">PASS</th><th style="width:70px">FAIL</th><th>Các ca hỏng</th></tr>
+<tr><td>bug</td><td>12</td><td><b>55</b></td><td>50 ca bản ghi đã mã hoá quá dài; 4 ca Finished có padding; 1 ca ClientHello quá lớn</td></tr>
+<tr><td>fix</td><td>66</td><td>1</td><td>ClientHello quá lớn (16168 byte padding)</td></tr>
+<tr><td>head</td><td>66</td><td>1</td><td>ClientHello quá lớn (16168 byte padding)</td></tr>
+</table>
+<p class="cap">Bảng 7. Kết quả tlsfuzzer. Kiểm thử phân biệt rõ bản lỗi và bản đã sửa ở đúng kịch bản sau handshake.</p>
+<p>Ca còn hỏng ở bản fix và head: wolfSSL trả ServerHello thay vì record_overflow cho ClientHello có bản ghi dài hơn 2^14. Ca này xác nhận độc lập kết quả ở Bảng 6.</p>
+
+<h3 id="s4-4">4.4. T1 và đối chiếu với T3</h3>
+<p>Đóng vai Code Reader trên bản head, chỉ cần hai lệnh tìm kiếm và một lệnh tra hằng là định vị được:</p>
+<pre><code>src/internal.c, GetRecordHeader (khoảng dòng 13884–13898)
+    if (*size > (MAX_RECORD_SIZE + MAX_MSG_EXTRA +
+            (ssl->options.usingCompression ? MAX_COMP_EXTRA : 0))) {
+        ...
+        return LENGTH_ERROR;
+    }
+wolfssl/internal.h:  MAX_RECORD_SIZE = 16384,  MAX_MSG_EXTRA = 38 + WC_MAX_DIGEST_SIZE  (= 102)</code></pre>
+<p>Ngưỡng trong mã là 16384 + 102 = <b>16486</b>, trùng với ngưỡng đo bằng T3. Ngưỡng này dùng chung cho mọi phiên bản TLS, không theo giới hạn 2^14 của TLSPlaintext trong TLS 1.3.</p>
+<table>
+<tr><th style="width:130px">Khía cạnh</th><th>Giá trị quan sát</th><th style="width:110px">Đối chiếu</th></tr>
+<tr><td>CONDITION</td><td>Có kiểm tra trường length của bản ghi</td><td>MATCH</td></tr>
+<tr><td>THRESHOLD</td><td>16486, trong khi yêu cầu §5.1 là 16384</td><td><b>MISMATCH</b></td></tr>
+<tr><td>REACTION</td><td><code>send_alert(record_overflow)</code> khi vượt ngưỡng</td><td>MATCH</td></tr>
+</table>
+<p class="cap">Bảng 8. LocationClaim cho yêu cầu §5.1 trên bản head, theo các khía cạnh ở tài liệu "Thiết kế phối hợp agent".</p>
+
+<h3 id="s4-5">4.5. Xác định dòng thực sự được biên dịch</h3>
+<p>Ở bản bug, dòng <code>SendAlert(ssl, alert_fatal, record_overflow);</code> có trong mã nhưng nằm trong khối <code>#ifdef HAVE_MAX_FRAGMENT</code>. Code Reader đọc mã mà không biết cấu hình build sẽ báo REACTION = MATCH, tức là sai.</p>
+<p><b>Cách giải đã thử:</b></p>
+<ol>
+  <li>Chạy <code>gcc -E</code> với đúng cờ build của SUT.</li>
+  <li>Đọc line marker để biết dòng nào của tệp nguồn thực sự xuất hiện sau tiền xử lý.</li>
+</ol>
+<table>
+<tr><th>Dòng</th><th>bug</th><th>fix</th></tr>
+<tr><td><code>SendAlert(ssl, alert_fatal, record_overflow);</code></td><td><b>không được biên dịch</b></td><td>được biên dịch</td></tr>
+</table>
+<p class="cap">Bảng 9. Kết quả xác định dòng được biên dịch.</p>
+
+<h3 id="s4-6">4.6. Áp quy tắc kết luận</h3>
+<table>
+<tr><th style="width:220px">Yêu cầu</th><th style="width:90px">Phiên bản</th><th>Bằng chứng</th><th style="width:180px">Nhãn</th></tr>
+<tr><td>§5.2: bản ghi đã mã hoá &gt; 2^14+256 → record_overflow (loại B)</td><td>bug</td><td>T3 FAIL hợp lệ (tlsfuzzer, socket thô)</td><td><b>VIOLATION</b> (R1)</td></tr>
+<tr><td>như trên</td><td>fix, head</td><td>T3 PASS mọi biến thể bắt buộc; T1 khớp</td><td>COMPLIANT (R2)</td></tr>
+<tr><td>§5.1: bản ghi chưa mã hoá &gt; 2^14 → record_overflow (loại B)</td><td>head</td><td>T3 FAIL ở biến thể vừa vượt ngưỡng; T1 cho THRESHOLD = MISMATCH</td><td><b>VIOLATION</b> (R1), ứng viên cần người kiểm chứng xác nhận</td></tr>
+</table>
+<p class="cap">Bảng 10. Kết luận theo R0–R7. Kết quả ở dòng cuối có thể là lựa chọn tương thích có chủ đích của wolfSSL, nên cần người kiểm chứng xem lại trước khi coi là lỗi.</p>
+
+<!-- 5 -->
+<h2 id="s5">5. Đánh giá khả thi</h2>
+<table>
+<tr><th style="width:200px">Tiêu chí</th><th style="width:70px">Điểm</th><th>Căn cứ</th></tr>
+<tr><td>Tính đúng của luồng</td><td>9,5</td><td>Luôn dừng và ra nhãn; nhãn do quy tắc tất định quyết định; trên lỗi thật cho đúng nhãn ở cả ba phiên bản</td></tr>
+<tr><td>Khả thi của T3</td><td>9</td><td>Cả mẫu tự viết và tlsfuzzer đều chạy được, trước và sau handshake; dựng môi trường hết khoảng một giờ</td></tr>
+<tr><td>Khả thi của T1 (agent đọc mã)</td><td>8,5</td><td>Định vị chỉ mất 2–3 lệnh; có tiền lệ RFCAudit, LocAgent; đã có cách xử lý <code>#ifdef</code>. Chưa đo với agent LLM thật</td></tr>
+<tr><td>Giá trị thực tế</td><td>9</td><td>Có sẵn lỗi thật làm dữ liệu chuẩn; tìm ra ứng viên sai lệch mà test của nhà phát triển bỏ sót</td></tr>
+<tr><td>Khối lượng so với thời gian</td><td>8</td><td>Khoảng 4–5 tháng cho một người với 5 giao thức; TLS làm sâu, các giao thức khác ở mức chứng minh mở rộng</td></tr>
+<tr><td><b>Tổng thể</b></td><td><b>9</b></td><td></td></tr>
+</table>
+<p class="cap">Bảng 11. Đánh giá khả thi theo tiêu chí.</p>
+
+<!-- 6 -->
+<h2 id="s6">6. Điều chỉnh thiết kế rút ra từ thực nghiệm</h2>
+<table>
+<tr><th style="width:230px">Điều chỉnh</th><th>Nội dung</th><th style="width:170px">Thành phần</th></tr>
+<tr><td>Cờ build là đầu vào cố định</td><td>Adapter khai báo cờ build của SUT; cờ được ghi vào bản kê lần chạy</td><td>Adapter, bản kê</td></tr>
+<tr><td>Đánh dấu dòng không được biên dịch</td><td>Code gate chạy bộ tiền xử lý theo cờ build; công cụ đọc mã đánh dấu dòng không được biên dịch; LocationClaim thêm khía cạnh "dòng được biên dịch"; Schema gate từ chối dẫn chứng là dòng không được biên dịch</td><td>Code gate, Code Reader, Schema gate</td></tr>
+<tr><td>Mỗi ca một tiến trình SUT</td><td>Sandbox khởi động SUT mới cho mỗi ca; kiểm tra sẵn sàng mà không mở kết nối thừa</td><td>Sandbox &amp; Test driver</td></tr>
+<tr><td>Dùng tlsfuzzer cho mẫu sau handshake</td><td>Bọc từng ca tlsfuzzer thành mẫu của adapter; cố định phiên bản tlsfuzzer và tlslite-ng (lấy từ mã nguồn, không dùng bản PyPI)</td><td>Adapter TLS</td></tr>
+<tr><td>Đối chứng hợp lệ trong biến thể</td><td>Mỗi dạng ràng buộc độ dài có thêm biến thể "đúng bằng ngưỡng" để phát hiện mẫu kiểm thử sai</td><td>Adapter</td></tr>
+</table>
+<p class="cap">Bảng 12. Điều chỉnh thiết kế. Không thêm thành phần mới.</p>
+
+<!-- 7 -->
+<h2 id="s7">7. Kế hoạch kiểm chứng thực tế</h2>
+<table>
+<tr><th style="width:240px">Tiêu chí</th><th>Ý nghĩa</th><th style="width:150px">Ngưỡng đề xuất</th></tr>
+<tr><td>COMPLIANT sai trên commit lỗi</td><td>Không bỏ lọt lỗi một cách nguy hiểm</td><td>0 (tối đa 5%)</td></tr>
+<tr><td>Recall trên lỗi lịch sử loại A–C</td><td>Bắt được lỗi thật</td><td>≥ 60%</td></tr>
+<tr><td>Precision của VIOLATION</td><td>Báo lỗi đáng tin, ngang RFCAudit (81,9%)</td><td>≥ 80%</td></tr>
+<tr><td>Vị trí mã đúng cho VIOLATION</td><td>Lập trình viên sửa được ngay</td><td>≥ 70%</td></tr>
+<tr><td>Tỉ lệ được kết luận, loại A–C</td><td>Không né bằng UNVERIFIABLE</td><td>≥ 60%</td></tr>
+<tr><td>Chi phí mỗi yêu cầu</td><td>Dùng được hằng ngày</td><td>Đo ở lát cắt dọc, sau đó đặt trần</td></tr>
+</table>
+<p class="cap">Bảng 13. Tiêu chí "work thực tế". Ngưỡng là đề xuất, cần thầy chốt.</p>
+<ol>
+  <li><b>Đến giữa tháng 11:</b> chọn 5 commit loại B sau tháng 7/2026 (gồm <code>c18833f52</code>), bọc thành mẫu adapter, chạy tay trên commit cha và commit sửa.</li>
+  <li><b>Cuối tháng 11:</b> lát cắt dọc, chạy trọn luồng với agent LLM thật cho TLS13-0042 và 5 lỗi trên; đo độ chính xác của Code Reader theo từng khía cạnh và đo chi phí.</li>
+  <li><b>Sau đó:</b> mở rộng lên 40–60 yêu cầu TLS, dùng 47 commit sau tháng 7/2026 làm tập đánh giá chính, các commit trước đó làm tập phát triển.</li>
+</ol>
+
+<!-- 8 -->
+<h2 id="s8">8. Rủi ro còn lại</h2>
+<table>
+<tr><th style="width:250px">Rủi ro</th><th>Biện pháp</th></tr>
+<tr><td>Agent LLM đọc ngưỡng hoặc phản ứng kém hơn khi người làm tay</td><td>Đo sớm ở lát cắt dọc; với loại A–C, T3 quyết định nhãn nên đọc mã kém không gây nhãn sai</td></tr>
+<tr><td>Chưa thử bộ kiểm thử của QUIC, DNS, SSH</td><td>HTTP/2 có h2spec; với các giao thức còn lại, kiểm tra bộ kiểm thử sẵn có trước khi chốt số yêu cầu</td></tr>
+<tr><td>Khối lượng cài đặt cho một người</td><td>TLS làm sâu, các giao thức khác ở mức chứng minh adapter mở rộng được, như bản đề xuất</td></tr>
+<tr><td>Ứng viên sai lệch có thể là lựa chọn có chủ đích</td><td>Giữ bước người kiểm chứng xác nhận; báo cáo là ứng viên cho tới khi nhà phát triển xác nhận</td></tr>
+</table>
+<p class="cap">Bảng 14. Rủi ro còn lại.</p>
+
+<!-- 9 -->
+<h2 id="s9">9. Tái lập</h2>
+<pre><code># SUT
+git clone https://github.com/wolfSSL/wolfssl && cd wolfssl
+git worktree add ../w_bug  c18833f52^      # bản lỗi
+git worktree add ../w_fix  c18833f52       # bản sửa
+cd ../w_bug && ./autogen.sh && ./configure --enable-tls13 --disable-shared --enable-static \
+     CFLAGS=-DWOLFSSL_TLS13_MIDDLEBOX_COMPAT && make examples/server/server
+./examples/server/server -v 4 -d -g -i -p 4433
+
+# T3 sau handshake
+git clone https://github.com/tlsfuzzer/tlsfuzzer && git clone https://github.com/tlsfuzzer/tlslite-ng
+cd tlsfuzzer && PYTHONPATH=../tlslite-ng python3 scripts/test-tls13-record-layer-limits.py \
+     -h 127.0.0.1 -p 4433 "&lt;tên ca&gt;"          # mỗi ca một tiến trình server mới
+
+# Dòng được biên dịch
+gcc -E -I. -DHAVE_CONFIG_H &lt;cờ build&gt; src/internal.c   # đọc line marker</code></pre>
+
+<!-- 10 -->
+<h2 id="s10">10. Nguồn</h2>
+<ul>
+  <li>wolfSSL, commit c18833f52 "Fix to send record_overflow alert". <a href="https://github.com/wolfSSL/wolfssl/commit/c18833f5206e5a96ab7400c569f830903f0c36c5">github.com/wolfSSL/wolfssl</a></li>
+  <li>tlsfuzzer. <a href="https://github.com/tlsfuzzer/tlsfuzzer">github.com/tlsfuzzer/tlsfuzzer</a>; tlslite-ng. <a href="https://github.com/tlsfuzzer/tlslite-ng">github.com/tlsfuzzer/tlslite-ng</a></li>
+  <li>M. Maehren et al., TLS-Anvil: Adapting Combinatorial Testing for TLS Libraries, USENIX Security 2022. <a href="https://www.usenix.org/conference/usenixsecurity22/presentation/maehren">usenix.org</a></li>
+  <li>M. Zheng et al., RFCAudit, ASE 2025. <a href="https://arxiv.org/abs/2506.00714">arXiv:2506.00714</a></li>
+  <li>RFC 8446: The Transport Layer Security (TLS) Protocol Version 1.3, §5.1, §5.2. <a href="https://www.rfc-editor.org/rfc/rfc8446">rfc-editor.org/rfc/rfc8446</a></li>
+</ul>
+</main>
+</div>
+</body>
+</html>
