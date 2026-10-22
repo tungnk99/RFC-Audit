@@ -61,6 +61,25 @@ def _rules() -> list[PlaybookRule]:
             priority=20,
         )
     )
+    # Mọi vấn đề phản biện đã được xử lý xong: phản biện lại thay vì giao lặp lại cùng nhiệm vụ.
+    rules.append(
+        PlaybookRule(
+            "R2-recritique-after-fix",
+            When(provisional=frozenset({"COMPLIANT"}), critique="stale"),
+            (Suggest(T.CRITIQUE.value),),
+            R.CRITIQUE_BEFORE_COMPLIANT.value,
+            priority=21,
+        )
+    )
+    rules.append(
+        PlaybookRule(
+            "R3-recritique-after-fix",
+            When(conflict=True, critique="stale"),
+            (Suggest(T.CRITIQUE.value),),
+            R.RESOLVE_CONFLICT.value,
+            priority=31,
+        )
+    )
     # Verdict engine báo mâu thuẫn: nhờ Verifier phân loại trước, rồi RECHECK theo khía cạnh (CONTRADICTION).
     rules.append(
         PlaybookRule(

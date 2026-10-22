@@ -37,6 +37,7 @@ Mỗi cấu hình nên chạy mỗi ca **ít nhất 3 lần** vì kết quả c�
 | 1 | 2026-10-22 | như trên | correct | COMPLIANT V5 LINKED | 3 | 26 | 209.715 | 6% | 1/4 | 12 (3) |
 | 2 | 2026-10-22 | #1 + prompt "nạp skill một lần" (BL-10), `llm_calls` Code Reader 20 (BL-11), gộp T3 thường trong `evidence.summary` (BL-12); 3 lần mỗi ca | faulty | VIOLATION V2 (3/3) | 1 | 9-13 | 75.679 / 95.007 / 96.553 | 0% | 0/2 (3 lần) | 3 (0) |
 | 2 | 2026-10-22 | như trên | correct | COMPLIANT V5 (3/3) | 2 / 2 / 7 | 18 / 26 / 128 | 170.996 / 270.201 / 1.184.441 | 0% / 0% / 14% | 0/3, 0/3, **1/8** | 5 (0) mỗi lần |
+| 3 | 2026-10-22 | #2 + sổ tay phản biện lại sau khi vấn đề được xử lý (R2/R3-recritique-after-fix); 5 lần | correct | COMPLIANT (5/5: V5 x4, V6 x1) | 2 (5/5) | 22-33 | 182.218 / 196.336 / 253.887 / 291.734 / 303.415 | 0-1 lần hỏng | 0/3 x4, **1/3** | 0 nạp lại |
 
 \* Lãng phí = token tiêu trong các lần chạy agent bị hỏng, chia tổng token. Mỗi ca mới chạy **một lần**, chưa đủ để nói về
 độ ổn định. Khi thêm dòng, ghi thêm thay đổi so với lần trước vào cột Cấu hình.
@@ -46,6 +47,11 @@ khoảng 41k token (trước 55k) ở ca correct. Lần correct thứ 3 là ngo�
 `worker_first_failures` của BL-10 chưa về 0 ở ca correct, nhưng nguyên nhân không còn là nạp skill: Planner giao LOCATE lặp lại nhiều
 vòng. Verifier_smoke vẫn nêu đúng cả hai tình huống (MISSING_EVIDENCE, CONTRADICTION), nhưng nó dùng hàng tóm tắt dựng tay nên không kiểm phần
 gộp T3; phần gộp được kiểm bằng `tests/test_summary_fold.py`. Chưa rõ mức giảm 55k → 41k do việc gộp hay do ca có ít T3 hơn.
+
+Dòng 3: lần correct tệ nhất trước đó (1,18 triệu token) do **lặp TRACE_PATHS**, không phải LOCATE: Verifier nêu MISSING_PATH một lần, sổ tay cứ làm theo phản biện cũ nên Planner giao
+TRACE_PATHS 4 vòng liền mà không phản biện lại. Đã sửa trong `advisor.py` (vấn đề đã được nhiệm vụ đề xuất xử lý thì coi là `stale`, gợi ý phản biện lại). Kết quả: cả 5 lần
+dừng ở vòng 2, tối đa 303k token. Còn một lần (correct-4) Code Reader vẫn dính `UsageLimitExceeded` dù `llm_calls` = 20, và vì thế nhãn cuối là V6 (BEHAVIORAL) thay vì V5
+(LINKED): lỗi này làm yếu mức bảo đảm chứ không đổi nhãn. Nên BL-11 và `worker_first_failures` của BL-10 vẫn chưa đạt; cần quyết định tăng `llm_calls` hay rút gọn việc Code Reader làm.
 
 ## Vấn đề đang mở
 

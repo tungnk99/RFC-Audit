@@ -110,7 +110,7 @@ class When:
     need: str | None = None  # có mục còn thiếu thuộc tầng này
     missing: bool | None = None  # True/False: còn / không còn mục thiếu
     conflict: bool | None = None
-    critique: str | None = None  # "none" | "clean" | "issues"
+    critique: str | None = None  # "none" | "clean" | "issues" | "stale" (vấn đề đã được xử lý, cần phản biện lại)
     critique_kind: str | None = None  # có vấn đề thuộc loại này
     first_round: bool | None = None
     not_dispatched: frozenset[str] = frozenset()  # các kiểu nhiệm vụ chưa từng được giao

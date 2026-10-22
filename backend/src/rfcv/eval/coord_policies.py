@@ -37,7 +37,7 @@ def _task(task_type: str, **params: Any) -> dict[str, Any]:
 
 def _advice(ctx: Mapping[str, Any]) -> tuple[Plan | None, list[dict[str, Any]]]:
     reg = current_registry()
-    a = advise(situation_from_context(ctx), reg.playbook, reg.tasks, HANDLED)
+    a = advise(situation_from_context(ctx, reg.loop_policy().critique_task), reg.playbook, reg.tasks, HANDLED)
     if a is None:
         return None, []
     if a.stop:
