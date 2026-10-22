@@ -62,7 +62,7 @@ quyết định số đo của mọi lần chạy sau.
 | BL-12 | Rút gọn `evidence.summary`: gộp T3 theo biến thể và kết quả, giữ chi tiết cho ca FAIL, mâu thuẫn, ca được trích | CT-03, VF-7 | – | M | Ngay | Token đầu vào của Verifier giảm so với mốc 55k; `verifier_smoke` vẫn nêu đúng hai tình huống | Xong |
 | BL-13 | Sửa chỉ số bám sổ tay: kế hoạch chứa đủ nhiệm vụ được gợi ý tính là `followed` | CT-04, PL-6 | – | S | Ngay | Có test; ca bản lỗi không còn bị ghi `deviated_unannounced` | Xong |
 | BL-14 | Giảm chi phí Code Reader: rút gọn đầu ra công cụ đọc mã, dừng sớm khi các khía cạnh đã đủ | CT-17, CR-5 | BL-10, BL-11 | M | G1 | Token Code Reader mỗi ca giảm có số đo mà độ chính xác T1 không đổi | Chưa làm |
-| BL-15 | Thử `MAP_COMPONENTS` với LLM thật; quyết định quy tắc vòng 1 của sổ tay và skill Verifier cho `WRONG_LOCATION` | CT-18, CI-3, CI-4 | – | S | G2 | Có số đo gán thành phần trên 30 hàm; sổ tay và skill được cập nhật theo kết quả | Chưa làm |
+| BL-15 | Thử `MAP_COMPONENTS` với LLM thật; quyết định quy tắc vòng 1 của sổ tay và skill Verifier cho `WRONG_LOCATION` | CT-18, CI-3, CI-4 | – | S | G2 | Có số đo gán thành phần trên 30 hàm; sổ tay và skill được cập nhật theo kết quả | Xong |
 | BL-16 | Thêm một mô hình họ khác vào `models` và gán cho Verifier và `rfc_analyst.b` | CT-07, RA-6 | – | S | G2 | Verifier chạy bằng mô hình khác họ; có số đo so với dùng chung | Chưa làm |
 
 ## EP-3. Bao phủ RFC và RFC Analyst

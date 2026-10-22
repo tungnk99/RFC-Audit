@@ -3,8 +3,12 @@
 Đây là dữ liệu, không phải mã: `core.advisor` đọc nó để gợi ý, `render_playbook` in nó thành lời nhắc, nên lời nhắc và hành
 vi gợi ý không thể lệch nhau. Sổ tay là gợi ý, không bắt buộc: Planner được làm khác nhưng phải khai `DEVIATE_PLAYBOOK`.
 
-Hai chỗ tài liệu thiết kế nêu mà chưa cài được, nên chưa có quy tắc: MAP_COMPONENTS ở vòng 1 (cần biết bản đồ thành phần
-đã phủ chưa), và STATIC_QUERY cho loại D (chưa có handler). Advisor tự bỏ qua nhiệm vụ chưa có handler.
+Hai chỗ tài liệu thiết kế nêu mà chưa có quy tắc: MAP_COMPONENTS ở vòng 1 và STATIC_QUERY cho loại D (chưa có handler). Advisor tự
+bỏ qua nhiệm vụ chưa có handler.
+
+MAP_COMPONENTS đã đo với LLM thật (BL-15, `scripts/measure_component_map.py`): gán đúng 44/44 hàm của wolfSSL, nhưng vẫn KHÔNG thêm
+quy tắc vòng 1, vì hub chưa cấp `task.scope` (TaskParams không có trường vùng mã) nên vòng điều tra chưa thể giao việc này, và bản đồ
+chỉ ảnh hưởng một hạng tử (comp, trọng số 2) của Locator, chưa có số đo cho thấy nó đổi kết quả LOCATE. Xem CT-18.
 """
 
 from __future__ import annotations
