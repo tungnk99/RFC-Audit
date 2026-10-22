@@ -231,6 +231,9 @@ def models_cmd(
     typer.echo("Mô hình hỗ trợ:")
     missing = False
     for name, spec in cfg.models.items():
+        if spec.api_key_env is None:
+            typer.echo(f"  {name:<18} {spec.provider}:{spec.model}  không cần khoá (máy chủ cục bộ)")
+            continue
         is_set = bool(os.environ.get(spec.api_key_env))
         missing = missing or not is_set
         state = "đã đặt" if is_set else "CHƯA đặt trong môi trường"

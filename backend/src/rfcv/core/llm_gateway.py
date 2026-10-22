@@ -29,12 +29,18 @@ ModelHandle = Any  # đối tượng mờ do nhà cung cấp tạo; chỉ runtim
 ProviderFactory = Callable[["ModelSpec", str], ModelHandle]
 
 
+# SDK của nhà cung cấp đòi khoá không rỗng; máy chủ cục bộ bỏ qua giá trị này.
+NO_KEY_PLACEHOLDER = "no-key-needed"
+
+
 class ModelSpec(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     provider: str
     model: str
-    api_key_env: str
+    # Tên biến môi trường chứa khoá. Bỏ trống cho máy chủ cục bộ không cần khoá (vLLM, Ollama...): khi đó mô hình được dựng
+    # với khoá giữ chỗ, và mã không đọc biến môi trường nào.
+    api_key_env: str | None = None
     base_url: str | None = None
     settings: dict[str, Any] = Field(default_factory=dict)
 
@@ -94,7 +100,7 @@ class LLMGateway:
     def api_keys(self) -> dict[str, str]:
         """Tên biến → giá trị của các khoá đã đặt, chỉ để bộ quét rò rỉ tìm dấu vết sau lần chạy (QS-07). Không đưa ra
         ngoài LLM gateway và bộ quét; kết quả quét không bao giờ chứa giá trị."""
-        names = {s.api_key_env for s in self._config.models.values()}
+        names = {s.api_key_env for s in self._config.models.values() if s.api_key_env is not None}
         return {n: v for n in sorted(names) if (v := self._env.get(n))}
 
     def uncovered(self, agents: Iterable[str]) -> list[str]:
@@ -132,6 +138,8 @@ class LLMGateway:
         factory = self._factories().get(spec.provider)
         if factory is None:
             raise UnknownProviderError(f"nhà cung cấp '{spec.provider}' chưa đăng ký")
+        if spec.api_key_env is None:
+            return factory(spec, NO_KEY_PLACEHOLDER)
         api_key = self._env.get(spec.api_key_env)
         if not api_key:
             raise RuntimeError(f"thiếu biến môi trường {spec.api_key_env}")

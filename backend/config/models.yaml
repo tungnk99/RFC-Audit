@@ -5,6 +5,10 @@
 #   models  kho mô hình được hỗ trợ, mỗi mô hình khai báo MỘT lần (nhà cung cấp, id, endpoint, biến chứa khoá, tham số).
 #   agents  agent nào dùng mô hình nào (theo tên trong `models`). Đổi mô hình của một agent là đổi một dòng.
 #
+# Mô hình cục bộ (vLLM, Ollama...) không cần khoá: bỏ dòng api_key_env, ví dụ
+#   qwen-local: {provider: openai_compatible, model: qwen2.5-coder, base_url: "http://localhost:8000/v1"}
+# rồi gán cho agent cần giữ mã trong máy ở mục `agents` bên dưới. (BL-63: chưa thử với mô hình cục bộ thật.)
+#
 # Lưu ý: Claude đời mới trả 400 nếu đặt temperature/top_p; chỉ thêm `settings` khi mô hình hỗ trợ.
 models:
   deepseek-flash:
