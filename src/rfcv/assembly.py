@@ -19,10 +19,10 @@ from rfcv.adapters.manifest import AdapterManifest, load_manifest
 from rfcv.core.budget import RequirementBudget
 from rfcv.core.execution_loop import ExecutionLoop
 from rfcv.core.llm_gateway import LLMGateway, ModelsConfig
-from rfcv.core.policy import PolicyStore
+from rfcv.core.policy import PolicyError, PolicyStore
 from rfcv.core.prompts import prompts_digest
 from rfcv.core.runner import RoleRunner
-from rfcv.core.skills import SkillRegistry, default_registry
+from rfcv.core.skills import SkillRegistry, default_registry, undeclared_skills
 from rfcv.core.trace import TraceLog
 from rfcv.evidence.artifacts import ArtifactStore
 from rfcv.evidence.registry import RequirementRegistry, State
@@ -98,6 +98,11 @@ class Runtime:
 
     def close(self) -> None:
         self.store.close()
+        # Nhà cung cấp giữ tài nguyên (container sandbox, kết nối chỉ mục) tự dọn khi lần chạy kết thúc.
+        for prov in (self.providers.executor, self.providers.code_index):
+            close = getattr(prov, "close", None)
+            if callable(close):
+                close()
 
     async def run_all(self, source: Path) -> list[VerdictRecord]:
         """Điều tra lần lượt từng yêu cầu miền nạp được từ `source`, ghi vòng đời vào Requirement registry."""
@@ -137,6 +142,7 @@ def build_runtime(
         pack = reg.domain(manifest.domain)
         rules = _resolve_rules(reg, pack, manifest)
         run_id = config.run_id or f"run-{uuid.uuid4().hex[:12]}"
+        config = replace(config, run_id=run_id)  # factory nhà cung cấp cần biết thư mục của lần chạy
         run_dir = config.run_dir / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
         code_root = config.code_root or run_dir / "repo"
@@ -167,8 +173,9 @@ def build_runtime(
         # 3. cổng công cụ: chỉ công cụ có khai báo trong registry mới đăng ký được
         gateway = ToolGateway(policy, trace, reg.tools)
         if resolved.code_index is not None and resolved.executor is not None:
+            # Bộ chạy lệnh thật gắn bản sao phạm vi làm gốc /repo; kiểm tra đường dẫn của explore phải dùng đúng gốc đó.
             scope = CodeScope(
-                root=code_root,
+                root=getattr(resolved.executor, "root", None) or code_root,
                 include=tuple(manifest.code_scope.include),
                 exclude=tuple(manifest.code_scope.exclude) or CodeScope(code_root).exclude,
             )
@@ -182,13 +189,20 @@ def build_runtime(
             llm = LLMGateway.load(config.models_path, overrides=resolved.models)
             if resolved.models is None:
                 llm.validate()
+                unassigned = llm.uncovered(policy.roles)
+                if unassigned:
+                    raise PolicyError(f"{config.models_path}: agent chưa được gán mô hình (mục agents): {unassigned}")
         else:
-            llm = LLMGateway(ModelsConfig(roles={}), overrides=resolved.models)
+            llm = LLMGateway(ModelsConfig(), overrides=resolved.models)
         skills = (
             default_registry(config.skills_root, manifest.adapter)
             if config.enable_skills and config.skills_root is not None and config.skills_root.is_dir()
             else None
         )
+        if skills is not None and config.skills_root is not None:
+            unknown = undeclared_skills({r: policy.profile(r).skills for r in policy.roles}, config.skills_root)
+            if unknown:
+                raise PolicyError(f"role.yaml khai báo skill không có trong {config.skills_root}: {', '.join(unknown)}")
 
         # 5. runtime agent
         runner = resolved.role_runner
@@ -209,6 +223,11 @@ def build_runtime(
             "registry": registry_fingerprint(reg),
             **{f"image:{k}": v for k, v in config.image_digests.items()},
         }
+        # Commit, digest bản sao, phiên bản tree-sitter, image sandbox: mọi vị trí T1 phải đối chiếu được (C3).
+        for prov in (resolved.code_index, resolved.executor):
+            entries = getattr(prov, "manifest_entries", None)
+            if callable(entries):
+                digests.update(entries())
         run_manifest = RunManifest(
             run_id=run_id,
             tenant=config.tenant,
@@ -241,6 +260,12 @@ def build_runtime(
             run_manifest=run_manifest,
             seed=config.seed,
         )
+        # Công cụ của miền cần runtime đã lắp (ví dụ locator.suggest cần chỉ mục và adapter). Agent được dựng lười ở lần
+        # gọi đầu, nên đăng ký ở đây vẫn kịp.
+        domain_tools = getattr(pack.runtime, "tools", None)
+        if callable(domain_tools):
+            for spec in domain_tools(rt):
+                gateway.register(spec)
         handlers: Mapping[str, Any] = pack.runtime.handlers(rt) if pack.runtime else {}
         rt.loop = ExecutionLoop(
             run_id=run_id,

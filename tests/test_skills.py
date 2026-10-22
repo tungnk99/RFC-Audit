@@ -16,12 +16,11 @@ from rfcv.agents.schemas import PlanAction
 from rfcv.core.envelope import EnvelopeFactory, MessageKind
 from rfcv.core.llm_gateway import LLMGateway, ModelsConfig
 from rfcv.core.policy import PolicyStore
-from rfcv.core.skills import SkillRegistry, default_registry, validate_library
+from rfcv.core.skills import SkillRegistry, default_registry, undeclared_skills, validate_library
 from rfcv.core.trace import TraceLog
 from rfcv.gates.tool_gateway import ToolGateway, ToolSession
 from rfcv.runtime.pydantic_ai import PydanticAIRoleRunner, SkillLibraryWorkspace, skills_capability
 
-ROLES = ["code_reader", "planner", "verifier", "test"]
 TASKS = ["LOCATE", "RECHECK", "CRITIQUE", "SELECT_TESTS"]
 
 
@@ -30,11 +29,7 @@ def write_skill(
 ) -> Path:
     d = lib / name
     d.mkdir(parents=True)
-    fm = (
-        front
-        if front is not None
-        else f"name: {name}\ndescription: Does a thing. Use when testing.\nmetadata:\n  rfcv-roles: code_reader\n"
-    )
+    fm = front if front is not None else f"name: {name}\ndescription: Does a thing. Use when testing.\n"
     (d / "SKILL.md").write_text(f"---\n{fm}---\n{body}\n", encoding="utf-8")
     for rel, content in (extra or {}).items():
         f = d / rel
@@ -46,26 +41,49 @@ def write_skill(
 # ------------------------------------------------------------ thư viện thật của dự án
 
 
-def test_project_skills_are_valid_and_scoped() -> None:
+def test_project_skills_are_valid_and_each_agent_sees_only_what_it_declares(policy: PolicyStore) -> None:
     reg = default_registry(ROOT / "skills", "tls13")
     assert {"resolve-c-macro-thresholds", "check-ifdef-compiled-lines", "tls-record-length-bounds"} <= set(reg.skills)
-    # Agent đặc quyền không thấy skill đọc mã của vùng cách ly
-    assert reg.select("planner") == ["summarize-evidence-for-planner"]
-    assert "resolve-c-macro-thresholds" not in reg.select("verifier")
-    assert "write-tlsfuzzer-scenarios" in reg.select("test")
-    # Chọn theo kiểu nhiệm vụ
-    assert "trace-all-entry-paths" in reg.select("code_reader", "TRACE_PATHS")
-    assert "resolve-c-macro-thresholds" not in reg.select("code_reader", "TRACE_PATHS")  # chỉ LOCATE, RECHECK
-    assert "resolve-c-macro-thresholds" in reg.select("code_reader", "RECHECK")
-    assert reg.select("code_reader", "LOCATE") == reg.select("code_reader", "LOCATE")  # tất định
+
+    def declared(role: str) -> tuple[str, ...]:
+        return policy.profile(role).skills
+
+    assert undeclared_skills({r: declared(r) for r in policy.roles}, ROOT / "skills") == []
+    assert reg.select(declared("planner")) == ["summarize-evidence-for-planner"]
+    assert "resolve-c-macro-thresholds" not in reg.select(declared("verifier"))  # Verifier không khai báo
+    assert "write-tlsfuzzer-scenarios" in reg.select(declared("test"))
+    for role in ("rfc_analyst", "report", "code_indexer"):  # không khai báo thì không có skill
+        assert reg.select(declared(role)) == []
+    # Trong số đã khai báo, lọc tiếp theo kiểu nhiệm vụ
+    reader = declared("code_reader")
+    assert "trace-all-entry-paths" in reg.select(reader, "TRACE_PATHS")
+    assert "resolve-c-macro-thresholds" not in reg.select(reader, "TRACE_PATHS")  # chỉ LOCATE, RECHECK
+    assert "resolve-c-macro-thresholds" in reg.select(reader, "RECHECK")
+    assert reg.select(reader, "LOCATE") == reg.select(reader, "LOCATE")  # tất định
+
+
+def test_a_skill_in_the_library_is_not_offered_unless_declared(tmp_path: Path) -> None:
+    write_skill(tmp_path / "core", "alpha")
+    write_skill(tmp_path / "core", "beta")
+    reg = SkillRegistry({"core": tmp_path / "core"}, TASKS)
+    assert reg.select([]) == []
+    assert reg.select(["beta"]) == ["beta"]
+    assert reg.select(["beta", "gamma"]) == ["beta"]  # không có trong lần chạy: bỏ qua
+
+
+def test_declaring_an_unknown_skill_is_reported(tmp_path: Path) -> None:
+    write_skill(tmp_path / "core", "alpha")
+    write_skill(tmp_path / "tls13", "beta")
+    # Skill của adapter khác vẫn hợp lệ; tên không có ở thư viện nào thì là lỗi.
+    assert undeclared_skills({"code_reader": ["alpha", "beta"], "planner": ["alpah"]}, tmp_path) == ["planner: alpah"]
 
 
 def test_digest_changes_when_a_skill_changes(tmp_path: Path) -> None:
     write_skill(tmp_path / "core", "alpha")
-    d1 = SkillRegistry({"core": tmp_path / "core"}, ROLES, TASKS).digest
+    d1 = SkillRegistry({"core": tmp_path / "core"}, TASKS).digest
     skill_md = tmp_path / "core" / "alpha" / "SKILL.md"
     skill_md.write_text(skill_md.read_text(encoding="utf-8") + "\nNew rule.\n", encoding="utf-8")
-    assert SkillRegistry({"core": tmp_path / "core"}, ROLES, TASKS).digest != d1
+    assert SkillRegistry({"core": tmp_path / "core"}, TASKS).digest != d1
 
 
 # ------------------------------------------------------------ kiểm định theo chuẩn và ràng buộc rfcv
@@ -74,34 +92,28 @@ def test_digest_changes_when_a_skill_changes(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("front", "needle"),
     [
-        ("name: Alpha\ndescription: d\nmetadata:\n  rfcv-roles: code_reader\n", "name"),
-        ("name: a--b\ndescription: d\nmetadata:\n  rfcv-roles: code_reader\n", "name"),
-        ("name: other\ndescription: d\nmetadata:\n  rfcv-roles: code_reader\n", "trùng tên thư mục"),
-        ("name: alpha\nmetadata:\n  rfcv-roles: code_reader\n", "description"),
-        ("name: alpha\ndescription: ''\nmetadata:\n  rfcv-roles: code_reader\n", "description"),
-        ("name: alpha\ndescription: d\n", "rfcv-roles"),
-        ("name: alpha\ndescription: d\nmetadata:\n  rfcv-roles: hacker\n", "vai trò lạ"),
-        (
-            "name: alpha\ndescription: d\nmetadata:\n  rfcv-roles: code_reader\n  rfcv-task-types: DROP_TABLE\n",
-            "nhiệm vụ lạ",
-        ),
-        (
-            "name: alpha\ndescription: d\nallowed-tools: Bash(rm:*)\nmetadata:\n  rfcv-roles: code_reader\n",
-            "allowed-tools",
-        ),
-        ("name: alpha\ndescription: d\nmetadata:\n  rfcv-roles: 1\n", "metadata"),
+        ("name: Alpha\ndescription: d\n", "name"),
+        ("name: a--b\ndescription: d\n", "name"),
+        ("name: other\ndescription: d\n", "trùng tên thư mục"),
+        ("name: alpha\n", "description"),
+        ("name: alpha\ndescription: ''\n", "description"),
+        # Skill không tự chọn agent: agent khai báo skill trong role.yaml.
+        ("name: alpha\ndescription: d\nmetadata:\n  rfcv-roles: code_reader\n", "role.yaml"),
+        ("name: alpha\ndescription: d\nmetadata:\n  rfcv-task-types: DROP_TABLE\n", "nhiệm vụ lạ"),
+        ("name: alpha\ndescription: d\nallowed-tools: Bash(rm:*)\n", "allowed-tools"),
+        ("name: alpha\ndescription: d\nmetadata:\n  version: 1\n", "metadata"),
     ],
 )
 def test_invalid_frontmatter_is_rejected(tmp_path: Path, front: str, needle: str) -> None:
     write_skill(tmp_path, "alpha", front=front)
-    result = validate_library(tmp_path, ROLES, TASKS)
+    result = validate_library(tmp_path, TASKS)
     assert not result.skills and any(needle in e for e in result.errors), result.errors
 
 
 def test_scripts_directory_is_forbidden(tmp_path: Path) -> None:
     """Rủi ro A3: skill chỉ là hướng dẫn, không có mã chạy được."""
     write_skill(tmp_path, "alpha", extra={"scripts/run.sh": "rm -rf /"})
-    result = validate_library(tmp_path, ROLES, TASKS)
+    result = validate_library(tmp_path, TASKS)
     assert not result.skills and any("scripts" in e for e in result.errors)
 
 
@@ -109,7 +121,7 @@ def test_body_length_and_references_shape(tmp_path: Path) -> None:
     write_skill(tmp_path, "long", body="\n".join(["line"] * 600))
     write_skill(tmp_path, "deep", extra={"references/sub/x.md": "x"})
     write_skill(tmp_path, "badref", extra={"references/run.py": "print(1)"})
-    errors = validate_library(tmp_path, ROLES, TASKS).errors
+    errors = validate_library(tmp_path, TASKS).errors
     assert any("vượt 500" in e for e in errors)
     assert any("references/sub" in e for e in errors)
     assert any("run.py" in e for e in errors)
@@ -119,7 +131,7 @@ def test_registry_rejects_duplicates_across_libraries(tmp_path: Path) -> None:
     write_skill(tmp_path / "core", "alpha")
     write_skill(tmp_path / "tls", "alpha")
     with pytest.raises(ValueError, match="trùng tên"):
-        SkillRegistry({"core": tmp_path / "core", "tls": tmp_path / "tls"}, ROLES, TASKS)
+        SkillRegistry({"core": tmp_path / "core", "tls": tmp_path / "tls"}, TASKS)
 
 
 # ------------------------------------------------------------ workspace chỉ đọc, giam đường dẫn
@@ -150,7 +162,7 @@ async def test_workspace_is_read_only_and_jailed(tmp_path: Path) -> None:
 def test_read_reference_is_one_level_and_confined(tmp_path: Path) -> None:
     write_skill(tmp_path / "core", "alpha", extra={"references/guide.md": "GUIDE"})
     (tmp_path / "core" / "outside.md").write_text("OUT", encoding="utf-8")
-    reg = SkillRegistry({"core": tmp_path / "core"}, ROLES, TASKS)
+    reg = SkillRegistry({"core": tmp_path / "core"}, TASKS)
     assert reg.read_reference("alpha", "references/guide.md") == "GUIDE"
     for bad in ("references/../SKILL.md", "../outside.md", "SKILL.md", "references/sub/x.md"):
         with pytest.raises(FileNotFoundError):
@@ -164,7 +176,7 @@ def test_progressive_disclosure_in_agent(tmp_path: Path) -> None:
     import asyncio
 
     write_skill(tmp_path / "core", "alpha", body="BODY_ONLY_AFTER_LOAD")
-    reg = SkillRegistry({"core": tmp_path / "core"}, ROLES, TASKS)
+    reg = SkillRegistry({"core": tmp_path / "core"}, TASKS)
     seen: dict[str, str] = {}
 
     def fn(messages: list, info: AgentInfo) -> ModelResponse:  # type: ignore[type-arg]
@@ -175,17 +187,18 @@ def test_progressive_disclosure_in_agent(tmp_path: Path) -> None:
         seen["catalog"] = info.instructions or ""
         return ModelResponse(parts=[ToolCallPart("load_capability", {"id": "alpha"})])
 
-    asyncio.run(Agent(FunctionModel(fn)).run("go", capabilities=[skills_capability(reg, "code_reader", "LOCATE")]))
+    capability = skills_capability(reg, reg.select(["alpha"], "LOCATE"))
+    asyncio.run(Agent(FunctionModel(fn)).run("go", capabilities=[capability]))
     assert "alpha: Does a thing" in seen["catalog"]  # chỉ tên và mô tả lúc đầu
     assert "BODY_ONLY_AFTER_LOAD" not in seen["catalog"]
     assert "BODY_ONLY_AFTER_LOAD" in seen["loaded"]  # thân chỉ vào ngữ cảnh sau khi nạp
 
 
-def test_role_without_matching_skill_gets_no_capability(tmp_path: Path) -> None:
+def test_agent_without_declared_skills_gets_no_capability(tmp_path: Path) -> None:
     write_skill(tmp_path / "core", "alpha")
-    reg = SkillRegistry({"core": tmp_path / "core"}, ROLES, TASKS)
-    assert skills_capability(reg, "planner") is None
-    assert skills_capability(reg, "code_reader") is not None
+    reg = SkillRegistry({"core": tmp_path / "core"}, TASKS)
+    assert skills_capability(reg, reg.select([])) is None
+    assert skills_capability(reg, reg.select(["alpha"])) is not None
 
 
 async def test_runner_logs_offered_and_loaded_skills(policy: PolicyStore, trace: TraceLog, tmp_path: Path) -> None:
@@ -199,7 +212,7 @@ async def test_runner_logs_offered_and_loaded_skills(policy: PolicyStore, trace:
             )
         return ModelResponse(parts=[ToolCallPart("load_capability", {"id": "summarize-evidence-for-planner"})])
 
-    llm = LLMGateway(ModelsConfig(roles={}), env={}, overrides={"planner": FunctionModel(fn)})
+    llm = LLMGateway(ModelsConfig(), env={}, overrides={"planner": FunctionModel(fn)})
     runner = PydanticAIRoleRunner(policy, ToolGateway(policy, trace), llm, trace, skills=reg)
     env = EnvelopeFactory("run-test").make(
         requirement_id="TLS13-0042",
@@ -218,8 +231,26 @@ async def test_runner_logs_offered_and_loaded_skills(policy: PolicyStore, trace:
     assert run["skills_digest"] == reg.digest
 
 
+def test_loaded_skills_reads_arguments_given_as_dict_or_as_json_string() -> None:
+    """Nhà cung cấp thật trả tham số lời gọi dạng chuỗi JSON; từng bỏ sót nên `skills_loaded` luôn rỗng khi chạy thật."""
+    from rfcv.runtime.pydantic_ai.runner import loaded_skills
+
+    def call(args: object, tool: str = "load_capability") -> dict[str, object]:
+        return {"parts": [{"part_kind": "tool-call", "tool_name": tool, "args": args}]}
+
+    messages = [
+        call({"id": "alpha"}),
+        call('{"id": "beta"}'),
+        call('{"id": "beta"}'),  # nạp lại cùng skill chỉ tính một
+        call("không phải JSON"),
+        call({"x": 1}),
+        call('{"id": "gamma"}', tool="code__read_function"),  # không phải lời gọi nạp skill
+    ]
+    assert loaded_skills(messages) == ["alpha", "beta"]
+
+
 async def test_runner_without_skills_is_unchanged(policy: PolicyStore, trace: TraceLog) -> None:
-    llm = LLMGateway(ModelsConfig(roles={}), env={}, overrides={"planner": TestModel()})
+    llm = LLMGateway(ModelsConfig(), env={}, overrides={"planner": TestModel()})
     runner = PydanticAIRoleRunner(policy, ToolGateway(policy, trace), llm, trace)
     env = EnvelopeFactory("run-test").make(
         requirement_id="TLS13-0042",

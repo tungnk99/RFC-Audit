@@ -24,6 +24,7 @@ HUB_FIELDS = {
     "requirement.rtype",
     "evidence.summary",
     "verdict.sufficiency",
+    "verdict.missing",
     "critique.latest",
     "tasks.history",
     "budget.left",
@@ -41,15 +42,13 @@ KNOWN_UNSUPPLIED = {
     "examples.similar_scenarios",
     "task.recheck_location",  # RECHECK chưa mang vị trí cần xem lại
     "task.scope",
-    "adapter.component_taxonomy",
-    "adapter.locator_hints",
     "adapter.dsl_reference",
     "adapter.rbs_grammar_ref",
     "verdict.record",
     "evidence.cited",
 }
 
-UNAVAILABLE_TASKS = {"MAP_COMPONENTS", "STATIC_QUERY"}  # có trong danh mục nhưng chưa có handler
+UNAVAILABLE_TASKS = {"STATIC_QUERY"}  # có trong danh mục nhưng chưa có handler
 
 PINNED_RULES_VERSION = "sha256:e723d7809280ea66b9d05f4698c1f56beb78ce503bd143e8748f9235374ad9ea"
 
@@ -62,7 +61,9 @@ def _domain_fields(manifest: AdapterManifest) -> set[str]:
 
 
 def _profiles() -> dict[str, dict[str, Any]]:
-    return {p.parent.name: yaml.safe_load(p.read_text(encoding="utf-8")) for p in sorted(AGENTS_DIR.glob("*/role.yaml"))}
+    return {
+        p.parent.name: yaml.safe_load(p.read_text(encoding="utf-8")) for p in sorted(AGENTS_DIR.glob("*/role.yaml"))
+    }
 
 
 @pytest.mark.parametrize("role", sorted(_profiles()))
@@ -81,12 +82,38 @@ def test_known_unsupplied_list_has_no_stale_entries(manifest: AdapterManifest) -
     assert declared >= KNOWN_UNSUPPLIED, "mục thừa trong KNOWN_UNSUPPLIED: không vai trò nào khai báo"
 
 
-def test_critic_and_test_agent_see_the_evidence_state() -> None:
-    """Phản biện mà không thấy bằng chứng, hay Test không biết còn thiếu biến thể nào, thì không phối hợp được."""
+def test_critic_sees_the_evidence_state_and_test_sees_only_what_is_missing() -> None:
+    """Phản biện cần thấy bằng chứng; Test cần biết còn thiếu biến thể nào nhưng không được thấy T1 hay nhãn tạm
+    (tài liệu phối hợp agent, Bảng 11), để T3 độc lập với việc đọc mã."""
     profiles = _profiles()
-    for role in ("verifier", "test"):
-        assert {"evidence.summary", "verdict.sufficiency"} <= set(profiles[role]["context_fields"]), role
-    assert "task.focus" in profiles["test"]["context_fields"]
+    assert {"evidence.summary", "verdict.sufficiency"} <= set(profiles["verifier"]["context_fields"])
+    test_fields = set(profiles["test"]["context_fields"])
+    assert {"task.focus", "verdict.missing"} <= test_fields
+    assert not test_fields & {"evidence.summary", "verdict.sufficiency"}
+
+
+def test_verifier_output_is_held_to_the_catalog_of_issue_kinds_and_tasks() -> None:
+    """Viết sai mã loại vấn đề thì quy tắc sổ tay khớp theo `kind` sẽ bỏ qua vấn đề; schema phải từ chối ngay."""
+    from pydantic import ValidationError
+
+    from rfcv.agents.schemas import Critique
+    from rfcv.plugins import current_registry
+
+    model = current_registry().schemas["Critique@1"]
+    ok = model.model_validate({"issues": [{"kind": "MISSING_PATH", "suggested_task": "TRACE_PATHS"}]})
+    assert isinstance(ok, Critique)
+    assert model.model_validate({"issues": []}).issues == []
+    for bad in (
+        {"kind": "Missing path", "suggested_task": "TRACE_PATHS"},
+        {"kind": "MISSING_PATH", "suggested_task": "trace paths"},
+    ):
+        with pytest.raises(ValidationError):
+            model.model_validate({"issues": [bad]})
+
+
+def test_code_reader_sees_the_adapter_vocabulary() -> None:
+    """Schema gate từ chối `observed` ngoài từ vựng adapter, nên Code Reader phải thấy từ vựng đó."""
+    assert "adapter.vocabulary" in _profiles()["code_reader"]["context_fields"]
 
 
 def test_every_catalog_task_has_a_handler_or_is_a_known_gap(manifest: AdapterManifest) -> None:

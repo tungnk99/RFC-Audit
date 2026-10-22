@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 56 24" xmlns="http://www.w3.org/2000/svg" width="56" height="24"><defs><marker id="d1l3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs><line x1="6" y1="12" x2="50" y2="12" stroke="#333" stroke-width="1.5" stroke-dasharray="2 3" marker-end="url(#d1l3)"/></svg>

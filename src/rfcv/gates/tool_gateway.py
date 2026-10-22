@@ -7,10 +7,10 @@ mã lỗi liệt kê, không kèm chi tiết chính sách (thiết kế chính, 
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import NoReturn
+from typing import Any, NoReturn
 
 from pydantic import BaseModel, ValidationError
 
@@ -31,9 +31,17 @@ class DenyCode(StrEnum):
 
 
 class ToolDenied(PermissionError):
-    def __init__(self, code: DenyCode) -> None:
+    def __init__(self, code: DenyCode, detail: str | None = None) -> None:
         super().__init__(code.value)
         self.code = code
+        # Lý do chi tiết (ví dụ FLAG_BLOCKED, PATH_OUT_OF_SCOPE): chỉ ghi Trace log để đo, không trả cho agent.
+        self.detail = detail
+
+
+# Kiểm tra đầu ra của agent trước khi kết thúc nhiệm vụ (ví dụ Schema gate với LocationClaim): trả danh sách mã lỗi
+# liệt kê; rỗng là qua. Runtime agent dùng nó để cho agent làm lại trong ngân sách.
+OutputCheck = Callable[[BaseModel], Sequence[str]]
+MAX_OUTPUT_RETRIES = 2
 
 
 @dataclass
@@ -47,6 +55,8 @@ class ToolSession:
     tool_calls: int = 0
     shown_lines: set[tuple[str, int]] = field(default_factory=set[tuple[str, int]])
     shown_edges: set[tuple[str, str]] = field(default_factory=set[tuple[str, str]])
+    output_check: OutputCheck | None = None
+    output_rejections: int = 0
 
 
 @dataclass(frozen=True)
@@ -62,15 +72,41 @@ Handler = Callable[[BaseModel, ToolSession], Awaitable[ToolResult]]
 
 @dataclass(frozen=True)
 class ToolSpec:
+    """Một công cụ, mô tả theo đúng khuôn của MCP (`tools/list`): tên, tiêu đề, mô tả cho mô hình, JSON Schema tham số
+    và annotations. Mô hình chỉ thấy phần mô tả này; mọi lời gọi vẫn đi qua ToolGateway."""
+
     name: str
     description: str
     params: type[BaseModel]
     handler: Handler
+    title: str | None = None
+    read_only: bool = True
 
     @property
     def llm_name(self) -> str:
         """Tên gửi cho LLM: API của các nhà cung cấp không cho phép dấu chấm."""
         return self.name.replace(".", "__")
+
+    def input_schema(self) -> dict[str, Any]:
+        schema = self.params.model_json_schema()
+        schema.pop("title", None)
+        return schema
+
+    def mcp_descriptor(self) -> dict[str, Any]:
+        """Mô tả công cụ dạng MCP Tool (name, title, description, inputSchema, annotations)."""
+        return {
+            "name": self.llm_name,
+            "title": self.title or self.name,
+            "description": self.description,
+            "inputSchema": self.input_schema(),
+            "annotations": {
+                "title": self.title or self.name,
+                "readOnlyHint": self.read_only,
+                "destructiveHint": False,
+                "idempotentHint": self.read_only,
+                "openWorldHint": False,
+            },
+        }
 
 
 class ToolGateway:
@@ -93,6 +129,11 @@ class ToolGateway:
     def specs_for(self, role: str) -> list[ToolSpec]:
         return [s for name, s in sorted(self._tools.items()) if self._policy.allows(role, name)]
 
+    def tools_list(self, role: str) -> dict[str, Any]:
+        """Danh mục công cụ của một vai trò đúng khuôn kết quả `tools/list` của MCP (để xem, kiểm thử, hoặc phục vụ
+        qua một máy chủ MCP đặt sau gateway)."""
+        return {"tools": [s.mcp_descriptor() for s in self.specs_for(role)]}
+
     async def call(self, session: ToolSession, tool: str, raw_args: dict[str, object]) -> ToolResult:
         spec = self._tools.get(tool)
         if spec is None:
@@ -109,7 +150,7 @@ class ToolGateway:
         try:
             result = await spec.handler(params, session)
         except ToolDenied as denied:
-            self._deny(session, tool, denied.code)
+            self._deny(session, tool, denied.code, denied.detail, params.model_dump(mode="json"))
         session.shown_lines |= result.shown_lines
         session.shown_edges |= result.shown_edges
         self._trace.append(
@@ -121,11 +162,23 @@ class ToolGateway:
         )
         return result
 
-    def _deny(self, session: ToolSession, tool: str, code: DenyCode) -> NoReturn:
+    def _deny(
+        self,
+        session: ToolSession,
+        tool: str,
+        code: DenyCode,
+        detail: str | None = None,
+        args: dict[str, Any] | None = None,
+    ) -> NoReturn:
+        payload: dict[str, Any] = {"tool": tool, "code": code.value}
+        if detail is not None:
+            payload["reason"] = detail
+        if args is not None:
+            payload["args"] = args
         self._trace.append(
             session.run_id,
             "tool_denied",
-            {"tool": tool, "code": code.value},
+            payload,
             role=session.role,
             requirement_id=session.requirement_id,
         )

@@ -80,6 +80,9 @@ class T1Payload(_Frozen):
     finding: Finding
     aspects: tuple[AspectCheck, ...] = ()
     call_path: tuple[str, ...] = ()
+    # Căn cứ của từng cạnh call_path[i] → call_path[i+1]: "index" (chỉ mục lời gọi, hoặc công cụ cấu trúc đã hiển thị)
+    # hay "textual" (chỉ thấy qua một dòng mã đã hiển thị, ví dụ gán con trỏ hàm, bảng xử lý).
+    call_edge_kinds: tuple[Literal["index", "textual"], ...] = ()
     unexplored: tuple[str, ...] = ()
 
     @property

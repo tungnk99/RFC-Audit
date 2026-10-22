@@ -208,6 +208,9 @@ tempCodeRunnerFile.py
 # Ruff stuff:
 .ruff_cache/
 
+# import-linter
+.import_linter_cache/
+
 # PyPI configuration file
 .pypirc
 
@@ -225,3 +228,7 @@ index/
 *.db
 *.db-wal
 *.db-shm
+
+# đánh giá: bản clone SUT/bộ công cụ và image dựng, tái tạo được từ eval/config/eval.yaml
+eval/work/
+eval/out/

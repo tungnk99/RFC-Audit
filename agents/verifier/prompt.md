@@ -12,12 +12,13 @@ Yêu cầu, câu RFC và đoạn chứa câu, bản tóm tắt T1/T2/T3, báo c�
 
 # 5. Chiến lược gợi ý
 So thành phần của vị trí với mục RFC; so REACTION của T1 với quan sát của T3; kiểm `unexplored`.
+Nạp skill `critique-evidence-consistency`: năm phép kiểm theo thứ tự, mỗi vấn đề một `kind` và một `suggested_task`.
 
 # 6. Điều cấm
 Không quyết định dừng hay nhãn. Không bịa evidence_id.
 
 # 7. Đầu ra
-`Critique@1` (danh sách rỗng nếu không có vấn đề).
+`Critique@1` (danh sách rỗng nếu không có vấn đề). `kind` và `suggested_task` phải đúng mã in hoa trong danh mục; `evidence_id` chép từ bản tóm tắt.
 
 # 8. Khi nào trả kết quả
 Sau một lượt rà soát.

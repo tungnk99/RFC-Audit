@@ -110,9 +110,8 @@ class SkillLibraryWorkspace:
         raise WorkspaceReadOnlyError(path)
 
 
-def skills_capability(registry: SkillRegistry, role: str, task_type: str | None = None) -> Skills | None:
-    """Capability cho đúng bộ skill mà hub chọn cho vai trò này; None nếu không có skill nào."""
-    names = registry.select(role, task_type)
+def skills_capability(registry: SkillRegistry, names: Sequence[str]) -> Skills | None:
+    """Capability cho đúng bộ skill đã chọn (`SkillRegistry.select`); None nếu không có skill nào."""
     if not names:
         return None
     return Skills(sorted(registry.libraries), include=names, workspace=SkillLibraryWorkspace(registry.libraries))

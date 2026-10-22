@@ -10,6 +10,7 @@ Chỉ đọc khi chạy; hash ghi vào bản kê lần chạy. Danh mục vai tr
 
 from __future__ import annotations
 
+import importlib.util
 import os
 from collections.abc import Collection, Iterable, Mapping
 from enum import StrEnum
@@ -26,11 +27,17 @@ AGENTS_ENV = "RFCV_AGENTS_DIR"
 
 
 def find_agents_root() -> Path:
-    """Thư mục `agents/` chứa hồ sơ và lời nhắc: biến môi trường RFCV_AGENTS_DIR, rồi ./agents, rồi gốc repo (cài kiểu phát triển)."""
+    """Thư mục `agents/` chứa hồ sơ và lời nhắc: biến môi trường RFCV_AGENTS_DIR, rồi ./agents, rồi gốc repo (cài kiểu
+    phát triển), rồi gói `agents` đã cài (wheel). Chỉ đọc `role.yaml` và `prompt.md`; mã trong cùng thư mục không bao giờ
+    được nạp từ đường dẫn này."""
     env = os.environ.get(AGENTS_ENV)
     if env:
         return Path(env)
-    for candidate in (Path.cwd() / "agents", Path(__file__).resolve().parents[3] / "agents"):
+    candidates = [Path.cwd() / "agents", Path(__file__).resolve().parents[3] / "agents"]
+    spec = importlib.util.find_spec("agents")
+    if spec is not None and spec.submodule_search_locations:
+        candidates.extend(Path(p) for p in spec.submodule_search_locations)
+    for candidate in candidates:
         if candidate.is_dir():
             return candidate
     return Path.cwd() / "agents"
@@ -57,6 +64,8 @@ class RoleProfile(BaseModel):
     zone: Zone
     context_fields: tuple[str, ...]
     tools: tuple[str, ...]
+    # Skill agent được phép dùng, lấy từ kho chung skills/. Không khai báo thì không có skill nào.
+    skills: tuple[str, ...] = ()
     output_schema: str
     prompt: str
     budget_per_task: TaskBudget
@@ -121,7 +130,12 @@ class PolicyStore:
         if pack.agents:
             root = agents_root if agents_root is not None else find_agents_root()
             declared = {a.name: a for a in pack.agents}
-            folders = {f.name: f for f in sorted(root.iterdir()) if f.is_dir()} if root.is_dir() else {}
+            # Thư mục agent nay chứa cả mã: bỏ qua __pycache__ và thư mục ẩn.
+            folders = (
+                {f.name: f for f in sorted(root.iterdir()) if f.is_dir() and not f.name.startswith(("_", "."))}
+                if root.is_dir()
+                else {}
+            )
             for name, agent in declared.items():
                 if not agent.has_role:
                     continue
@@ -131,11 +145,16 @@ class PolicyStore:
                 role_file = folder / "role.yaml"
                 agent = declared.get(name)
                 if not role_file.is_file():
+                    if agent is not None and not agent.has_role:
+                        continue  # thành phần tất định (ví dụ locator): có mã, không có hồ sơ LLM
                     raise PolicyError(f"{folder}: thiếu role.yaml")
                 profile = RoleProfile.model_validate(yaml.safe_load(role_file.read_text(encoding="utf-8")))
                 if profile.role != name:
                     raise PolicyError(f"{role_file}: role '{profile.role}' phải trùng tên thư mục '{name}'")
-                if agent is not None and (profile.zone.value, profile.output_schema) != (agent.zone, agent.output_schema):
+                if agent is not None and (profile.zone.value, profile.output_schema) != (
+                    agent.zone,
+                    agent.output_schema,
+                ):
                     raise PolicyError(
                         f"{role_file}: {name} không được đổi vùng tin cậy hay schema đầu ra "
                         f"(mã khai báo {agent.zone}, {agent.output_schema})"

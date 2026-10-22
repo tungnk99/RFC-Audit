@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 960 600" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, system-ui, sans-serif" width="960" height="600">
+  <defs>
+    <marker id="h1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker>
+    <marker id="h2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker>
+  </defs>
+  <rect x="5" y="5" width="950" height="588" rx="10" fill="#fff" stroke="#333" stroke-width="2.5"/>
+  <text x="20" y="28" font-size="14" font-weight="700">SECURITY-AWARE AGENT HARNESS</text>
+  <rect x="25" y="40" width="910" height="130" rx="8" fill="none" stroke="#888" stroke-dasharray="4 3"/>
+  <text x="38" y="58" font-size="12" font-weight="600" fill="#555">MULTI-AGENT SYSTEM</text>
+  <rect x="40" y="66" width="500" height="92" rx="6" fill="#ede7f6" stroke="#5e35b1" stroke-width="1.5"/>
+  <text x="290" y="92" font-size="13" font-weight="700" text-anchor="middle" fill="#4527a0">PRIVILEGED AGENTS</text>
+  <text x="290" y="117" font-size="13" text-anchor="middle">RFC Analyst · Planner · Test</text>
+  <text x="290" y="139" font-size="13" text-anchor="middle">Verifier · Report</text>
+  <rect x="580" y="66" width="340" height="92" rx="6" fill="#fdecea" stroke="#c62828" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="750" y="92" font-size="13" font-weight="700" text-anchor="middle" fill="#b71c1c">QUARANTINE ZONE</text>
+  <text x="750" y="124" font-size="13" text-anchor="middle">Code Indexer · Code Reader</text>
+  <rect x="25" y="200" width="910" height="44" rx="6" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="480" y="227" font-size="13.5" font-weight="700" text-anchor="middle" fill="#0d47a1">EXECUTION LOOP  (hub · ngân sách · phát hiện lặp)   [I1]</text>
+  <line x1="290" y1="160" x2="290" y2="198" stroke="#333" stroke-width="1.6" marker-start="url(#h1)" marker-end="url(#h1)"/>
+  <circle cx="314" cy="179" r="11" fill="#fff" stroke="#333"/><text x="314" y="183" font-size="10" font-weight="700" text-anchor="middle">I1</text>
+  <line x1="700" y1="200" x2="700" y2="160" stroke="#333" stroke-width="1.6" marker-end="url(#h1)"/>
+  <text x="708" y="186" font-size="11" fill="#333">task</text>
+  <path d="M920 112 H945 V548 H894" fill="none" stroke="#c62828" stroke-width="1.6" stroke-dasharray="5 3" marker-end="url(#h2)"/>
+  <circle cx="945" cy="330" r="11" fill="#fff" stroke="#c62828"/><text x="945" y="334" font-size="10" font-weight="700" text-anchor="middle" fill="#c62828">I3</text>
+  <g font-size="11" fill="#666" font-weight="600">
+    <text x="30" y="270">ĐIỀU PHỐI VÀ NGỮ CẢNH</text><text x="30" y="352">CỔNG VÀO</text>
+    <text x="30" y="434">CÔNG CỤ VÀ CỔNG RA</text><text x="30" y="516">KIỂM CHỨNG</text>
+  </g>
+  <g font-size="12" text-anchor="middle">
+    <rect x="30" y="278" width="164" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="112" y="298">Context builder</text><text x="112" y="316" font-size="10.5" fill="#555">I2</text>
+    <rect x="214" y="278" width="164" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="296" y="298">IFC tracker</text><text x="296" y="316" font-size="10.5" fill="#555">I2 · I3</text>
+    <rect x="398" y="278" width="164" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="480" y="298">LLM gateway</text><text x="480" y="316" font-size="10.5" fill="#555">I2</text>
+    <rect x="582" y="278" width="164" height="48" rx="5" fill="#f5f5f5" stroke="#212121" stroke-width="3"/><text x="664" y="298">Policy store</text><text x="664" y="316" font-size="10.5" fill="#555">I4 · I5</text>
+    <rect x="766" y="278" width="164" height="48" rx="5" fill="#f5f5f5" stroke="#212121" stroke-width="3"/><text x="848" y="298">Trace log</text><text x="848" y="316" font-size="10.5" fill="#555">ghi mọi giao diện</text>
+    <rect x="30" y="360" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="135" y="380">RFC gate</text><text x="135" y="398" font-size="10.5" fill="#555">I6</text>
+    <rect x="260" y="360" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="365" y="380">Code gate</text><text x="365" y="398" font-size="10.5" fill="#555">I5 · I6</text>
+    <rect x="490" y="360" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="595" y="380">Locator</text><text x="595" y="398" font-size="10.5" fill="#555">I5 · I6</text>
+    <rect x="720" y="360" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="825" y="380">Protocol adapters</text><text x="825" y="398" font-size="10.5" fill="#555">I6</text>
+    <rect x="30" y="442" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="135" y="462">Tool gateway</text><text x="135" y="480" font-size="10.5" fill="#555">I4</text>
+    <rect x="260" y="442" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="365" y="462">Sandbox &amp; Test driver</text><text x="365" y="480" font-size="10.5" fill="#555">I4 · I6 · I9</text>
+    <rect x="490" y="442" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#212121" stroke-width="3"/><text x="595" y="462">Coverage linker</text><text x="595" y="480" font-size="10.5" fill="#555">I7</text>
+    <rect x="720" y="442" width="210" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="825" y="462">Output gate</text><text x="825" y="480" font-size="10.5" fill="#555">I8</text>
+  </g>
+  <g font-size="11" text-anchor="middle">
+    <rect x="30" y="524" width="132" height="48" rx="5" fill="#f5f5f5" stroke="#212121" stroke-width="3"/><text x="96" y="544">Oracle compiler</text><text x="96" y="562" font-size="10" fill="#555">I3 · I7</text>
+    <rect x="176" y="524" width="132" height="48" rx="5" fill="#f5f5f5" stroke="#212121" stroke-width="3"/><text x="242" y="544">Req. registry</text><text x="242" y="562" font-size="10" fill="#555">I7</text>
+    <rect x="322" y="524" width="132" height="48" rx="5" fill="#f5f5f5" stroke="#212121" stroke-width="3"/><text x="388" y="544">Adapter checker</text><text x="388" y="562" font-size="10" fill="#555">I6</text>
+    <rect x="468" y="524" width="132" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="534" y="544">Evidence store</text><text x="534" y="562" font-size="10" fill="#555">I3 · I7</text>
+    <rect x="614" y="524" width="132" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="680" y="544">Verdict engine</text><text x="680" y="562" font-size="10" fill="#555">I7 · I8</text>
+    <rect x="760" y="524" width="132" height="48" rx="5" fill="#f5f5f5" stroke="#757575"/><text x="826" y="544">Schema gate</text><text x="826" y="562" font-size="10" fill="#555">I3</text>
+  </g>
+</svg>

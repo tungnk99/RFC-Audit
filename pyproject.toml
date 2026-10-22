@@ -19,6 +19,15 @@ dependencies = [
     "pydantic-ai-harness[skills]==0.59.0",
 ]
 
+[project.optional-dependencies]
+# Bộ dựng chỉ mục mã (rfcv.codeindex.builder). Cài trong image code-indexer; harness chỉ cần khi dùng treesitter-local.
+codeindex = [
+    "tree-sitter>=0.23,<0.26",
+    "tree-sitter-c>=0.23,<0.25",
+    "tree-sitter-rust>=0.23,<0.25",
+    "tree-sitter-go>=0.23,<0.26",
+]
+
 [project.scripts]
 rfcv = "rfcv.ui.cli:app"
 rfcv-eval = "rfcv.eval.cli:app"
@@ -31,6 +40,10 @@ dev = [
     "import-linter>=2.1",
     "ruff>=0.9",
     "pyright>=1.1.390",
+    "tree-sitter>=0.23,<0.26",
+    "tree-sitter-c>=0.23,<0.25",
+    "tree-sitter-rust>=0.23,<0.25",
+    "tree-sitter-go>=0.23,<0.26",
 ]
 
 [build-system]
@@ -38,24 +51,26 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/rfcv"]
+# `agents` là gói ngoài `rfcv`: mỗi agent một thư mục gồm role.yaml, prompt.md và mã (schema, handler, SPEC).
+packages = ["src/rfcv", "agents"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src", "."]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-src = ["src", "tests"]
+src = ["src", "tests", "."]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
 ignore = ["RUF001", "RUF002", "RUF003", "E501"]  # tiếng Việt trong chuỗi/chú thích; formatter lo độ dài dòng của mã
 
 [tool.pyright]
-include = ["src"]
+include = ["src", "agents"]
 pythonVersion = "3.12"
 typeCheckingMode = "strict"
 reportMissingTypeStubs = false
@@ -63,7 +78,7 @@ reportUnknownMemberType = false
 
 # Ranh giới kiến trúc = ranh giới quyền (thiết kế chính, mục 2.3). CI fail nếu vi phạm.
 [tool.importlinter]
-root_package = "rfcv"
+root_packages = ["rfcv", "agents"]
 include_external_packages = true
 
 [[tool.importlinter.contracts]]
@@ -73,7 +88,7 @@ source_modules = [
     "rfcv.core", "rfcv.gates", "rfcv.evidence", "rfcv.agents", "rfcv.adapters",
     "rfcv.spi", "rfcv.plugins", "rfcv.manifest", "rfcv.common",
 ]
-forbidden_modules = ["rfcv.domains", "rfcv.backends", "rfcv.eval", "rfcv.runtime"]
+forbidden_modules = ["rfcv.domains", "rfcv.backends", "rfcv.eval", "rfcv.runtime", "agents"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
@@ -82,6 +97,7 @@ type = "forbidden"
 source_modules = [
     "rfcv.core", "rfcv.gates", "rfcv.evidence", "rfcv.agents", "rfcv.adapters", "rfcv.domains", "rfcv.backends",
     "rfcv.ui", "rfcv.eval", "rfcv.spi", "rfcv.plugins", "rfcv.manifest", "rfcv.assembly", "rfcv.builtin", "rfcv.common",
+    "agents",
 ]
 forbidden_modules = ["pydantic_ai", "pydantic_ai_harness"]
 allow_indirect_imports = true
@@ -89,7 +105,7 @@ allow_indirect_imports = true
 [[tool.importlinter.contracts]]
 name = "Miền không nhập runtime agent hay backend (chiều phụ thuộc: backend và runtime phụ thuộc miền, không ngược lại)"
 type = "forbidden"
-source_modules = ["rfcv.domains"]
+source_modules = ["rfcv.domains", "agents"]
 forbidden_modules = ["rfcv.runtime", "rfcv.backends"]
 allow_indirect_imports = true
 
@@ -105,7 +121,7 @@ name = "Không thành phần nào ngoài eval nhập eval/"
 type = "forbidden"
 source_modules = [
     "rfcv.core", "rfcv.gates", "rfcv.evidence", "rfcv.agents", "rfcv.adapters", "rfcv.domains", "rfcv.backends",
-    "rfcv.runtime", "rfcv.ui", "rfcv.spi", "rfcv.plugins", "rfcv.assembly", "rfcv.builtin",
+    "rfcv.runtime", "rfcv.ui", "rfcv.spi", "rfcv.plugins", "rfcv.assembly", "rfcv.builtin", "agents",
 ]
 forbidden_modules = ["rfcv.eval"]
 allow_indirect_imports = true

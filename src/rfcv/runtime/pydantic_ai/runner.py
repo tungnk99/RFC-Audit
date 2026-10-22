@@ -12,10 +12,14 @@ chỉ ảnh hưởng thư mục này.
 from __future__ import annotations
 
 import json
-from typing import Any
+import time
+from collections.abc import Sequence
+from typing import Any, cast
 
-from pydantic_ai import Agent, RunContext, Tool, UsageLimits
-from pydantic_ai.exceptions import UnexpectedModelBehavior, UsageLimitExceeded
+from pydantic import BaseModel
+from pydantic_ai import Agent, ModelRetry, RunContext, Tool, UsageLimits, capture_run_messages
+from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior, UsageLimitExceeded
+from pydantic_ai.messages import ModelMessage, ModelMessagesTypeAdapter, ModelResponse
 from pydantic_ai.settings import ModelSettings
 
 from rfcv.core.context_builder import ContextBuilder
@@ -26,23 +30,44 @@ from rfcv.core.prompts import role_prompt
 from rfcv.core.runner import RoleOutcome
 from rfcv.core.skills import SkillRegistry
 from rfcv.evidence.repository import TraceSink
-from rfcv.gates.tool_gateway import ToolDenied, ToolGateway, ToolSession, ToolSpec
+from rfcv.gates.tool_gateway import MAX_OUTPUT_RETRIES, ToolDenied, ToolGateway, ToolSession, ToolSpec
 from rfcv.plugins import current_registry
 from rfcv.runtime.pydantic_ai.skills import skills_capability
 
 LOAD_TOOL = "load_capability"  # tên công cụ nạp skill của harness; chỉ nơi này được biết
 
 
+def _dump(messages: Sequence[ModelMessage]) -> list[dict[str, Any]]:
+    """Hội thoại của framework dạng JSON thuần, để ghi vào trace."""
+    return json.loads(ModelMessagesTypeAdapter.dump_json(list(messages)))
+
+
+def _tokens(messages: Sequence[ModelMessage]) -> int:
+    """Token đã tiêu, cộng từ các phản hồi đã nhận (lần chạy lỗi không trả `result.usage`)."""
+    return sum(
+        (m.usage.input_tokens or 0) + (m.usage.output_tokens or 0) for m in messages if isinstance(m, ModelResponse)
+    )
+
+
+def _tool_args(part: dict[str, Any]) -> dict[str, Any]:
+    """Tham số của một lời gọi công cụ trong lịch sử: nhà cung cấp thật trả chuỗi JSON, mô hình giả trả dict."""
+    args: Any = part.get("args")
+    if isinstance(args, str):
+        try:
+            args = json.loads(args)
+        except ValueError:
+            return {}
+    return cast("dict[str, Any]", args) if isinstance(args, dict) else {}
+
+
 def loaded_skills(messages: list[dict[str, Any]]) -> list[str]:
     """Skill mô hình thực sự đã nạp, trích từ lịch sử tin nhắn của framework."""
     return sorted(
         {
-            str(part["args"].get("id"))
+            str(_tool_args(part)["id"])
             for msg in messages
             for part in msg.get("parts", [])
-            if part.get("part_kind") == "tool-call"
-            and part.get("tool_name") == LOAD_TOOL
-            and isinstance(part.get("args"), dict)
+            if part.get("part_kind") == "tool-call" and part.get("tool_name") == LOAD_TOOL and "id" in _tool_args(part)
         }
     )
 
@@ -77,8 +102,32 @@ class PydanticAIRoleRunner:
             call,
             name=spec.llm_name,
             description=spec.description,
-            json_schema=spec.params.model_json_schema(),
+            json_schema=spec.input_schema(),
             takes_ctx=True,
+        )
+
+    def _check_output(self, ctx: RunContext[ToolSession], output: Any) -> Any:
+        """Cổng tất định chạy trên đầu ra trước khi nhiệm vụ kết thúc (ví dụ Schema gate với LocationClaim). Không qua
+        thì agent được làm lại tối đa MAX_OUTPUT_RETRIES lần trong ngân sách; chỉ mã lỗi liệt kê được trả về agent."""
+        session = ctx.deps
+        check = session.output_check
+        if check is None or not isinstance(output, BaseModel):
+            return output
+        errors = list(check(output))
+        if not errors or session.output_rejections >= MAX_OUTPUT_RETRIES:
+            return output  # hết lượt làm lại: handler vẫn kiểm tra và ghi gate_reject
+        session.output_rejections += 1
+        self._trace.append(
+            session.run_id,
+            "output_retry",
+            {"attempt": session.output_rejections, "errors": errors},
+            role=session.role,
+            requirement_id=session.requirement_id,
+        )
+        raise ModelRetry(
+            "Cổng kiểm tra từ chối đầu ra: "
+            + ", ".join(errors)
+            + ". Đọc lại (read_range) đúng các dòng sẽ dẫn, sửa vị trí/đường gọi rồi trả lại."
         )
 
     def agent(self, role: str, model_key: str | None = None) -> Agent[ToolSession, Any]:
@@ -86,17 +135,19 @@ class PydanticAIRoleRunner:
         if key not in self._agents:
             profile = self._policy.profile(role)
             settings = self._llm.settings_for(key)
-            self._agents[key] = Agent(
+            agent = Agent(
                 self._llm.model_for(key),
                 output_type=current_registry().schemas[profile.output_schema],
                 system_prompt=role_prompt(self._policy, role),
                 deps_type=ToolSession,
                 tools=[self._wrap(s) for s in self._gateway.specs_for(role)],
                 model_settings=ModelSettings(**settings) if settings else None,  # type: ignore[typeddict-item]
-                retries=2,
+                retries={"tools": 2, "output": MAX_OUTPUT_RETRIES + 1},
                 name=key,
                 defer_model_check=True,
             )
+            agent.output_validator(self._check_output)
+            self._agents[key] = agent
         return self._agents[key]
 
     async def run(
@@ -105,31 +156,50 @@ class PydanticAIRoleRunner:
         role = envelope.to_role
         budget = self._policy.profile(role).budget_per_task
         agent = self.agent(role, model_key)
-        # Hub chọn skill tất định từ vai trò và kiểu nhiệm vụ; mô hình chỉ quyết định nạp skill nào trong số đó.
+        # Chỉ skill agent khai báo trong role.yaml, lọc tất định theo kiểu nhiệm vụ; mô hình chỉ quyết định nạp skill nào
+        # trong số đó.
         task_type = envelope.body.get("task_type")
         task = str(task_type) if task_type else None
-        offered = self._skills.select(role, task) if self._skills else []
-        capability = skills_capability(self._skills, role, task) if self._skills else None
-        try:
-            result = await agent.run(
-                ContextBuilder.render(envelope, context),
-                deps=session,
-                capabilities=[capability] if capability is not None else None,
-                usage_limits=UsageLimits(
-                    request_limit=budget.llm_calls,
-                    tool_calls_limit=budget.tool_calls,
-                    total_tokens_limit=budget.tokens,
-                ),
-            )
-        except (UsageLimitExceeded, UnexpectedModelBehavior) as exc:
-            self._trace.append(
-                envelope.run_id,
-                "llm_failure",
-                {"msg_id": envelope.msg_id, "error": type(exc).__name__, "detail": str(exc)[:500]},
-                role=role,
-                requirement_id=envelope.requirement_id,
-            )
-            return RoleOutcome(None, 0, type(exc).__name__)
+        offered = self._skills.select(self._policy.profile(role).skills, task) if self._skills else []
+        capability = skills_capability(self._skills, offered) if self._skills else None
+        started = time.monotonic()
+        # `capture_run_messages` giữ hội thoại kể cả khi lần chạy ném lỗi: đúng lúc hỏng mới cần xem mô hình đã thấy và
+        # trả lời gì. Mỗi nhiệm vụ một ngữ cảnh riêng nên chạy song song không lẫn.
+        with capture_run_messages() as captured:
+            try:
+                result = await agent.run(
+                    ContextBuilder.render(envelope, context),
+                    deps=session,
+                    capabilities=[capability] if capability is not None else None,
+                    usage_limits=UsageLimits(
+                        request_limit=budget.llm_calls,
+                        tool_calls_limit=budget.tool_calls,
+                        total_tokens_limit=budget.tokens,
+                    ),
+                )
+            except (UsageLimitExceeded, UnexpectedModelBehavior, ModelAPIError) as exc:
+                transcript = _dump(captured)
+                spent = _tokens(captured)
+                self._trace.append(
+                    envelope.run_id,
+                    "llm_failure",
+                    {
+                        "msg_id": envelope.msg_id,
+                        "model": model_key or role,
+                        "error": type(exc).__name__,
+                        "detail": str(exc)[:500],
+                        "duration_ms": int((time.monotonic() - started) * 1000),
+                        "skills_offered": offered,
+                        "skills_loaded": loaded_skills(transcript),
+                        "tokens": spent,
+                        "tool_calls": session.tool_calls,
+                        "messages": transcript,
+                    },
+                    role=role,
+                    requirement_id=envelope.requirement_id,
+                )
+                # Token đã tiêu trước khi hỏng vẫn tính vào ngân sách của yêu cầu.
+                return RoleOutcome(None, spent, type(exc).__name__)
 
         usage = result.usage
         tokens = int((usage.input_tokens or 0) + (usage.output_tokens or 0))
@@ -143,6 +213,7 @@ class PydanticAIRoleRunner:
                 "skills_offered": offered,
                 "skills_loaded": loaded_skills(messages),
                 "skills_digest": self._skills.digest if self._skills else None,
+                "duration_ms": int((time.monotonic() - started) * 1000),
                 "input_tokens": usage.input_tokens,
                 "output_tokens": usage.output_tokens,
                 "requests": usage.requests,

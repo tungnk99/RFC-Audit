@@ -2,7 +2,6 @@
 name: trace-all-entry-paths
 description: Enumerates every code path that reaches a protocol check and says which paths pass through it. Use when the RFC sentence says every received record or message, when a requirement of type D must hold on all paths, or when the verifier reported a missing path.
 metadata:
-  rfcv-roles: code_reader
   rfcv-task-types: TRACE_PATHS LOCATE
   version: "1"
 ---

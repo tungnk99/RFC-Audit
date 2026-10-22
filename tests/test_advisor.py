@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 import toy_domain as toy
+from agents.planner.playbook import PLAYBOOK, sync_prompt
 from rfcv.agents.schemas import PlanAction
 from rfcv.assembly import Providers, RuntimeConfig, build_runtime
 from rfcv.core.advisor import (
@@ -23,7 +24,6 @@ from rfcv.core.advisor import (
 from rfcv.core.envelope import Envelope, EnvelopeFactory, MessageKind
 from rfcv.core.playbook_runner import PlaybookRunner
 from rfcv.core.runner import RoleOutcome
-from rfcv.domains.rfc_protocol.agents.planner.playbook import PLAYBOOK, sync_prompt
 from rfcv.evidence.verdict_engine import Label
 from rfcv.plugins import Registry, RegistryError, current_registry, use_registry
 from rfcv.spi import PlaybookRule, Suggest, When
@@ -150,9 +150,15 @@ def test_freeze_rejects_a_bad_playbook(tmp_path: Path) -> None:
     bad = {
         "unknown-task": PlaybookRule("a", When(), (Suggest("NOPE"),), "NEXT_CLAUSE"),
         "unknown-rationale": PlaybookRule("b", When(), (good,), "WHY_NOT"),
-        "bad-bind-source": PlaybookRule("c", When(), (Suggest("CHECK_CLAUSE", bind={"clause_id": "free.text"}),), "NEXT_CLAUSE"),
-        "bad-bind-target": PlaybookRule("d", When(), (Suggest("CHECK_CLAUSE", bind={"nope": "missing.first_variant"}),), "NEXT_CLAUSE"),
-        "bad-static-params": PlaybookRule("e", When(), (Suggest("CHECK_CLAUSE", {"clause_id": 3, "zzz": 1}),), "NEXT_CLAUSE"),
+        "bad-bind-source": PlaybookRule(
+            "c", When(), (Suggest("CHECK_CLAUSE", bind={"clause_id": "free.text"}),), "NEXT_CLAUSE"
+        ),
+        "bad-bind-target": PlaybookRule(
+            "d", When(), (Suggest("CHECK_CLAUSE", bind={"nope": "missing.first_variant"}),), "NEXT_CLAUSE"
+        ),
+        "bad-static-params": PlaybookRule(
+            "e", When(), (Suggest("CHECK_CLAUSE", {"clause_id": 3, "zzz": 1}),), "NEXT_CLAUSE"
+        ),
         "empty": PlaybookRule("f", When(), (), "NEXT_CLAUSE"),
         "stop-and-suggest": PlaybookRule("g", When(), (good,), "ALL_CHECKED", stop=True),
         "bad-label": PlaybookRule("h", When(provisional=frozenset({"MAYBE"})), (good,), "NEXT_CLAUSE"),

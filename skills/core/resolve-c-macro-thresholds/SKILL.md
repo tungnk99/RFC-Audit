@@ -2,7 +2,6 @@
 name: resolve-c-macro-thresholds
 description: Resolves a numeric threshold in C code that is written with macros or constants before comparing it with the RFC value. Use when a length or size check uses names like MAX_RECORD_SIZE, MAX_MSG_EXTRA or sizeof expressions, or when judging the THRESHOLD aspect.
 metadata:
-  rfcv-roles: code_reader
   rfcv-task-types: LOCATE RECHECK
   version: "1"
 ---

@@ -64,6 +64,7 @@ class Registry:
         self.schemas: dict[str, type[BaseModel]] = {}
         self.tasks: dict[str, TaskDefinition] = {}
         self.rationale_codes: list[str] = []
+        self.critique_kinds: list[str] = []
         self.playbook: list[PlaybookRule] = []
         self.rule_sets: dict[str, RuleSet] = {}
         self.tools: dict[str, ToolDescriptor] = {}
@@ -136,6 +137,10 @@ class Registry:
             if code in self.rationale_codes:
                 raise RegistryError(f"mã lý do '{code}' đã đăng ký")
             self.rationale_codes.append(code)
+        for kind in pack.critique_kinds:
+            if kind in self.critique_kinds:
+                raise RegistryError(f"loại vấn đề phản biện '{kind}' đã đăng ký")
+            self.critique_kinds.append(kind)
         self.playbook.extend(pack.playbook)
         for rs in pack.rule_sets:
             self.register_rule_set(rs)
@@ -239,7 +244,7 @@ class Registry:
     def freeze(self) -> Registry:
         if self._frozen:
             return self
-        from rfcv.agents.schemas import build_plan_action_model
+        from rfcv.agents.schemas import build_critique_model, build_plan_action_model
         from rfcv.core.advisor import validate_playbook
         from rfcv.evidence.verdict_engine import Label
 
@@ -247,6 +252,7 @@ class Registry:
         if errors:
             raise RegistryError("sổ tay điều tra không hợp lệ: " + "; ".join(errors))
         self.schemas["PlanAction@1"] = build_plan_action_model(self.tasks, self.rationale_codes)
+        self.schemas["Critique@1"] = build_critique_model(self.critique_kinds, sorted(self.tasks))
         self._frozen = True
         return self
 

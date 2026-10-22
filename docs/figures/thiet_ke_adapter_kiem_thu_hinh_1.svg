@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 960 400" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, system-ui, sans-serif" width="960" height="400">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker></defs>
+  <g font-size="11.5" text-anchor="middle">
+    <rect x="20" y="20" width="200" height="120" rx="6" fill="#f5f5f5" stroke="#757575"/>
+    <text x="120" y="42" font-weight="700">Protocol adapter</text>
+    <text x="120" y="62" font-size="10.5">sut: công thức dựng SUT</text>
+    <text x="120" y="78" font-size="10.5">templates: mẫu kiểm thử</text>
+    <text x="120" y="94" font-size="10.5">variants: biến thể bắt buộc</text>
+    <text x="120" y="110" font-size="10.5">observations, oracle</text>
+    <text x="120" y="126" font-size="10.5">runner: bộ chuyển đổi công cụ</text>
+    <rect x="20" y="175" width="200" height="56" rx="6" fill="#f5f5f5" stroke="#212121" stroke-width="2.5"/>
+    <text x="120" y="198" font-weight="700">Adapter checker</text><text x="120" y="216" font-size="10.5">kiểm định trước khi nạp</text>
+    <rect x="270" y="20" width="190" height="62" rx="6" fill="#ede7f6" stroke="#5e35b1"/>
+    <text x="365" y="45" font-weight="700">Test Agent</text><text x="365" y="64" font-size="10.5">TestSelection: mẫu + biến thể</text>
+    <rect x="270" y="120" width="190" height="62" rx="6" fill="#f5f5f5" stroke="#212121" stroke-width="2.5"/>
+    <text x="365" y="145" font-weight="700">Tool gateway</text><text x="365" y="164" font-size="10.5">ghép mẫu–yêu cầu, tính tham số</text>
+    <rect x="505" y="20" width="430" height="290" rx="8" fill="none" stroke="#c62828" stroke-width="1.5" stroke-dasharray="6 3"/>
+    <text x="520" y="40" font-size="11" font-weight="700" fill="#c62828" text-anchor="start">SANDBOX (mạng nội bộ, không ra ngoài; huỷ sau mỗi lần chạy)</text>
+    <rect x="525" y="60" width="180" height="100" rx="6" fill="#f5f5f5" stroke="#757575"/>
+    <text x="615" y="84" font-weight="700">Test driver</text>
+    <text x="615" y="104" font-size="10.5">runner: tlsfuzzer, h2spec,</text>
+    <text x="615" y="120" font-size="10.5">genreport, DSL…</text>
+    <text x="615" y="140" font-size="10.5">→ quan sát chuẩn hoá</text>
+    <rect x="745" y="60" width="170" height="100" rx="6" fill="#fff3e0" stroke="#e65100"/>
+    <text x="830" y="84" font-weight="700">SUT</text>
+    <text x="830" y="104" font-size="10.5">image theo digest</text>
+    <text x="830" y="120" font-size="10.5">mỗi ca một tiến trình</text>
+    <text x="830" y="140" font-size="10.5">(UNTRUSTED)</text>
+    <rect x="525" y="200" width="180" height="56" rx="6" fill="#f5f5f5" stroke="#757575"/>
+    <text x="615" y="223" font-weight="700">Oracle</text><text x="615" y="241" font-size="10.5">PASS / FAIL / ERROR</text>
+    <rect x="745" y="200" width="170" height="56" rx="6" fill="#f5f5f5" stroke="#757575"/>
+    <text x="830" y="223" font-weight="700">Artifact store</text><text x="830" y="241" font-size="10.5">pcap, nhật ký (theo hash)</text>
+    <rect x="505" y="335" width="200" height="50" rx="6" fill="#f5f5f5" stroke="#757575"/>
+    <text x="605" y="357" font-weight="700">Evidence store</text><text x="605" y="374" font-size="10.5">bản ghi T3</text>
+    <rect x="745" y="335" width="190" height="50" rx="6" fill="#f5f5f5" stroke="#757575"/>
+    <text x="840" y="357" font-weight="700">Verdict engine</text><text x="840" y="374" font-size="10.5">R0–R7</text>
+  </g>
+  <g stroke="#333" stroke-width="1.5" fill="none">
+    <path d="M120 140 V173" marker-end="url(#a)"/>
+    <path d="M220 60 H268" marker-end="url(#a)"/>
+    <path d="M365 82 V118" marker-end="url(#a)"/>
+    <path d="M460 150 H490 V110 H523" marker-end="url(#a)"/>
+    <path d="M705 100 H743" marker-end="url(#a)"/>
+    <path d="M743 120 H707" marker-end="url(#a)"/>
+    <path d="M615 160 V198" marker-end="url(#a)"/>
+    <path d="M705 228 H743" stroke-dasharray="5 3" marker-end="url(#a)"/>
+    <path d="M615 256 V333" marker-end="url(#a)"/>
+    <path d="M705 360 H743" marker-end="url(#a)"/>
+  </g>
+  <g font-size="10.5" fill="#333"><text x="228" y="52">danh mục</text><text x="470" y="176">lời gọi đã</text><text x="470" y="189">kiểm tra</text><text x="712" y="94">gửi</text><text x="712" y="134">phản hồi</text></g>
+</svg>

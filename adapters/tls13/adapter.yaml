@@ -44,15 +44,23 @@ field_domains:
 consistency_rules:
   - {if_expect_contains: send_alert, then_type: B}
 
+# Gợi ý cho Locator (score = 3·kw + 2·comp + 2·near + 1·hint): keywords → kw, comp; entry_points → near (khoảng cách
+# trên đồ thị gọi hàm); paths → hint. Tên hàm, tệp của wolfSSL; kiểm lại khi đổi commit SUT.
 locator_hints:
-  record_layer: {keywords: ["record", "TLSCiphertext", "length", "MAX_RECORD_SIZE"]}
-  alerts: {keywords: ["SendAlert", "record_overflow", "decode_error"]}
+  record_layer:
+    keywords: ["record", "TLSCiphertext", "length", "MAX_RECORD_SIZE"]
+    entry_points: ["ProcessReply", "ProcessReplyEx"]
+    paths: ["src/internal.c", "src/tls13.c"]
+  alerts:
+    keywords: ["SendAlert", "record_overflow", "decode_error"]
+    paths: ["src/internal.c"]
 
 # Cờ build là đầu vào cố định, dùng chung cho Test driver và Code gate (tài liệu khả thi, mục 6).
 build_flags: ["--enable-tls13", "--disable-shared", "--enable-static", "-DWOLFSSL_TLS13_MIDDLEBOX_COMPAT"]
 
 sut:
   repo: https://github.com/wolfSSL/wolfssl
+  # commit: <sha 40 ký tự>   # bật để Code gate từ chối chạy khi --code-root không ở đúng commit (ràng buộc C3)
   recipe: sut/wolfssl.yaml
   start: {role: server, port: 4433}
 

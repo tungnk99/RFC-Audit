@@ -82,6 +82,8 @@ class LoopPolicy:
     critique_task: str | None = "CRITIQUE"
     # Nhãn tạm cần một lần phản biện sạch trước khi dừng (mặc định chỉ COMPLIANT, vì dễ sai nhất).
     critique_before: frozenset[str] = frozenset({"COMPLIANT"})
+    # Mã lý do Planner phải khai khi cố ý làm khác sổ tay; dùng để ghi trace "đi theo hay chệch sổ tay".
+    deviation_code: str | None = None
 
 
 # ---- Sổ tay điều tra (kinh nghiệm dẫn đường) ---------------------------------------------------------
@@ -189,3 +191,5 @@ class DomainPack:
     runtime: DomainRuntime | None = None
     # Sổ tay điều tra của miền (xem PlaybookRule); rỗng nghĩa là miền không đưa kinh nghiệm dẫn đường.
     playbook: Sequence[PlaybookRule] = ()
+    # Loại vấn đề Verifier được nêu (`Critique@1.issues[].kind`); rỗng thì `kind` là chuỗi tự do.
+    critique_kinds: Sequence[str] = ()

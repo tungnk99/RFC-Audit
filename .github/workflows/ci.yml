@@ -19,7 +19,7 @@ jobs:
       - run: uv python install 3.12
       - run: uv sync --locked
       - name: Ruff
-        run: uv run ruff check src tests && uv run ruff format --check src tests
+        run: uv run ruff check src tests agents && uv run ruff format --check src tests agents
       - name: Pyright (strict)
         run: uv run pyright
       - name: Ranh giới kiến trúc (import-linter)

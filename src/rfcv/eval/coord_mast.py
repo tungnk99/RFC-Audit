@@ -1,7 +1,8 @@
 """Gắn mã lỗi phối hợp (theo tinh thần MAST, arXiv 2503.13657) từ dấu vết một lần điều tra. Hàm thuần trên danh sách sự kiện.
 
 Chạy được trên dấu vết thật lẫn mô phỏng: cùng một bộ nhãn để so sánh. Chỉ gắn mã khi dấu vết CÓ bằng chứng; mã cần dữ liệu mà
-hub chưa ghi (ví dụ bỏ qua phản biện: nội dung Critique chưa vào trace) thì chưa có ở đây, không đoán.
+hub không ghi thì không có ở đây, không đoán. Mô phỏng chạy qua cùng hub nên cũng ghi `critique_result`; số đếm mã trong báo
+cáo mô phỏng chỉ để quan sát, không vào quyết định của đăng ký trước.
 
 | Mã                       | Dấu hiệu trong trace                                                            |
 |--------------------------|---------------------------------------------------------------------------------|
@@ -13,6 +14,8 @@ hub chưa ghi (ví dụ bỏ qua phản biện: nội dung Critique chưa vào t
 | FM_WORKER_FAILURE        | `role_failure` của vai trò khác                                                 |
 | FM_GATE_REJECTED         | `gate_reject`                                                                   |
 | FM_UNAWARE_TERMINATION   | dừng do BUDGET/LOOP trong khi ba báo cáo độ đủ cuối giống hệt nhau              |
+| FM_CRITIQUE_IGNORED      | ngay sau `critique_result` có vấn đề, kế hoạch kế tiếp không giao nhiệm vụ nào  |
+|                          | trong số nhiệm vụ Verifier đề xuất (bỏ các nhiệm vụ chưa có handler) hoặc dừng |
 """
 
 from __future__ import annotations
@@ -29,6 +32,7 @@ TAGS = (
     "FM_WORKER_FAILURE",
     "FM_GATE_REJECTED",
     "FM_UNAWARE_TERMINATION",
+    "FM_CRITIQUE_IGNORED",
 )
 
 
@@ -43,6 +47,7 @@ def classify_trace(events: Iterable[Mapping[str, Any]], *, unavailable_tasks: Co
     reports: list[dict[str, Any]] = []
     stop_reason: str | None = None
     repeated_plan = False
+    advised: frozenset[str] = frozenset()  # nhiệm vụ Verifier vừa đề xuất mà kế hoạch kế tiếp chưa xử lý
     for e in events:
         kind, payload = e["kind"], e.get("payload", {})
         if kind == "sufficiency":
@@ -52,8 +57,14 @@ def classify_trace(events: Iterable[Mapping[str, Any]], *, unavailable_tasks: Co
             last_report = body
             reports.append(body)
             repeated_plan = False
+        elif kind == "critique_result":
+            suggested = {str(i.get("suggested_task")) for i in payload.get("issues", [])}
+            advised = frozenset(suggested - set(unavailable_tasks))
         elif kind == "plan":
             tasks = frozenset(str(t["task_type"]) for t in payload.get("tasks", []))
+            if advised and not tasks & advised:
+                tags.add("FM_CRITIQUE_IGNORED")
+            advised = frozenset()
             repeated_plan = bool(tasks) and tasks == last_plan_tasks
             if tasks:
                 last_plan_tasks = tasks

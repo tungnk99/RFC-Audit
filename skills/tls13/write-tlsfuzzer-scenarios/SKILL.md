@@ -2,9 +2,8 @@
 name: write-tlsfuzzer-scenarios
 description: Builds a scenario in the rfcv scenario DSL for a TLS requirement, reaching the connected state and then sending the trigger with a variant value. Use when selecting tests for a TLS 1.3 requirement of type A, B or C.
 metadata:
-  rfcv-roles: test
   rfcv-task-types: SELECT_TESTS
-  version: "1"
+  version: "2"
 ---
 
 # Write TLS scenarios
@@ -22,5 +21,6 @@ the outcome; never state expected pass or fail.
 5. Start from the closest entry of `examples.similar_scenarios` and change as little as possible.
 6. If a run reports `TRIGGER_NOT_REACHED`, fix the steps that lead to the state; do not remove the trigger.
 
-Cover the missing variants first (`verdict.missing_variants`), including the control value equal to the limit,
-which must be accepted.
+Cover the missing variants first: `task.focus.missing_variants` when the planner names them, otherwise the items of
+`verdict.missing` with `need: T3`. Include the control value equal to the limit, which must be accepted. You do not see
+code evidence or the provisional label; that is deliberate, so the test result stays independent of the code reading.

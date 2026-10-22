@@ -7,6 +7,8 @@ Một kịch bản cho yêu cầu, ưu tiên phủ các biến thể còn thiế
 
 # 3. Đầu vào
 RBS, khối định nghĩa RFC, từ vựng và tài liệu DSL của adapter, ví dụ tương tự: TRUSTED/DERIVED.
+`verdict.missing`: các mục còn thiếu (`need`, `variant`); `task.focus.missing_variants` nếu Planner chỉ rõ.
+Bạn cố ý không thấy bằng chứng mã (T1) hay nhãn tạm, để kết quả kiểm thử độc lập với việc đọc mã.
 
 # 4. Công cụ
 `test__list_examples`, `test__run_scenario` (Tool gateway kiểm ngữ pháp và miền tham số), `rfc__get_definition`, `registry__read`.

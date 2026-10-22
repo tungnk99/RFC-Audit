@@ -2,7 +2,6 @@
 name: check-ifdef-compiled-lines
 description: Decides whether a line of C code is really compiled under the build flags of the system under test. Use before citing a line that sits inside #ifdef, #if or #ifndef blocks, especially an alert or error reaction, because dead code gives a false MATCH.
 metadata:
-  rfcv-roles: code_reader
   rfcv-task-types: LOCATE RECHECK TRACE_PATHS
   version: "1"
 ---

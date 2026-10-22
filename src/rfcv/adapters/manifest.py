@@ -32,6 +32,8 @@ class SutSpec(_M):
     repo: str
     recipe: str
     start: dict[str, str | int] = Field(default_factory=dict)
+    # Commit cố định của kho mã (40 hoặc 64 ký tự hex). Có thì Code gate từ chối chạy khi kho mã không ở đúng commit.
+    commit: str | None = Field(default=None, pattern=r"^[0-9a-f]{40}([0-9a-f]{24})?$")
 
 
 class CodeScopeSpec(_M):

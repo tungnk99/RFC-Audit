@@ -9,28 +9,52 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from agents.code_indexer.handler import ComponentMapHandler
+from agents.code_reader.handler import LocationHandler
+from agents.common import ORACLE_KEY, TaskType
+from agents.locator.service import Locator, requirement_keywords
+from agents.test.handler import ScenarioHandler
+from agents.verifier.handler import NoopHandler
 from rfcv.core.execution_loop import Investigation
 from rfcv.core.ifc import Labeled, TrustLabel
 from rfcv.domains.rfc_protocol.adapter_view import to_vocabulary, vocabulary_terms
-from rfcv.domains.rfc_protocol.agents.code_reader.handler import LocationHandler
-from rfcv.domains.rfc_protocol.agents.common import ORACLE_KEY, TaskType
-from rfcv.domains.rfc_protocol.agents.test.handler import ScenarioHandler
-from rfcv.domains.rfc_protocol.agents.verifier.handler import NoopHandler
 from rfcv.domains.rfc_protocol.rules import ProtocolRequirement
 from rfcv.domains.rfc_protocol.sandbox.driver import TestDriver
 from rfcv.domains.rfc_protocol.schema_gate import SchemaGate
 from rfcv.domains.rfc_protocol.spec.oracle_compiler import compile_oracle
 from rfcv.domains.rfc_protocol.spec.rbs import parse_rbs
+from rfcv.gates.tool_gateway import ToolSpec
 
 __all__ = ["ORACLE_KEY", "LocationHandler", "NoopHandler", "ProtocolRuntime", "ScenarioHandler"]
 
+
 class ProtocolRuntime:
+    def __init__(self) -> None:
+        self._locators: dict[str, Locator] = {}  # theo run_id
+
     def required_providers(self) -> Sequence[str]:
         return ("backend", "code_index", "executor", "sut_launcher")
 
+    def tools(self, rt: Any) -> Sequence[ToolSpec]:
+        """Công cụ của miền cần runtime đã lắp: locator.suggest (chỉ mục mã + gợi ý của adapter)."""
+        index = rt.providers.code_index
+        if index is None:
+            return ()
+        locator = Locator(index, rt.manifest)
+        self._locators[rt.run_id] = locator
+        return (locator.tool_spec(),)
+
     def handlers(self, rt: Any) -> Mapping[str, Any]:
         manifest = rt.manifest
-        gate = SchemaGate(rt.providers.code_index, vocabulary_terms(manifest))
+        index = rt.providers.code_index
+        # Kiểm tra số 5 của Schema gate: dòng dẫn phải được biên dịch theo cờ build (khi chỉ mục có nhánh #if).
+        compiled: Any = getattr(index, "compiled_lines", None)
+        flags = tuple(manifest.build_flags)
+        gate = SchemaGate(
+            index,
+            vocabulary_terms(manifest),
+            (lambda f: compiled(f, flags)) if callable(compiled) else None,
+        )
         driver = TestDriver(
             rt.providers.backend,
             rt.providers.sut_launcher,
@@ -41,10 +65,12 @@ class ProtocolRuntime:
             references=[ref.split("@", 1)[0] for ref in manifest.references],
         )
         location, scenario = LocationHandler(rt, gate), ScenarioHandler(rt, driver)
+        run_id = getattr(rt, "run_id", None) or ""
         return {
             TaskType.LOCATE.value: location,
             TaskType.TRACE_PATHS.value: location,
             TaskType.RECHECK.value: location,
+            TaskType.MAP_COMPONENTS.value: ComponentMapHandler(rt, lambda: self._locators.get(run_id)),
             TaskType.SELECT_TESTS.value: scenario,
             TaskType.CRITIQUE.value: NoopHandler(),
         }
@@ -54,6 +80,8 @@ class ProtocolRuntime:
         manifest = rt.manifest
         vocab = to_vocabulary(manifest)
         terms = vocabulary_terms(manifest)
+        locator = self._locators.get(getattr(rt, "run_id", None) or "")
+        hints = {k: {kk: list(vv) for kk, vv in v.items()} for k, v in manifest.locator_hints.items()}
         out: list[Investigation] = []
         for f in sorted(source.glob("*.rbs")):
             text = f.read_text(encoding="utf-8")
@@ -67,11 +95,15 @@ class ProtocolRuntime:
                 random_k=oracle.random_k,
                 valid_random_k=oracle.valid_random_k,
             )
+            if locator is not None:
+                locator.register(rbs.requirement_id, requirement_keywords(rbs))
             context = {
                 "requirement.structured": Labeled(rbs.model_dump(mode="json"), TrustLabel.TRUSTED),
                 "requirement.rbs": Labeled(rbs.model_dump(mode="json"), TrustLabel.TRUSTED),
                 "adapter.vocabulary": Labeled(sorted(terms), TrustLabel.TRUSTED),
                 "adapter.build_flags": Labeled(list(manifest.build_flags), TrustLabel.TRUSTED),
+                "adapter.component_taxonomy": Labeled(list(manifest.component_taxonomy), TrustLabel.TRUSTED),
+                "adapter.locator_hints": Labeled(hints, TrustLabel.TRUSTED),
             }
             out.append(
                 Investigation(
@@ -82,4 +114,3 @@ class ProtocolRuntime:
                 )
             )
         return out
-

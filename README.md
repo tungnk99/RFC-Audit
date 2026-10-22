@@ -1,6 +1,6 @@
 # rfcv: framework kiểm chứng tuân thủ đặc tả dựa trên bằng chứng, nhiều agent, an toàn trước đối thủ
 
-Mã nguồn cho luận văn *"Kiểm chứng tự động và an toàn sự tuân thủ đặc tả giao thức mạng dựa trên bằng chứng, sử dụng hệ thống AI đa tác tử"* (Nguyễn Kỳ Tùng, GVHD TS. Tống Văn Vạn). Thiết kế: [documents/thiet_ke_chi_tiet_he_thong_final.html](documents/thiet_ke_chi_tiet_he_thong_final.html).
+Mã nguồn cho luận văn *"Kiểm chứng tự động và an toàn sự tuân thủ đặc tả giao thức mạng dựa trên bằng chứng, sử dụng hệ thống AI đa tác tử"* (Nguyễn Kỳ Tùng, GVHD TS. Tống Văn Vạn). Thiết kế: [docs/design/thiet_ke_chi_tiet_he_thong.md](docs/design/thiet_ke_chi_tiet_he_thong.md). Toàn bộ tài liệu thiết kế, đánh giá và theo dõi cải thiện: [docs/README.md](docs/README.md).
 
 Nguyên tắc: **agent đề xuất, thành phần tất định kiểm chứng.** LLM chỉ đề xuất. Một đề xuất chỉ thành bằng chứng sau khi qua bộ kiểm chứng không dùng LLM, và nhãn do Verdict engine gán theo một bộ quy tắc cố định, có phiên bản là hash nội dung.
 
@@ -23,9 +23,16 @@ uv run rfcv skills check skills --adapter tls13
 uv run rfcv rbs check adapters/tls13/examples/TLS13-0042.rbs --adapter adapters/tls13
 uv run rfcv run --adapter adapters/tls13     # lắp ráp runtime; báo rõ thành phần còn thiếu
 uv run rfcv verify runs/<run_id>
+uv run python scripts/e2e_live.py faulty        # thử cả vòng điều tra với LLM thật (SUT và mã giả); đo cải thiện, xem bên dưới
+uv run python scripts/analyze_run.py runs/e2e-faulty
+uv run rfcv trace runs/<run_id> -r TLS13-0042   # xem lại luồng xử lý: giao việc, bằng chứng, vì sao dừng (--json để phân tích)
 ```
 
-Khoá API chỉ đọc từ biến môi trường (`ANTHROPIC_API_KEY`, `DASHSCOPE_API_KEY`, `DEEPSEEK_API_KEY`) và chỉ trong LLM gateway. Mô hình theo vai trò: [config/models.yaml](config/models.yaml).
+**Tiêu chuẩn chất lượng:** hệ thống phải đạt gì và từng thành phần phải làm được gì nằm ở [docs/quality/](docs/quality/tieu_chuan_he_thong.md).
+
+**Theo dõi cải thiện:** vấn đề đã biết, bằng chứng, cách đo và cách biết đã sửa xong nằm ở [docs/management/theo_doi_cai_thien.md](docs/management/theo_doi_cai_thien.md). Đổi prompt, skill, cấu hình hay mô hình thì chạy lại phép thử và ghi một dòng vào Nhật ký đo ở đó.
+
+Khoá API chỉ đọc từ biến môi trường (tên biến khai báo cho từng mô hình, ví dụ `DEEPSEEK_API_KEY`) và chỉ trong LLM gateway; `rfcv` không tự nạp `.env`, hãy đặt biến vào môi trường trước khi chạy. Cấu hình mô hình: [config/models.yaml](config/models.yaml), gồm hai phần: `models` (kho mô hình hỗ trợ, khai báo một lần kèm biến chứa khoá) và `agents` (agent nào dùng mô hình nào). Xem bằng `uv run rfcv models`.
 
 ## Kiến trúc
 
@@ -53,7 +60,7 @@ src/rfcv/
                           rfc_analyst planner test verifier report code_indexer code_reader + locator (tất định)
   backends/tlsfuzzer/     plugin backend
 agents/<tên>/ (ở gốc repo)   DỮ LIỆU của mỗi agent, ngoài mã nguồn: role.yaml (hồ sơ) + prompt.md (lời nhắc)
-adapters/tls13/   skills/   agents/   config/   docker/   tests/
+adapters/tls13/   skills/   agents/   config/   docker/   docs/   scripts/   tests/
 ```
 
 Chiều phụ thuộc: `domains`, `backends`, `runtime` phụ thuộc lõi, **không ngược lại** (import-linter ép).
@@ -118,11 +125,29 @@ Phép thử tổng quát: [tests/toy_domain.py](tests/toy_domain.py) là một m
 | Domain pack `rfc_protocol` (bằng chứng, V0–V9, RBS, oracle, Schema gate, Test driver, Coverage linker, handler) | ✅ với đối tượng giả |
 | Ca K3 chạy trọn luồng qua `build_runtime`, LLM thay bằng kịch bản | ✅ ra VIOLATION (V2) |
 | Miền thứ hai làm phép thử tổng quát | ✅ |
-| **Chạy với LLM thật** | ⏳ chưa lần nào; schema Planner dựng động chưa kiểm với API thật |
-| Chỉ mục mã tree-sitter → SQLite, bộ chạy lệnh trong container | ⏳ đã có Protocol `CodeIndex` / `SandboxExecutor` |
+| Chạy với LLM thật (DeepSeek `deepseek-flash`; SUT, backend kiểm thử và mã nguồn **giả**) | ✅ đã thử đầu-cuối 2026-10-22: bản lỗi ra `VIOLATION` (V2), bản đúng ra `COMPLIANT` (V5, LINKED). Còn vấn đề về độ tin cậy và chi phí, xem [sổ theo dõi](docs/management/theo_doi_cai_thien.md) |
+| **Chạy trên bản triển khai thật (wolfSSL)** | ⏳ chưa: thiếu backend kiểm thử thật và bộ chạy SUT. Chưa có số liệu thực nghiệm nào |
+| Chỉ mục mã tree-sitter → SQLite (C, Rust, Go), bản sao phạm vi tại commit, bộ chạy lệnh trong container, `locator.suggest`, MAP_COMPONENTS | ✅ cài đặt (`rfcv.codeindex`); ⏳ chưa chạy trên wolfSSL thật |
 | `DockerSutLauncher`, `TlsfuzzerBackend.run/sanity` | ⏳ |
-| Handler STATIC_QUERY, MAP_COMPONENTS; RFC Analyst hai luồng; Report/Output gate | ⏳ |
+| Handler STATIC_QUERY; RFC Analyst hai luồng; Report/Output gate | ⏳ |
 | CLI `specs`, `status`, `rerun`, `review`, `report` | ⏳ (trả mã 2) |
 | Lớp dịch vụ: API, hàng đợi, Postgres, đa tenant, OpenTelemetry, secrets provider | ⏳ đã chừa chỗ (Protocol repository, `tenant`, `TraceSink`) |
+
+### Nối agent với mã nguồn (tài liệu khám phá mã)
+
+```bash
+# 1. image sandbox (một lần)
+docker build -f docker/code-index-worker.Dockerfile --target indexer -t rfcv/code-indexer:latest .
+docker build -f docker/code-index-worker.Dockerfile --target worker  -t rfcv/code-index-worker:latest .
+# 2. kho mã SUT tại đúng commit (đặt sut.commit trong adapter.yaml để harness từ chối commit khác)
+git clone https://github.com/wolfSSL/wolfssl ../wolfssl && git -C ../wolfssl checkout <commit>
+# 3. chạy: sao phần code_scope → dựng chỉ mục trong container → công cụ đọc mã chạy trong container
+rfcv run --adapter adapters/tls13 --code-root ../wolfssl --code-index treesitter --executor docker ...
+# xem đúng danh mục công cụ (khuôn MCP tools/list) mà một agent nhận
+rfcv code tools --role code_reader
+```
+
+Khi phát triển không có Docker: `pip install -e '.[codeindex]'`, `--code-index treesitter-local`, và
+`RFCV_ALLOW_UNSANDBOXED_EXECUTOR=1 … --executor local-unsandboxed` (chạy lệnh trên máy, không thoả Bảng 6).
 
 Mốc G1 (cuối tháng 11): ca K3 trọn luồng với wolfSSL và LLM thật. Thứ tự làm: backend + bộ chạy SUT → chỉ mục tree-sitter → chạy thử với LLM thật.

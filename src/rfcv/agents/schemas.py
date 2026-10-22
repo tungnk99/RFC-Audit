@@ -110,3 +110,22 @@ def build_plan_action_model(tasks: Mapping[str, TaskDefinition], rationale_codes
     if rationale_codes:
         fields["rationale_code"] = (Literal[tuple(rationale_codes)], ...)
     return cast(type[PlanAction], _create("PlanAction", __base__=PlanAction, **fields))
+
+
+def build_critique_model(kinds: Sequence[str], task_names: Sequence[str]) -> type[Critique]:
+    """Dựng schema chặt cho Verifier: `kind` thuộc danh mục loại vấn đề của miền, `suggested_task` thuộc danh mục
+    nhiệm vụ. Không có danh mục thì giữ schema tổng quát.
+
+    Không ép thì mô hình có thể viết "Missing path" thay vì `MISSING_PATH`, và quy tắc sổ tay khớp theo `kind` bỏ qua
+    vấn đề mà không báo lỗi. Kết quả vẫn là lớp con của Critique nên hub xử lý như nhau.
+    """
+    if not kinds:
+        return Critique
+    issue_fields: dict[str, Any] = {"kind": (Literal[tuple(kinds)], ...)}
+    if task_names:
+        issue_fields["suggested_task"] = (Literal[tuple(task_names)], ...)
+    issue = _create("CritiqueIssue", __base__=CritiqueIssue, **issue_fields)
+    return cast(
+        type[Critique],
+        _create("Critique", __base__=Critique, issues=(list[issue], Field(default_factory=list))),
+    )

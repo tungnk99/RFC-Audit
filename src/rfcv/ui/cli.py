@@ -82,6 +82,7 @@ def agents(
                     "stage": a.stage,
                     "tasks": [t.name for t in a.tasks],
                     "output": role.get("output_schema", "-"),
+                    "skills": role.get("skills", []),
                     "wired": a.wired,
                     "summary": a.summary,
                 }
@@ -89,14 +90,77 @@ def agents(
     if as_json:
         typer.echo(json.dumps(rows, ensure_ascii=False, indent=2))
         return
-    typer.echo(f"{'agent':<13} {'vùng':<11} {'giai đoạn':<14} {'nối':<5} nhiệm vụ nhận")
+    typer.echo(f"{'agent':<13} {'vùng':<11} {'giai đoạn':<14} {'nối':<5} nhiệm vụ nhận | skill khai báo")
     for r in rows:
         mark = "có" if r["wired"] else "CHƯA"
         tasks = ", ".join(r["tasks"]) or "-"  # type: ignore[arg-type]
-        typer.echo(f"{r['agent']!s:<13} {r['zone']!s:<11} {r['stage']!s:<14} {mark:<5} {tasks}")
+        skills = ", ".join(r["skills"]) or "-"  # type: ignore[arg-type]
+        typer.echo(f"{r['agent']!s:<13} {r['zone']!s:<11} {r['stage']!s:<14} {mark:<5} {tasks} | {skills}")
     unwired = [str(r["agent"]) for r in rows if not r["wired"]]
     if unwired:
         typer.echo(f"\nChưa nối vào luồng chạy: {', '.join(unwired)}")
+
+
+code_app = typer.Typer(help="Khám phá mã: danh mục công cụ cho agent, chỉ mục mã.", no_args_is_help=True)
+app.add_typer(code_app, name="code")
+
+
+class _NullTrace:
+    def append(self, *args: object, **kwargs: object) -> None:
+        return None
+
+
+class _NoExecutor:
+    async def run(self, segments: list[list[str]], timeout_s: float) -> str:
+        return ""
+
+
+@code_app.command("tools")
+def code_tools(
+    role: Annotated[str, typer.Option(help="Vai trò agent")] = "code_reader",
+    adapter: Annotated[Path, typer.Option(help="Thư mục adapter")] = Path("adapters/tls13"),
+    agents_dir: Annotated[Path | None, typer.Option("--agents", help="Thư mục hồ sơ và lời nhắc agent")] = None,
+) -> None:
+    """In danh mục công cụ mà một vai trò nhận, đúng khuôn kết quả `tools/list` của MCP (tên, mô tả, inputSchema,
+    annotations). Đây chính là phần mô tả mô hình thấy."""
+    from types import SimpleNamespace
+
+    from rfcv.adapters.manifest import load_manifest
+    from rfcv.core.policy import PolicyStore
+    from rfcv.gates.code_gate import InMemoryCodeIndex, build_code_tools
+    from rfcv.gates.explore_policy import CodeScope
+    from rfcv.gates.tool_gateway import ToolGateway
+
+    reg = current_registry()
+    manifest = load_manifest(adapter)
+    pack = reg.domain(manifest.domain)
+    policy = PolicyStore.load(None, reg, pack.name, agents_dir)
+    gateway = ToolGateway(policy, _NullTrace(), reg.tools)
+    index = InMemoryCodeIndex({})
+    for spec in build_code_tools(index, _NoExecutor(), CodeScope(Path("."))):
+        gateway.register(spec)
+    domain_tools = getattr(pack.runtime, "tools", None)
+    if callable(domain_tools):
+        rt = SimpleNamespace(manifest=manifest, run_id="cli", providers=SimpleNamespace(code_index=index))
+        for spec in domain_tools(rt):
+            gateway.register(spec)
+    typer.echo(json.dumps(gateway.tools_list(role), ensure_ascii=False, indent=2))
+
+
+@code_app.command("index")
+def code_index_build(
+    root: Annotated[Path, typer.Option(help="Thư mục kho mã (bản sao phạm vi)")],
+    out: Annotated[Path, typer.Option(help="Tệp chỉ mục SQLite")],
+) -> None:
+    """Dựng chỉ mục tree-sitter tại chỗ (phát triển). Khi chạy thật, chỉ mục được dựng trong container code-indexer."""
+    from rfcv.codeindex.builder import IndexBuildError, build_index
+
+    try:
+        meta = build_index(root, out)
+    except IndexBuildError as exc:
+        typer.echo(f"LỖI: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(json.dumps(meta, ensure_ascii=False, indent=2))
 
 
 @adapter_app.command("check")
@@ -114,18 +178,87 @@ def adapter_check(adapter_dir: Path) -> None:
 def skills_check(
     skills_root: Annotated[Path, typer.Argument(help="Thư mục gốc chứa core/ và <adapter>/")] = Path("skills"),
     adapter: Annotated[str | None, typer.Option(help="Tên adapter để nạp thêm skills/<adapter>")] = None,
+    agents_dir: Annotated[Path | None, typer.Option("--agents", help="Thư mục hồ sơ và lời nhắc agent")] = None,
 ) -> None:
-    """Kiểm định thư viện skill và in skill mà từng vai trò sẽ thấy."""
-    from rfcv.core.skills import default_registry
+    """Kiểm định thư viện skill và in skill mà từng agent khai báo và sẽ thấy trong lần chạy với adapter này."""
+    from rfcv.core.policy import PolicyError, PolicyStore
+    from rfcv.core.skills import default_registry, undeclared_skills
 
     try:
         reg = default_registry(skills_root, adapter)
-    except ValueError as exc:
+        policy = PolicyStore.load(None, current_registry(), None, agents_dir)
+    except (ValueError, PolicyError) as exc:
         typer.echo(f"LỖI: {exc}", err=True)
         raise typer.Exit(1) from exc
-    for role in current_registry().role_names():
-        typer.echo(f"{role:<14} {', '.join(reg.select(role)) or '-'}")
+    declared = {r: policy.profile(r).skills for r in policy.roles}
+    for role, names in declared.items():
+        typer.echo(f"{role:<14} {', '.join(reg.select(names)) or '-'}")
     typer.echo(f"digest {reg.digest}")
+    unknown = undeclared_skills(declared, skills_root)
+    if unknown:
+        typer.echo(f"LỖI: role.yaml khai báo skill không có: {', '.join(unknown)}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command("models")
+def models_cmd(
+    path: Annotated[Path, typer.Argument(help="Tệp cấu hình mô hình")] = Path("config/models.yaml"),
+) -> None:
+    """Mô hình được hỗ trợ và agent nào dùng mô hình nào. Cho biết biến chứa khoá đã đặt chưa, không bao giờ in khoá."""
+    import os
+
+    import yaml
+
+    from rfcv.core.llm_gateway import LLMGateway, ModelsConfig
+
+    try:
+        cfg = ModelsConfig.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
+    except (OSError, ValueError, yaml.YAMLError) as exc:
+        typer.echo(f"LỖI: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo("Mô hình hỗ trợ:")
+    for name, spec in cfg.models.items():
+        state = "đã đặt" if os.environ.get(spec.api_key_env) else "CHƯA đặt"
+        typer.echo(f"  {name:<18} {spec.provider}:{spec.model}  khoá {spec.api_key_env} ({state})")
+    typer.echo("Agent → mô hình:")
+    for agent, model in cfg.agents.items():
+        typer.echo(f"  {agent:<16} {model}")
+    unassigned = LLMGateway(cfg).uncovered(current_registry().role_names())
+    if unassigned:
+        typer.echo(f"LỖI: agent chưa được gán mô hình: {', '.join(unassigned)}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command("trace")
+def trace_cmd(
+    run_dir: Annotated[Path, typer.Argument(help="Thư mục một lần chạy (có trace.db), ví dụ runs/run-ab12cd34ef56")],
+    requirement: Annotated[str | None, typer.Option("--requirement", "-r", help="Chỉ một yêu cầu")] = None,
+    tools: Annotated[bool, typer.Option("--tools", help="Gồm cả từng lời gọi công cụ (rất dài)")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="In từng sự kiện dạng JSON, mỗi dòng một sự kiện")] = False,
+) -> None:
+    """Xem lại luồng xử lý của một lần chạy: ai được giao gì, bằng chứng nào ra, vì sao dừng. Chỉ đọc."""
+    from rfcv.core.trace import TraceLog, describe
+
+    db = run_dir / "trace.db"
+    if not db.is_file():
+        typer.echo(f"LỖI: không có {db}", err=True)
+        raise typer.Exit(1)
+    log = TraceLog(db)
+    first_ns: int | None = None
+    for event in log.events():
+        if requirement is not None and event["requirement_id"] not in (None, requirement):
+            continue
+        if not tools and event["kind"] in ("tool_call", "tool_denied"):
+            continue
+        if as_json:
+            typer.echo(json.dumps(event, ensure_ascii=False))
+            continue
+        first_ns = event["ts_ns"] if first_ns is None else first_ns
+        rnd = event["payload"].get("round")
+        typer.echo(
+            f"{event['seq']:>5} +{(event['ts_ns'] - first_ns) / 1e9:8.2f}s "
+            f"v{rnd if rnd is not None else '-':<2} {event['role'] or '-'!s:<14} {event['kind']:<17} {describe(event)}"
+        )
 
 
 @app.command()
@@ -149,8 +282,12 @@ def run(
     agents_dir: Annotated[Path | None, typer.Option("--agents", help="Thư mục hồ sơ và lời nhắc agent")] = None,
     models: Annotated[Path, typer.Option(help="Cấu hình mô hình theo vai trò")] = Path("config/models.yaml"),
     code_root: Annotated[Path | None, typer.Option(help="Nơi kho mã tại commit cố định")] = None,
-    code_index: Annotated[str | None, typer.Option(help="Tên chỉ mục mã trong registry")] = None,
-    executor: Annotated[str | None, typer.Option(help="Tên bộ chạy lệnh sandbox trong registry")] = None,
+    code_index: Annotated[
+        str | None, typer.Option(help="Tên chỉ mục mã trong registry (treesitter | treesitter-local)")
+    ] = None,
+    executor: Annotated[
+        str | None, typer.Option(help="Tên bộ chạy lệnh sandbox trong registry (docker | local-unsandboxed)")
+    ] = None,
     sut_launcher: Annotated[str | None, typer.Option(help="Tên bộ chạy SUT trong registry")] = None,
     tenant: Annotated[str, typer.Option()] = "default",
 ) -> None:
@@ -169,11 +306,16 @@ def run(
         executor=executor,
         sut_launcher=sut_launcher,
     )
+    from rfcv.codeindex.workspace import WorkspaceError
+
     try:
         rt = build_runtime(cfg)
     except MissingProviderError as exc:
         typer.echo(f"LỖI: {exc}", err=True)
         typer.echo("Chưa có triển khai cho các thành phần trên; xem `rfcv plugins` và README, mục Lộ trình.", err=True)
+        raise typer.Exit(2) from exc
+    except WorkspaceError as exc:
+        typer.echo(f"LỖI kho mã: {exc}", err=True)
         raise typer.Exit(2) from exc
     try:
         verdicts = asyncio.run(rt.run_all(source or adapter / "examples"))

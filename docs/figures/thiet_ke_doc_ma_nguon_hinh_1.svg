@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 960 400" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, system-ui, sans-serif" width="960" height="400">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#14532d"/></marker>
+  </defs>
+  <rect x="15" y="120" width="160" height="110" rx="6" fill="#fdecea" stroke="#c62828" stroke-dasharray="5 3"/>
+  <text x="95" y="145" font-size="12.5" font-weight="700" text-anchor="middle">Code Reader</text>
+  <text x="95" y="166" font-size="11" text-anchor="middle">agent cách ly</text>
+  <text x="95" y="190" font-size="10.5" text-anchor="middle">explore(cmd)</text>
+  <text x="95" y="207" font-size="10.5" text-anchor="middle">+ 9 công cụ bổ trợ</text>
+  <rect x="215" y="135" width="140" height="80" rx="6" fill="#f5f5f5" stroke="#757575"/>
+  <text x="285" y="160" font-size="12.5" font-weight="700" text-anchor="middle">Tool gateway</text>
+  <text x="285" y="180" font-size="10.5" text-anchor="middle">quyền, danh sách</text>
+  <text x="285" y="196" font-size="10.5" text-anchor="middle">lệnh, tham số</text>
+  <rect x="395" y="135" width="150" height="80" rx="6" fill="#f5f5f5" stroke="#757575"/>
+  <text x="470" y="160" font-size="12.5" font-weight="700" text-anchor="middle">Lớp bọc Code gate</text>
+  <text x="470" y="180" font-size="10.5" text-anchor="middle">giới hạn, chuẩn hoá</text>
+  <text x="470" y="196" font-size="10.5" text-anchor="middle">file:line, nhãn</text>
+  <rect x="585" y="40" width="360" height="300" rx="10" fill="#fdf6ec" stroke="#b26a00" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="600" y="60" font-size="11.5" font-weight="700" fill="#8a5300">SANDBOX code-index-worker</text>
+  <g font-size="11.5" text-anchor="middle">
+    <rect x="605" y="75" width="155" height="58" rx="5" fill="#fff" stroke="#555"/><text x="682" y="98" font-weight="700">mcp-server-tree-sitter</text><text x="682" y="117" font-size="10.5">ký hiệu, tham chiếu, tệp</text>
+    <rect x="775" y="75" width="155" height="58" rx="5" fill="#fff" stroke="#555"/><text x="852" y="98" font-weight="700">Chỉ mục SQLite</text><text x="852" y="117" font-size="10.5">ký hiệu, lời gọi, macro</text>
+    <rect x="605" y="148" width="155" height="58" rx="5" fill="#fff" stroke="#555"/><text x="682" y="171" font-weight="700">rg, ast-grep</text><text x="682" y="190" font-size="10.5">tìm văn bản, cấu trúc</text>
+    <rect x="775" y="148" width="155" height="58" rx="5" fill="#fff" stroke="#555"/><text x="852" y="171" font-weight="700">find, sed -n, head…</text><text x="852" y="190" font-size="10.5">lệnh đọc cho explore</text>
+    <rect x="605" y="225" width="325" height="96" rx="5" fill="#fdecea" stroke="#c62828" stroke-dasharray="4 3"/><text x="767" y="252" font-weight="700">Kho mã @commit</text><text x="767" y="272" font-size="10.5">gắn chỉ đọc, chỉ phần code_scope</text><text x="767" y="290" font-size="10.5">không mạng · không khoá · user không phải root</text><text x="767" y="308" font-size="10.5">giới hạn CPU, bộ nhớ, thời gian</text>
+  </g>
+  <rect x="215" y="275" width="140" height="60" rx="6" fill="#f5f5f5" stroke="#212121" stroke-width="2.5"/>
+  <text x="285" y="300" font-size="12.5" font-weight="700" text-anchor="middle">Schema gate</text><text x="285" y="318" font-size="10.5" text-anchor="middle">kiểm tra LocationClaim</text>
+  <rect x="395" y="275" width="150" height="60" rx="6" fill="#f5f5f5" stroke="#757575"/>
+  <text x="470" y="300" font-size="12.5" font-weight="700" text-anchor="middle">Trace log</text><text x="470" y="318" font-size="10.5" text-anchor="middle">mọi lệnh và đầu ra</text>
+  <g stroke="#333" stroke-width="1.5" fill="none">
+    <path d="M175 165 H213" marker-end="url(#a1)"/>
+    <path d="M355 175 H393" marker-end="url(#a1)"/>
+    <path d="M545 175 H583" marker-end="url(#a1)"/>
+    <path d="M583 195 H555 V200 H175" stroke-dasharray="5 3" marker-end="url(#a1)"/>
+    <path d="M470 215 V273" stroke-dasharray="2 3" marker-end="url(#a1)"/>
+    <path d="M95 230 V305 H213" marker-end="url(#a1)"/>
+    <path d="M395 305 H357" stroke-dasharray="2 3" marker-end="url(#a1)"/>
+  </g>
+  <path d="M285 335 V385 H330" fill="none" stroke="#14532d" stroke-width="1.6" stroke-dasharray="6 3" marker-end="url(#a2)"/>
+  <g font-size="10.5" fill="#333">
+    <text x="182" y="155">lời gọi</text>
+    <text x="262" y="215" fill="#555">kết quả đã chuẩn hoá</text>
+    <text x="102" y="295">LocationClaim</text>
+    <text x="338" y="389" fill="#14532d">T1</text>
+    <text x="362" y="296" font-size="9.5">đối chiếu</text>
+  </g>
+</svg>

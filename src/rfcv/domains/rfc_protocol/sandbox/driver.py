@@ -1,7 +1,8 @@
 """Test driver: chạy kịch bản trên SUT và bản tham chiếu, áp oracle, ghi T3 kèm nhân chứng (M3).
 
 Một lần chạy một biến thể:
-1. khởi động SUT mới, chạy ca sanity: hỏng thì kết quả là ERROR (lỗi môi trường), không phải FAIL;
+1. khởi động SUT mới, chạy ca sanity: hỏng, kể cả SUT không khởi động được, thì kết quả là ERROR (lỗi môi trường), không
+   phải FAIL. Riêng NotImplementedError (thành phần chưa cài) không bị giấu thành ERROR. Mỗi ca để lại một sự kiện `t3_case`;
 2. chạy kịch bản qua backend → vết sự kiện chuẩn hoá; chưa tới trigger thì ERROR;
 3. oracle biên dịch tính PASS/FAIL (agent không tham gia);
 4. ca FAIL chạy lại thêm 2 lần, ở môi trường khác; khác nhau thì consistent = False (V0);
@@ -34,6 +35,9 @@ class CaseResult:
     outcome: Outcome
     trace: EventTrace | None
     reason: str | None = None
+    detail: str | None = (
+        None  # lỗi môi trường: tên và thông điệp ngoại lệ (cắt ngắn); chỉ vào trace, không vào bằng chứng
+    )
 
 
 class TestDriver:
@@ -112,10 +116,16 @@ class TestDriver:
         environment: int,
         coverage: bool,
     ) -> CaseResult:
-        async with self._launcher.start(impl, coverage=coverage, environment=environment) as ep:
-            if not await self._backend.sanity(ep):
-                return CaseResult(Outcome.ERROR, None, "sanity_failed")
-            trace = await self._backend.run(scenario, params, ep, seed)
+        try:
+            async with self._launcher.start(impl, coverage=coverage, environment=environment) as ep:
+                if not await self._backend.sanity(ep):
+                    return CaseResult(Outcome.ERROR, None, "sanity_failed")
+                trace = await self._backend.run(scenario, params, ep, seed)
+        except NotImplementedError:
+            raise  # khoảng trống cài đặt chứ không phải lỗi môi trường: phải lộ ra, không giấu thành ERROR
+        except Exception as exc:
+            # SUT không khởi động được, container sập, backend lỗi giữa chừng: lỗi môi trường, không phải FAIL của SUT.
+            return CaseResult(Outcome.ERROR, None, "environment_error", f"{type(exc).__name__}: {exc}"[:300])
         if not trace.trigger_reached:
             return CaseResult(Outcome.ERROR, trace, "trigger_not_reached")
         if not trace.sut_alive_after:
@@ -124,6 +134,41 @@ class TestDriver:
         valid_side = self._side(oracle, variant, params) == "valid"
         evaluate = oracle.evaluate_control if valid_side else oracle.evaluate
         return CaseResult(evaluate(trace.events), trace)
+
+    async def _traced_case(
+        self,
+        run_id: str,
+        role: str,
+        impl: str,
+        oracle: CompiledOracle,
+        variant: ConcreteVariant,
+        name: str,
+        scenario: ScenarioProposal,
+        params: dict[str, int | str],
+        seed: int,
+        environment: int,
+        coverage: bool,
+    ) -> CaseResult:
+        """Một ca chạy kèm một sự kiện `t3_case`: vai (SUT, chạy lại, tham chiếu, đột biến), kết quả, vì sao ERROR."""
+        result = await self._case(impl, oracle, variant, scenario, params, seed, environment, coverage)
+        trace = result.trace
+        self._trace.append(
+            run_id,
+            "t3_case",
+            {
+                "variant": name,
+                "role": role,
+                "impl": impl,
+                "environment": environment,
+                "outcome": result.outcome.value,
+                "reason": result.reason,
+                "detail": result.detail,
+                "trigger_reached": trace.trigger_reached if trace else None,
+                "sut_alive_after": trace.sut_alive_after if trace else None,
+            },
+            requirement_id=oracle.requirement_id,
+        )
+        return result
 
     @staticmethod
     def _side(oracle: CompiledOracle, variant: ConcreteVariant, params: dict[str, int | str]) -> str:
@@ -146,22 +191,26 @@ class TestDriver:
         requested_by: dict[str, str] | None,
     ) -> Evidence:
         s = seed or 0
-        first = await self._case(
-            self._sut, oracle, variant, scenario, params, s, environment=0, coverage=self._coverage
-        )
+
+        async def case(role: str, impl: str, environment: int, coverage: bool) -> CaseResult:
+            return await self._traced_case(
+                run_id, role, impl, oracle, variant, name, scenario, params, s, environment, coverage
+            )
+
+        first = await case("sut", self._sut, 0, self._coverage)
         runs = [first]
         if first.outcome is Outcome.FAIL:
             for env in range(1, self._reruns + 1):
-                runs.append(await self._case(self._sut, oracle, variant, scenario, params, s, env, coverage=False))
+                runs.append(await case("rerun", self._sut, env, False))
         consistent = len({r.outcome for r in runs}) == 1
 
         positive: list[WitnessRun] = []
         for ref in self._refs:
-            r = await self._case(ref, oracle, variant, scenario, params, s, 0, coverage=False)
+            r = await case("reference", ref, 0, False)
             positive.append(WitnessRun(impl=ref, outcome=r.outcome))
         negative: list[WitnessRun] = []
         for mutant in self._mutants:
-            r = await self._case(mutant, oracle, variant, scenario, params, s, 0, coverage=False)
+            r = await case("mutant", mutant, 0, False)
             negative.append(WitnessRun(impl=mutant, outcome=r.outcome))
 
         artifacts: dict[str, str] = {"scenario": scenario_hash}

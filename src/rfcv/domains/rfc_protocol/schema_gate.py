@@ -3,14 +3,17 @@
 Kiểm tra (tài liệu khám phá mã, Bảng 8; tài liệu khả thi, mục 6):
 1. ký hiệu có trong chỉ mục; khoảng dòng nằm trong thân ký hiệu;
 2. mọi dòng được dẫn thuộc tập dòng đã hiển thị cho agent trong phiên;
-3. mỗi cạnh của call_path có trong chỉ mục lời gọi, hoặc đã hiển thị cho agent (cạnh textual);
+3. mỗi cạnh của call_path có trong chỉ mục lời gọi (hoặc công cụ cấu trúc đã hiển thị cạnh đó), hoặc là cạnh
+   `textual`: một dòng đã hiển thị nằm trong thân ký hiệu gọi và nhắc tới tên ký hiệu được gọi (con trỏ hàm, bảng xử lý);
 4. observed thuộc từ vựng adapter hoặc là số;
 5. dòng được dẫn phải được biên dịch theo cờ build (nếu có dữ liệu tiền xử lý/độ phủ).
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Iterable
+from typing import Literal
 
 from rfcv.domains.rfc_protocol.payloads import AspectCheck, Producer, T1Payload, Tier
 from rfcv.domains.rfc_protocol.schemas import LocationClaim
@@ -35,6 +38,21 @@ class SchemaGate:
         self._terms = frozenset(vocabulary_terms)
         self._compiled = compiled_lines
 
+    def _textual_edge(self, caller: str, callee: str, session: ToolSession) -> bool:
+        """Có dòng đã hiển thị thuộc thân `caller` mà nhắc tới `callee` như một từ riêng."""
+        word = re.compile(rf"(?<![A-Za-z0-9_]){re.escape(callee)}(?![A-Za-z0-9_])")
+        spans = [(s.file, s.line_start, s.line_end) for s in self._index.lookup(caller)]
+        for file, line in sorted(session.shown_lines):
+            if not any(f == file and a <= line <= b for f, a, b in spans):
+                continue
+            sym = self._index.containing_symbol(file, line)
+            if sym is None or sym.name != caller:
+                continue
+            text = self._index.lines(file, line, line)
+            if text and word.search(text[0]):
+                return True
+        return False
+
     def check_location(
         self, claim: LocationClaim, session: ToolSession, *, run_id: str, requirement_id: str, msg_id: str
     ) -> GateResult:
@@ -54,8 +72,13 @@ class SchemaGate:
                 errors.append("LINES_NOT_SHOWN")
                 break
 
+        edge_kinds: list[Literal["index", "textual"]] = []
         for a, b in zip(claim.call_path, claim.call_path[1:], strict=False):
-            if not self._index.has_call_edge(a, b) and (a, b) not in session.shown_edges:
+            if self._index.has_call_edge(a, b) or (a, b) in session.shown_edges:
+                edge_kinds.append("index")
+            elif self._textual_edge(a, b, session):
+                edge_kinds.append("textual")
+            else:
                 errors.append("CALL_EDGE_UNKNOWN")
                 break
 
@@ -85,6 +108,7 @@ class SchemaGate:
                 AspectCheck(aspect=a.aspect, value=a.value, observed=a.observed, lines=a.lines) for a in claim.aspects
             ),
             call_path=tuple(claim.call_path),
+            call_edge_kinds=tuple(edge_kinds),
             unexplored=tuple(claim.unexplored),
         )
         draft = EvidenceDraft(

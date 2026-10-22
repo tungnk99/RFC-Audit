@@ -2,7 +2,6 @@
 name: tls-record-length-bounds
 description: Explains the TLS 1.3 record length limits of RFC 8446 sections 5.1 and 5.2 and how libraries usually implement them. Use when a requirement is about record length, record_overflow, plaintext or ciphertext size limits, or when a threshold in TLS record code needs to be compared with the RFC.
 metadata:
-  rfcv-roles: code_reader verifier
   rfcv-task-types: LOCATE RECHECK TRACE_PATHS CRITIQUE
   version: "1"
 ---

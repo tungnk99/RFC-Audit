@@ -232,13 +232,98 @@ async def test_premature_stop_rejected_then_infeasible(
     assert v2.stop_reason is StopReason.INFEASIBLE and v2.label is Label.UNVERIFIABLE
 
 
+# ---------------------------------------------------------------- dấu vết để phân tích sau
+
+
+def kinds(trace: TraceLog) -> list[str]:
+    return [e["kind"] for e in trace.events()]
+
+
+def payloads(trace: TraceLog, kind: str) -> list[dict[str, Any]]:
+    return [e["payload"] for e in trace.events(kind)]
+
+
+async def test_trace_follows_one_investigation_from_start_to_stop(
+    store: EvidenceStore, trace: TraceLog, policy: PolicyStore
+) -> None:
+    """Một lượt điều tra phải đọc lại được: bắt đầu thế nào, mỗi vòng ra sao, ai chạy bao lâu, vì sao dừng."""
+    runner = FakeRunner(lambda n: plan(SELECT, LOCATE), OUTPUTS)
+    handlers = {
+        TaskType.SELECT_TESTS: WriteOnce(store, lambda: [t3(outcome=Outcome.FAIL, alert="decode_error")]),
+        TaskType.LOCATE: WriteOnce(
+            store, lambda: [t1(reaction=AspectValue.MISMATCH, observed="send_alert(decode_error)")]
+        ),
+    }
+    await make_loop(store, trace, policy, runner, handlers).investigate(inv())
+
+    order = kinds(trace)
+    assert order[0] == "requirement_start" and order.index("round_start") < order.index("plan")
+    assert order.index("stop") < order.index("verdict") == len(order) - 1
+
+    start = payloads(trace, "requirement_start")[0]
+    assert start["rtype"] == "B" and start["budget"]["rounds"] == 8 and "rules_version" in start
+
+    runs = {p["role"]: p for p in payloads(trace, "role_run")}
+    assert set(runs) == {"planner", "test", "code_reader"}
+    assert all(p["ok"] and p["duration_ms"] >= 0 for p in runs.values())
+    assert runs["planner"]["output"] is None  # kế hoạch đã có sự kiện `plan`
+    assert runs["code_reader"]["schema"] == "LocationClaim"
+    assert runs["code_reader"]["output"]["symbol"] == "GetRecordHeader"
+
+    stop = payloads(trace, "stop")[0]
+    assert stop["reason"] == "SUFFICIENT" and stop["label"] == "VIOLATION" and stop["rule"] == "V2"
+
+
+async def test_stop_event_names_what_ran_out_or_what_repeated(
+    store: EvidenceStore, trace: TraceLog, policy: PolicyStore
+) -> None:
+    loop_runner = FakeRunner(lambda n: plan(LOCATE), OUTPUTS)
+    await make_loop(store, trace, policy, loop_runner, {TaskType.LOCATE: Noop()}).investigate(inv())
+    stop = payloads(trace, "stop")[-1]
+    assert stop["reason"] == "LOOP" and stop["repeated"][0]["task_type"] == "LOCATE"
+
+    budget_runner = FakeRunner(lambda n: plan(action="stop"), OUTPUTS)
+    await make_loop(store, trace, policy, budget_runner, {}, RequirementBudget(rounds=2)).investigate(inv())
+    stop = payloads(trace, "stop")[-1]
+    assert stop["reason"] == "BUDGET" and stop["exhausted_by"] == ["rounds"] and stop["used"]["rounds"] == 2
+
+
+async def test_critique_content_and_gating_are_traced(
+    store: EvidenceStore, trace: TraceLog, policy: PolicyStore
+) -> None:
+    """Nội dung phản biện trước đây không vào trace nên không phân tích được Planner có làm theo hay bỏ qua."""
+    runner = FakeRunner(lambda n: plan(SELECT, LOCATE) if n == 1 else plan(CRITIQUE), OUTPUTS)
+    handlers = {
+        TaskType.SELECT_TESTS: WriteOnce(store, full_passing_set),
+        TaskType.LOCATE: Noop(),
+        TaskType.CRITIQUE: Noop(),
+    }
+    await make_loop(store, trace, policy, runner, handlers).investigate(inv())
+    (critique,) = payloads(trace, "critique_result")
+    assert critique["clean"] is True and critique["gating"] is True and critique["accepted_as_clean"] is True
+    assert payloads(trace, "stop")[0]["critiqued_clean"] is True
+
+
+async def test_plan_context_records_what_the_playbook_would_have_advised(
+    store: EvidenceStore, trace: TraceLog, policy: PolicyStore
+) -> None:
+    """Để đo Planner đi theo hay chệch sổ tay: tình huống, lời khuyên và kết luận so sánh nằm cạnh kế hoạch."""
+    runner = FakeRunner(lambda n: plan(SELECT, LOCATE), OUTPUTS)
+    handlers = {TaskType.SELECT_TESTS: Noop(), TaskType.LOCATE: Noop()}
+    await make_loop(store, trace, policy, runner, handlers, RequirementBudget(rounds=1)).investigate(inv())
+    (ctx,) = payloads(trace, "plan_context")
+    assert ctx["rtype"] == "B" and ctx["planned"] == ["SELECT_TESTS", "LOCATE"]
+    assert ctx["advice"]["rule"] == "R1-B" and sorted(ctx["advice"]["tasks"]) == ["LOCATE", "SELECT_TESTS"]
+    assert ctx["adherence"] == "followed"
+
+
 # ---------------------------------------------------------------- phối hợp: ngữ cảnh worker, dấu vết lỗi, khe đo
 
 
 async def test_workers_and_critic_receive_the_evidence_state(
     store: EvidenceStore, trace: TraceLog, policy: PolicyStore
 ) -> None:
-    """Phản biện và Test phải thấy bằng chứng đã có và độ đủ; trước đây chỉ Planner thấy."""
+    """Phản biện thấy bằng chứng đã có và độ đủ (kèm feasible); Test chỉ thấy phần còn thiếu, không thấy T1 (Bảng 11)."""
     runner = FakeRunner(lambda n: plan(SELECT, LOCATE) if n == 1 else plan(CRITIQUE), OUTPUTS)
     handlers = {
         TaskType.SELECT_TESTS: WriteOnce(store, full_passing_set),
@@ -247,9 +332,10 @@ async def test_workers_and_critic_receive_the_evidence_state(
     }
     await make_loop(store, trace, policy, runner, handlers).investigate(inv())
     by_role = {c.to_role: ctx for c, ctx in zip(runner.calls, runner.contexts, strict=True)}
-    for role in ("verifier", "test"):
-        assert {"evidence.summary", "verdict.sufficiency"} <= set(by_role[role]), role
-    assert "task.focus" in by_role["test"]
+    assert {"evidence.summary", "verdict.sufficiency"} <= set(by_role["verifier"])
+    assert "feasible" in by_role["verifier"]["verdict.sufficiency"]["value"]
+    assert {"task.focus", "verdict.missing"} <= set(by_role["test"])
+    assert not {"evidence.summary", "verdict.sufficiency"} & set(by_role["test"])
     # Vùng cách ly chỉ nhận trường nó khai báo: code_reader không khai báo nên không được cấp thêm.
     assert "evidence.summary" not in by_role["code_reader"]
 

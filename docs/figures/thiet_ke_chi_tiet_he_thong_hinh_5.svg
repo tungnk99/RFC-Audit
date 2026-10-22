@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 960 340" xmlns="http://www.w3.org/2000/svg" font-family="Be Vietnam Pro, system-ui, sans-serif" width="960" height="340">
+  <defs>
+    <marker id="w1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker>
+    <marker id="w2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c62828"/></marker>
+  </defs>
+  <rect x="10" y="20" width="940" height="100" fill="#fff" stroke="#999"/>
+  <rect x="10" y="120" width="940" height="110" fill="#f7fafd" stroke="#999"/>
+  <rect x="10" y="230" width="940" height="100" fill="#fff" stroke="#999"/>
+  <rect x="10" y="20" width="115" height="310" fill="#eeeeee" stroke="#999"/>
+  <g font-size="12" font-weight="700" text-anchor="middle" fill="#333">
+    <text x="67" y="74">AUDITOR</text><text x="67" y="179">HỆ THỐNG</text><text x="67" y="284">REVIEWER</text>
+  </g>
+  <g font-size="11" text-anchor="middle">
+    <rect x="137" y="48" width="105" height="44" rx="8" fill="#fff" stroke="#555"/><text x="190" y="66">Chọn giao thức,</text><text x="190" y="82">repo, commit</text>
+    <rect x="252" y="153" width="105" height="44" rx="8" fill="#e3f2fd" stroke="#1565c0"/><text x="305" y="171">Kiểm định</text><text x="305" y="187">adapter, dựng SUT</text>
+    <rect x="367" y="153" width="105" height="44" rx="8" fill="#e3f2fd" stroke="#1565c0"/><text x="420" y="171">Dịch RBS</text><text x="420" y="187">hai luồng</text>
+    <rect x="482" y="48" width="105" height="44" rx="8" fill="#fff" stroke="#555"/><text x="535" y="66">Duyệt RBS</text><text x="535" y="82">bất đồng</text>
+    <rect x="597" y="153" width="105" height="44" rx="8" fill="#e3f2fd" stroke="#1565c0"/><text x="650" y="171">Điều tra, thu</text><text x="650" y="187">bằng chứng</text>
+    <rect x="712" y="153" width="105" height="44" rx="8" fill="#e3f2fd" stroke="#1565c0"/><text x="765" y="171">Kết luận,</text><text x="765" y="187">lập báo cáo</text>
+    <rect x="712" y="258" width="105" height="44" rx="8" fill="#fff" stroke="#555"/><text x="765" y="276">Duyệt yêu cầu</text><text x="765" y="292">NEEDS_REVIEW</text>
+    <rect x="827" y="48" width="105" height="44" rx="8" fill="#fff" stroke="#555"/><text x="880" y="66">Nhận báo cáo,</text><text x="880" y="82">SARIF</text>
+  </g>
+  <g stroke="#333" stroke-width="1.5" fill="none">
+    <path d="M190 92 V175 H250" marker-end="url(#w1)"/>
+    <path d="M357 175 H365" marker-end="url(#w1)"/>
+    <path d="M420 153 V70 H480" marker-end="url(#w1)"/>
+    <path d="M535 92 V175 H595" marker-end="url(#w1)"/>
+    <path d="M702 175 H710" marker-end="url(#w1)"/>
+    <path d="M817 175 H860 V94" marker-end="url(#w1)"/>
+    <path d="M765 197 V256" stroke-dasharray="5 3" marker-end="url(#w1)"/>
+    <path d="M817 280 H905 V94" marker-end="url(#w1)"/>
+  </g>
+  <path d="M305 153 V80 H244" fill="none" stroke="#c62828" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#w2)"/>
+  <g font-size="10.5"><text x="311" y="118" fill="#c62828">không đạt</text><text x="772" y="232" fill="#333">nếu có</text></g>
+</svg>

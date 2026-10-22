@@ -2,6 +2,7 @@ role: planner
 zone: privileged
 context_fields: [requirement.structured, requirement.rtype, rfc.sentence, evidence.summary, verdict.sufficiency, critique.latest, tasks.history, budget.left]
 tools: [registry.read, evidence.read_summary, verdict.read]
+skills: [summarize-evidence-for-planner]
 output_schema: PlanAction@1
 prompt: prompt.md
 budget_per_task: {llm_calls: 3, tool_calls: 4, tokens: 60000, seconds: 120}

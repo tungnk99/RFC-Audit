@@ -33,7 +33,9 @@ def driver(store: EvidenceStore, trace: TraceLog, tmp_path: Path, backend: FakeB
 
 
 def view(oracle: CompiledOracle) -> ProtocolRequirement:
-    return ProtocolRequirement(REQ, oracle.rtype, "MUST", oracle.required_variant_names, oracle.random_k, oracle.valid_random_k)
+    return ProtocolRequirement(
+        REQ, oracle.rtype, "MUST", oracle.required_variant_names, oracle.random_k, oracle.valid_random_k
+    )
 
 
 async def test_buggy_sut_gives_violation_with_witness(
@@ -89,6 +91,59 @@ async def test_sanity_failure_is_error_not_fail(
     )
     assert all(isinstance(e.payload, T3Payload) and e.payload.outcome is Outcome.ERROR for e in evs)
     assert decide(view(oracle), store.for_requirement(REQ), StopReason.BUDGET).label is Label.UNVERIFIABLE
+
+
+class BrokenLauncher:
+    """SUT không khởi động được (container sập, hết tài nguyên…)."""
+
+    def __init__(self, error: Exception) -> None:
+        self.error = error
+
+    def start(self, impl: str, *, coverage: bool, environment: int):
+        raise self.error
+
+
+def broken_driver(store: EvidenceStore, trace: TraceLog, tmp_path: Path, error: Exception) -> TestDriver:
+    return TestDriver(
+        FakeBackend(),
+        BrokenLauncher(error),
+        store,
+        ArtifactStore(tmp_path / "artifacts"),
+        trace,
+        sut_impl="sut",
+        references=["rustls"],
+    )
+
+
+async def test_sut_start_failure_is_a_traced_error_not_a_crash_and_not_a_fail(
+    store: EvidenceStore, trace: TraceLog, tmp_path: Path, oracle: CompiledOracle
+) -> None:
+    d = broken_driver(store, trace, tmp_path, RuntimeError("docker: cannot start container"))
+    evs = await d.run_requirement(run_id="run-test", oracle=oracle, scenario=SCENARIO, seed=1)
+    assert evs and all(isinstance(e.payload, T3Payload) and e.payload.outcome is Outcome.ERROR for e in evs)
+    cases = [e["payload"] for e in trace.events("t3_case")]
+    assert cases and all(c["outcome"] == "ERROR" and c["reason"] == "environment_error" for c in cases)
+    assert "cannot start container" in cases[0]["detail"] and cases[0]["role"] == "sut"
+    assert {c["role"] for c in cases} == {"sut", "reference"}
+
+
+async def test_an_unimplemented_backend_is_not_hidden_as_an_environment_error(
+    store: EvidenceStore, trace: TraceLog, tmp_path: Path, oracle: CompiledOracle
+) -> None:
+    d = broken_driver(store, trace, tmp_path, NotImplementedError("backend chưa cài"))
+    with pytest.raises(NotImplementedError):
+        await d.run_requirement(run_id="run-test", oracle=oracle, scenario=SCENARIO, seed=1)
+
+
+async def test_every_case_leaves_a_t3_case_event(
+    store: EvidenceStore, trace: TraceLog, tmp_path: Path, oracle: CompiledOracle
+) -> None:
+    await driver(store, trace, tmp_path, FakeBackend()).run_requirement(
+        run_id="run-test", oracle=oracle, scenario=SCENARIO, seed=7
+    )
+    roles = {e["payload"]["role"] for e in trace.events("t3_case")}
+    assert roles == {"sut", "rerun", "reference", "mutant"}  # ca FAIL được chạy lại; có cả tham chiếu và đột biến
+    assert all(e["requirement_id"] == REQ for e in trace.events("t3_case"))
 
 
 async def test_trigger_not_reached_is_error(

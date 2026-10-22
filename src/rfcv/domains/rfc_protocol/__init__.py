@@ -33,9 +33,9 @@ TOOLS = (
 
 
 def pack() -> DomainPack:
+    from agents.planner import playbook
+    from agents.registry import AGENTS
     from rfcv.domains.rfc_protocol import adapter_checks, cli, payloads, rules, runtime, schemas
-    from rfcv.domains.rfc_protocol.agents.planner import playbook
-    from rfcv.domains.rfc_protocol.agents.registry import AGENTS
 
     return DomainPack(
         name="rfc_protocol",
@@ -48,9 +48,14 @@ def pack() -> DomainPack:
         tools=TOOLS,
         required_roles=REQUIRED_ROLES,
         agents=AGENTS,
-        loop=LoopPolicy(planner_role="planner", critique_task=schemas.TaskType.CRITIQUE.value),
+        loop=LoopPolicy(
+            planner_role="planner",
+            critique_task=schemas.TaskType.CRITIQUE.value,
+            deviation_code=schemas.RationaleCode.DEVIATE_PLAYBOOK.value,
+        ),
         adapter_checks=[adapter_checks.check_protocol_adapter],
         cli_apps={"rbs": cli.rbs_app, "rfc": cli.rfc_app},
         runtime=runtime.ProtocolRuntime(),
         playbook=playbook.PLAYBOOK,
+        critique_kinds=[k.value for k in schemas.CritiqueKind],
     )

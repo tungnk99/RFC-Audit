@@ -1,0 +1,24 @@
+# Toán tử tạo lỗi (thiết kế đánh giá, Bảng 4). Người tạo lỗi KHÔNG xem kết quả của hệ thống (N2).
+# Mỗi phiên bản lỗi là một bản ghi trong mutants.yaml theo mẫu `template` dưới đây; patch lưu ở patches/<id>.patch.
+operators:
+  - {id: DEL_CHECK,    types: [A, B], how: "Xoá phép kiểm tra (độ dài, phần mở rộng trùng lặp)"}
+  - {id: OFF_BY_ONE,   types: [A, B], how: "Đổi ngưỡng ±1 hoặc > thành >="}
+  - {id: WRONG_ALERT,  types: [B],    how: "Đổi mã cảnh báo hoặc mã lỗi trả về"}
+  - {id: NO_CLOSE,     types: [B],    how: "Gửi cảnh báo nhưng không đóng kết nối"}
+  - {id: SKIP_STATE,   types: [C],    how: "Bỏ kiểm tra trạng thái hoặc thứ tự thông điệp"}
+  - {id: WRONG_VALUE,  types: [A],    how: "Đổi giá trị trường gửi đi (ví dụ legacy_version)"}
+  - {id: NO_ZEROIZE,   types: [D],    how: "Bỏ lệnh xoá bí mật"}
+
+template:
+  id: M-TLS13-0042-01          # <yêu cầu>-<số thứ tự>
+  protocol: tls13
+  impl: wolfssl
+  base: "<commit gốc đang tuân thủ yêu cầu>"
+  requirement: TLS13-0042
+  operator: DEL_CHECK
+  patch: patches/M-TLS13-0042-01.patch
+  fix_location: {file: src/internal.c, lines: [0, 0]}   # nhãn chuẩn cho định vị T1
+  builds: false                # điền true sau khi dựng được và test sẵn có của dự án vẫn chạy (mục 4.1, bước 2)
+  equivalent: false            # người tạo đánh dấu TRƯỚC khi chạy hệ thống nếu hành vi tương đương bản gốc (bước 4)
+  split: eval
+  author: ""

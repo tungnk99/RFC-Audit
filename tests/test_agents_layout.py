@@ -9,17 +9,25 @@ from types import SimpleNamespace
 import yaml
 from typer.testing import CliRunner
 
+from agents.registry import AGENTS
 from conftest import AGENTS_DIR
 from rfcv.adapters.manifest import AdapterManifest
 from rfcv.domains.rfc_protocol import REQUIRED_ROLES
-from rfcv.domains.rfc_protocol.agents.registry import AGENTS
 from rfcv.domains.rfc_protocol.runtime import ProtocolRuntime
 from rfcv.domains.rfc_protocol.schemas import DOMAIN_SCHEMAS, TASKS
 from rfcv.plugins import current_registry
 from rfcv.ui.cli import app
 
 DOMAIN_DIR = Path(__file__).resolve().parents[1] / "src" / "rfcv" / "domains" / "rfc_protocol"
-EXPECTED = {"rfc_analyst", "planner", "test", "verifier", "report", "code_indexer", "code_reader"}  # bảy agent + locator
+EXPECTED = {
+    "rfc_analyst",
+    "planner",
+    "test",
+    "verifier",
+    "report",
+    "code_indexer",
+    "code_reader",
+}  # bảy agent + locator
 
 
 def by_name() -> dict[str, object]:
@@ -31,16 +39,15 @@ def test_the_seven_documented_agents_plus_the_deterministic_locator_are_declared
     assert set(REQUIRED_ROLES) == EXPECTED
 
 
-def test_every_agent_has_a_code_folder_and_a_data_folder() -> None:
-    """Mã (schema, handler, SPEC) trong src/; dữ liệu (hồ sơ, lời nhắc) ở agents/ ngoài mã nguồn."""
+def test_every_agent_is_one_folder_holding_its_code_and_its_data() -> None:
+    """Mỗi agent một thư mục ở agents/: mã (schema, handler, SPEC) cùng hồ sơ và lời nhắc."""
     for a in AGENTS:
-        code = DOMAIN_DIR / "agents" / a.name
-        assert (code / "__init__.py").is_file(), a.name
-        assert not list(code.glob("*.yaml")) and not list(code.glob("*.md")), "dữ liệu phải ở agents/ ngoài mã nguồn"
+        folder = AGENTS_DIR / a.name
+        assert (folder / "__init__.py").is_file(), a.name
         if not a.has_role:
-            assert a.name == "locator" and not (AGENTS_DIR / a.name).exists()  # tất định, không LLM
+            assert a.name == "locator" and not (folder / "role.yaml").exists()  # tất định, không LLM
             continue
-        role = yaml.safe_load((AGENTS_DIR / a.name / "role.yaml").read_text(encoding="utf-8"))
+        role = yaml.safe_load((folder / "role.yaml").read_text(encoding="utf-8"))
         assert (role["role"], role["zone"], role["output_schema"]) == (a.name, a.zone, a.output_schema)
         assert (AGENTS_DIR / a.name / role["prompt"]).is_file()
 

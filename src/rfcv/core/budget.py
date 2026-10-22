@@ -39,13 +39,27 @@ class BudgetTracker:
     def elapsed(self) -> float:
         return self._clock() - self._start
 
-    def exhausted(self) -> bool:
-        return (
-            self.rounds >= self.budget.rounds
-            or self.tool_calls >= self.budget.tool_calls
-            or self.tokens >= self.budget.tokens
-            or self.elapsed() >= self.budget.seconds
+    def exhausted_by(self) -> list[str]:
+        """Những chiều ngân sách đã cạn (rounds, tool_calls, tokens, seconds); rỗng nếu còn."""
+        limits = (
+            ("rounds", self.rounds, self.budget.rounds),
+            ("tool_calls", self.tool_calls, self.budget.tool_calls),
+            ("tokens", self.tokens, self.budget.tokens),
+            ("seconds", self.elapsed(), self.budget.seconds),
         )
+        return [name for name, used, limit in limits if used >= limit]
+
+    def exhausted(self) -> bool:
+        return bool(self.exhausted_by())
+
+    def used(self) -> dict[str, int]:
+        """Đã dùng bao nhiêu theo từng chiều, để ghi vào trace (đối xứng với `remaining`)."""
+        return {
+            "rounds": self.rounds,
+            "tool_calls": self.tool_calls,
+            "tokens": self.tokens,
+            "seconds": int(self.elapsed()),
+        }
 
     def remaining(self) -> dict[str, int]:
         return {

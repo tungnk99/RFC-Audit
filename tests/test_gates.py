@@ -42,10 +42,7 @@ def scope(tmp_path: Path) -> CodeScope:
     ],
 )
 def test_explore_allowed(cmd: str, scope: CodeScope) -> None:
-    if "$" in cmd:
-        with pytest.raises(CommandRejected):  # biến shell bị chặn kể cả trong mẫu ast-grep
-            explore_policy.validate(cmd, scope)
-        return
+    # `$` trong mẫu ast-grep là biến mẫu, không phải biến shell: lệnh chạy bằng execve, không qua shell.
     segments = explore_policy.validate(cmd, scope)
     assert segments and all(seg[0] in explore_policy.ALLOWED for seg in segments)
 

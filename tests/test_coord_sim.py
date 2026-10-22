@@ -140,5 +140,29 @@ def test_mast_unaware_termination_needs_three_identical_reports_and_a_forced_sto
     assert "FM_UNAWARE_TERMINATION" not in classify_trace([*reports, ev("verdict", stop_reason="SUFFICIENT")])
 
 
+def critique(*suggested: str) -> dict[str, object]:
+    issues = [{"kind": "MISSING_PATH", "evidence_id": None, "suggested_task": t} for t in suggested]
+    return ev("critique_result", round=1, issues=issues, clean=not issues, gating=True, accepted_as_clean=not issues)
+
+
+def test_mast_flags_a_plan_that_ignores_the_critique() -> None:
+    ignored = [critique("TRACE_PATHS"), ev("plan", tasks=[{"task_type": "SELECT_TESTS"}])]
+    assert "FM_CRITIQUE_IGNORED" in classify_trace(ignored)
+    stop = [critique("TRACE_PATHS"), ev("plan", tasks=[], action="stop")]
+    assert "FM_CRITIQUE_IGNORED" in classify_trace(stop)
+
+
+def test_mast_accepts_a_plan_that_follows_the_critique_or_cannot_follow_it() -> None:
+    both = [{"task_type": "TRACE_PATHS"}, {"task_type": "SELECT_TESTS"}]
+    assert "FM_CRITIQUE_IGNORED" not in classify_trace([critique("TRACE_PATHS"), ev("plan", tasks=both)])
+    # Verifier đề xuất việc chưa có handler: Planner không làm theo được, không phải lỗi của Planner.
+    impossible = [critique("STATIC_QUERY"), ev("plan", tasks=[{"task_type": "SELECT_TESTS"}])]
+    assert "FM_CRITIQUE_IGNORED" not in classify_trace(impossible, unavailable_tasks={"STATIC_QUERY"})
+    # Phản biện sạch không đòi hỏi gì; và chỉ kế hoạch ngay sau đó bị xét.
+    assert "FM_CRITIQUE_IGNORED" not in classify_trace([critique(), ev("plan", tasks=[{"task_type": "LOCATE"}])])
+    later = [critique("TRACE_PATHS"), ev("plan", tasks=[{"task_type": "TRACE_PATHS"}]), ev("plan", tasks=[])]
+    assert "FM_CRITIQUE_IGNORED" not in classify_trace(later)
+
+
 def test_every_tag_is_documented() -> None:
     assert len(set(TAGS)) == len(TAGS)

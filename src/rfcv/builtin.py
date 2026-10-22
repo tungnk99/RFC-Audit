@@ -17,6 +17,17 @@ def _tlsfuzzer(manifest: Any, config: Any) -> Any:
     return TlsfuzzerBackend()
 
 
+def _codeindex(name: str) -> Any:
+    """Nhập muộn: chỉ khi cấu hình chọn mới nạp gói chỉ mục và bộ chạy lệnh."""
+
+    def factory(manifest: Any, config: Any) -> Any:
+        from rfcv.codeindex import providers
+
+        return getattr(providers, name)(manifest, config)
+
+    return factory
+
+
 def register_builtin(reg: Registry) -> None:
     from rfcv.domains.rfc_protocol import pack
     from rfcv.gates.code_gate import CODE_TOOL_DESCRIPTORS
@@ -26,6 +37,10 @@ def register_builtin(reg: Registry) -> None:
         reg.register_tool(tool)
     reg.register_domain(pack())
     reg.register_backend("tlsfuzzer", _tlsfuzzer)
+    reg.register_code_index("treesitter", _codeindex("treesitter_sandboxed"))
+    reg.register_code_index("treesitter-local", _codeindex("treesitter_local"))
+    reg.register_executor("docker", _codeindex("docker_executor"))
+    reg.register_executor("local-unsandboxed", _codeindex("local_executor"))
     reg.register_llm_provider("anthropic", anthropic_factory)
     reg.register_llm_provider("openai_compatible", openai_compatible_factory)
     reg.register_agent_runtime("pydantic_ai", create_runner)

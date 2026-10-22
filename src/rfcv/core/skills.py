@@ -10,8 +10,10 @@ Ràng buộc an toàn của đề tài, thêm lên trên chuẩn:
   runtime.pydantic_ai.skills).
 - Không cho phép `scripts/` (rủi ro A3); `references/` chỉ đọc qua công cụ `skill.read_reference`
   đi qua Tool gateway.
-- Bộ skill mỗi vai trò thấy được chọn tất định từ metadata `rfcv-roles`, `rfcv-task-types`
-  (lọc `include` của harness không phải ranh giới phân quyền, nên ta tự lọc trước).
+- `skills/` là kho chung. Agent nào dùng skill nào do chính agent khai báo (`skills:` trong `agents/<tên>/role.yaml`);
+  không khai báo thì không có skill. Skill chỉ tự giới hạn theo kiểu nhiệm vụ (`rfcv-task-types`), không tự chọn agent.
+  Bộ skill mỗi lượt được chọn tất định từ hai điều kiện đó (lọc `include` của harness không phải ranh giới phân quyền,
+  nên ta tự lọc trước).
 """
 
 from __future__ import annotations
@@ -40,7 +42,6 @@ class SkillInfo:
     name: str
     description: str
     path: Path
-    roles: frozenset[str]
     task_types: frozenset[str]
     metadata: dict[str, str]
     digest: str
@@ -56,9 +57,9 @@ def _split_set(value: str | None) -> frozenset[str]:
     return frozenset(v for v in (value or "").split() if v)
 
 
-def validate_library(library: Path, known_roles: Iterable[str], known_task_types: Iterable[str]) -> SkillValidation:
+def validate_library(library: Path, known_task_types: Iterable[str]) -> SkillValidation:
     """Kiểm định một thư viện skill theo chuẩn Agent Skills và ràng buộc của rfcv."""
-    roles, tasks = set(known_roles), set(known_task_types)
+    tasks = set(known_task_types)
     result = SkillValidation()
     if not library.is_dir():
         return result
@@ -103,12 +104,11 @@ def validate_library(library: Path, known_roles: Iterable[str], known_task_types
             metadata = {str(k): str(v) for k, v in meta_items}
         if "allowed-tools" in front:
             errors.append("allowed-tools: không dùng; quyền công cụ do Policy store quyết định")
-        skill_roles = _split_set(metadata.get("rfcv-roles"))
+        if "rfcv-roles" in metadata:
+            errors.append(
+                "metadata.rfcv-roles: không dùng; agent khai báo skill trong agents/<tên>/role.yaml (skills:)"
+            )
         skill_tasks = _split_set(metadata.get("rfcv-task-types"))
-        if not skill_roles:
-            errors.append("metadata.rfcv-roles: bắt buộc (danh sách vai trò, cách nhau bởi khoảng trắng)")
-        if skill_roles - roles:
-            errors.append(f"metadata.rfcv-roles: vai trò lạ {sorted(skill_roles - roles)}")
         if skill_tasks - tasks:
             errors.append(f"metadata.rfcv-task-types: kiểu nhiệm vụ lạ {sorted(skill_tasks - tasks)}")
         if len(m.group(2).splitlines()) > MAX_BODY_LINES:
@@ -136,7 +136,6 @@ def validate_library(library: Path, known_roles: Iterable[str], known_task_types
                 name=str(name),
                 description=str(desc),
                 path=skill_dir,
-                roles=skill_roles,
                 task_types=skill_tasks,
                 metadata=metadata,
                 digest=content_hash(files),
@@ -151,18 +150,13 @@ def validate_library(library: Path, known_roles: Iterable[str], known_task_types
 class SkillRegistry:
     """Các thư viện skill của một lần chạy: lõi (không gắn giao thức) và adapter."""
 
-    def __init__(
-        self,
-        libraries: Mapping[str, Path],
-        known_roles: Iterable[str],
-        known_task_types: Iterable[str],
-    ) -> None:
-        roles, tasks = list(known_roles), list(known_task_types)
+    def __init__(self, libraries: Mapping[str, Path], known_task_types: Iterable[str]) -> None:
+        tasks = list(known_task_types)
         self._libraries = dict(libraries)
         self.skills: dict[str, SkillInfo] = {}
         errors: list[str] = []
         for lib in self._libraries.values():
-            v = validate_library(lib, roles, tasks)
+            v = validate_library(lib, tasks)
             errors += v.errors
             for s in v.skills:
                 if s.name in self.skills:
@@ -179,12 +173,17 @@ class SkillRegistry:
     def digest(self) -> str:
         return content_hash({n: s.digest for n, s in sorted(self.skills.items())})
 
-    def select(self, role: str, task_type: str | None = None) -> list[str]:
-        """Tất định: skill có role trong rfcv-roles, và (nếu khai báo) task_type trong rfcv-task-types."""
+    def select(self, declared: Iterable[str], task_type: str | None = None) -> list[str]:
+        """Tất định: skill agent đã khai báo, có trong lần chạy này, và (nếu skill giới hạn) đúng kiểu nhiệm vụ.
+
+        Skill khai báo mà không có trong lần chạy (ví dụ skill của adapter khác) bị bỏ qua; tên sai đã bị
+        `undeclared_skills` chặn lúc lắp runtime.
+        """
         return sorted(
             s.name
-            for s in self.skills.values()
-            if role in s.roles and (not s.task_types or task_type is None or task_type in s.task_types)
+            for name in set(declared)
+            if (s := self.skills.get(name)) is not None
+            and (not s.task_types or task_type is None or task_type in s.task_types)
         )
 
     def read_reference(self, skill: str, relpath: str) -> str:
@@ -204,21 +203,24 @@ def default_registry(
     skills_root: Path,
     adapter: str | None = None,
     *,
-    roles: Iterable[str] | None = None,
     task_types: Iterable[str] | None = None,
 ) -> SkillRegistry:
     """Thư viện lõi (skills/core) cộng thư viện của adapter (skills/<adapter>) nếu có.
 
-    Vai trò và kiểu nhiệm vụ hợp lệ lấy từ registry plugin (domain pack), trừ khi truyền tường minh.
+    Kiểu nhiệm vụ hợp lệ lấy từ registry plugin (domain pack), trừ khi truyền tường minh.
     """
     from rfcv.plugins import current_registry
 
-    reg = current_registry()
     libraries = {"core": skills_root / "core"}
     if adapter and (skills_root / adapter).is_dir():
         libraries[adapter] = skills_root / adapter
-    return SkillRegistry(
-        libraries,
-        roles if roles is not None else reg.role_names(),
-        task_types if task_types is not None else reg.task_names(),
-    )
+    return SkillRegistry(libraries, task_types if task_types is not None else current_registry().task_names())
+
+
+def undeclared_skills(declared: Mapping[str, Iterable[str]], skills_root: Path) -> list[str]:
+    """Tên skill agent khai báo mà không có trong bất kỳ thư viện nào dưới `skills_root` (gõ sai tên, skill đã xoá).
+
+    Xét mọi thư viện chứ không chỉ thư viện của lần chạy, để skill của adapter khác không bị coi là lỗi.
+    """
+    existing = {p.parent.name for p in skills_root.glob("*/*/SKILL.md")} if skills_root.is_dir() else set[str]()
+    return [f"{role}: {name}" for role, names in sorted(declared.items()) for name in names if name not in existing]

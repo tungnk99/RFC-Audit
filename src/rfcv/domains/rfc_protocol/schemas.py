@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from rfcv.domains.rfc_protocol.agents.code_indexer.schema import ComponentEntry, ComponentMap
-from rfcv.domains.rfc_protocol.agents.code_reader.schema import AspectClaim, CheckKind, LocationClaim
-from rfcv.domains.rfc_protocol.agents.common import (
+from agents.code_indexer.schema import ComponentEntry, ComponentMap
+from agents.code_reader.schema import AspectClaim, CheckKind, LocationClaim
+from agents.common import (
     NoTaskParams,
     Out,
     RationaleCode,
@@ -19,11 +19,11 @@ from rfcv.domains.rfc_protocol.agents.common import (
     TaskParams,
     TaskType,
 )
-from rfcv.domains.rfc_protocol.agents.locator.schema import QueryProposal
-from rfcv.domains.rfc_protocol.agents.registry import AGENTS
-from rfcv.domains.rfc_protocol.agents.rfc_analyst.schema import RbsProposal
-from rfcv.domains.rfc_protocol.agents.test.schema import ScenarioProposal, ScenarioStep
-from rfcv.domains.rfc_protocol.agents.verifier.schema import CritiqueKind
+from agents.locator.schema import QueryProposal
+from agents.registry import AGENTS
+from agents.rfc_analyst.schema import RbsProposal
+from agents.test.schema import ScenarioProposal, ScenarioStep
+from agents.verifier.schema import CritiqueKind
 from rfcv.spi import TaskDefinition
 
 # Suy ra từ khai báo của từng agent.

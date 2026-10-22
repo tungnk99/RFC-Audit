@@ -1,40 +1,31 @@
-# Mô hình theo vai trò (LLM gateway). Hash tệp này ghi vào bản kê lần chạy.
-# Khoá API chỉ đọc từ biến môi trường, chỉ trong LLM gateway.
+# Cấu hình mô hình (LLM gateway). Hash tệp này ghi vào bản kê lần chạy.
+# Khoá API chỉ đọc từ biến môi trường, chỉ trong LLM gateway; ở đây chỉ ghi TÊN biến, không ghi khoá.
+#
+# Hai phần tách bạch:
+#   models  kho mô hình được hỗ trợ, mỗi mô hình khai báo MỘT lần (nhà cung cấp, id, endpoint, biến chứa khoá, tham số).
+#   agents  agent nào dùng mô hình nào (theo tên trong `models`). Đổi mô hình của một agent là đổi một dòng.
+#
 # Lưu ý: Claude đời mới trả 400 nếu đặt temperature/top_p; chỉ thêm `settings` khi mô hình hỗ trợ.
-roles:
-  rfc_analyst.a:
-    provider: anthropic
-    model: claude-opus-5-5
-    api_key_env: ANTHROPIC_API_KEY
-  rfc_analyst.b:            # luồng dịch thứ hai: khác họ mô hình để lỗi ít tương quan (M2)
+models:
+  deepseek-flash:
     provider: openai_compatible
-    model: qwen3-max
-    base_url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
-    api_key_env: DASHSCOPE_API_KEY
-    settings: {temperature: 0}
-  planner:
-    provider: anthropic
-    model: claude-sonnet-5-5
-    api_key_env: ANTHROPIC_API_KEY
-  test:
-    provider: anthropic
-    model: claude-sonnet-5-5
-    api_key_env: ANTHROPIC_API_KEY
-  verifier:                 # phản biện bằng họ mô hình khác
-    provider: openai_compatible
-    model: deepseek-chat
-    base_url: https://api.deepseek.com/v1
+    model: deepseek-flash
+    base_url: https://api.deepseek.com
     api_key_env: DEEPSEEK_API_KEY
-    settings: {temperature: 0}
-  report:
-    provider: anthropic
-    model: claude-haiku-5-5
-    api_key_env: ANTHROPIC_API_KEY
-  code_indexer:
-    provider: anthropic
-    model: claude-haiku-5-5
-    api_key_env: ANTHROPIC_API_KEY
-  code_reader:
-    provider: anthropic
-    model: claude-sonnet-5-5
-    api_key_env: ANTHROPIC_API_KEY
+    # Tắt chế độ suy nghĩ của DeepSeek qua tham số riêng của họ: chế độ đó từ chối `tool_choice` mà runtime dùng để ép
+    # đầu ra có cấu trúc (400 "Thinking mode does not support this tool_choice"), và khi thinking bật thì temperature
+    # bị bỏ qua. (`thinking: false` chung của pydantic-ai không được dịch sang tham số này cho endpoint kiểu OpenAI.)
+    settings: {temperature: 0, extra_body: {thinking: {type: disabled}}}
+
+# Hiện chỉ có một mô hình nên mọi agent dùng chung. Khi có thêm mô hình thì khai báo ở `models` rồi đổi dòng tương ứng.
+# Hai chỗ thiết kế muốn KHÁC họ mô hình để lỗi ít tương quan: rfc_analyst.b (luồng dịch thứ hai, M2) và verifier
+# (phản biện độc lập). Dùng chung một mô hình thì độc lập đó chưa có; ghi lại khi đánh giá.
+agents:
+  rfc_analyst.a: deepseek-flash
+  rfc_analyst.b: deepseek-flash
+  planner: deepseek-flash
+  test: deepseek-flash
+  verifier: deepseek-flash
+  report: deepseek-flash
+  code_indexer: deepseek-flash
+  code_reader: deepseek-flash
