@@ -59,7 +59,7 @@ nhưng **không thể bảo đảm theo nghĩa đen** với bất kỳ công c�
 | YD-24 | Xét **mọi đường xử lý** tới điểm kiểm tra ("mọi bản ghi nhận vào"); đường chưa xét được liệt kê, không ngụ ý đầy đủ | 100% T1 điền đúng `unexplored` khi cạn ngân sách; tỉ lệ yêu cầu loại "mọi" đủ đường được báo cáo | Cơ chế có (`TRACE_PATHS`, `unexplored`); chưa đo |
 | YD-25 | Phát hiện **mã bất thường nhằm đánh lừa kiểm thử**: nhận ra kiểm thử, so sánh với hằng khớp giá trị thử, đọc biến môi trường hay tên máy | Mức 1, 2: 100%; mức 3: báo cáo trung thực (TK, Bảng 30) | **Chưa có bộ quét nhánh nghi vấn**; mô phỏng mới có họ lỗi `a7_canonical` |
 | YD-26 | **Không báo sai**: bản triển khai hợp lệ nhưng làm khác (cách làm thay thế RFC cho phép) không bị báo VIOLATION; mọi VIOLATION có nhân chứng dương | Precision VIOLATION ≥ 80% tối thiểu, ≥ 95% mục tiêu | Chưa đo |
-| YD-27 | Ghi nhận SUT **sập** khi nhận dữ liệu kích hoạt (có thể là lỗ hổng bảo mật) | 100% ca sập có cờ `sut_crashed` | Có mã trong Test driver; chưa có test riêng |
+| YD-27 | Ghi nhận SUT **sập** khi nhận dữ liệu kích hoạt (có thể là lỗ hổng bảo mật) | 100% ca sập có cờ `sut_crashed` | Đạt (test, [test_driver_and_coverage.py](../../backend/tests/test_driver_and_coverage.py)): ca sập là FAIL, mang cờ `sut_crashed` trong bản ghi T3 và trace |
 
 ## D. Dùng trong vòng đời phát triển
 
