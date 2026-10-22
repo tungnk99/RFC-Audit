@@ -40,7 +40,8 @@ class PlaybookRunner:
 
     def plan(self, context: dict[str, Any]) -> PlanAction:
         reg = self.registry
-        advice = advise(situation_from_context(context), reg.playbook, reg.tasks, self._handled)
+        sit = situation_from_context(context, reg.loop_policy().critique_task)
+        advice = advise(sit, reg.playbook, reg.tasks, self._handled)
         model: type[PlanAction] = reg.schemas["PlanAction@1"]  # type: ignore[assignment]
         if advice is None or advice.stop:
             rationale = advice.rationale_code if advice is not None else self._stop_rationale

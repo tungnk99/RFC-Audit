@@ -32,7 +32,9 @@ class Situation:
     needs: frozenset[str]
     missing: tuple[tuple[str, str | None], ...]  # (tầng, biến thể hoặc mục) theo báo cáo độ đủ
     conflicts: tuple[tuple[str, str | None], ...]  # (loại, khía cạnh)
-    critique: str  # "none" | "clean" | "issues"
+    # "none": chưa phản biện; "clean": phản biện không nêu vấn đề; "issues": còn vấn đề chưa được xử lý;
+    # "stale": mọi vấn đề đã được nhiệm vụ đề xuất xử lý xong sau lần phản biện, cần phản biện lại (không giao lặp lại).
+    critique: str
     critique_kinds: tuple[str, ...]
     critique_evidence: tuple[str, ...]
     dispatched: frozenset[str]
@@ -73,22 +75,43 @@ def _rows(value: Any) -> list[dict[str, Any]]:
     return [cast("dict[str, Any]", r) for r in cast("list[Any]", value or []) if isinstance(r, dict)]
 
 
-def situation_from_context(context: Mapping[str, Any]) -> Situation:
-    """Dựng tình huống từ ngữ cảnh đã qua Context builder (mỗi trường là {"label", "value"})."""
+def _unaddressed(
+    issues: list[dict[str, Any]], history: list[dict[str, Any]], critique_task: str | None
+) -> list[dict[str, Any]]:
+    """Vấn đề của phản biện gần nhất mà nhiệm vụ nó đề xuất (`suggested_task`) chưa chạy xong sau lần phản biện đó.
+
+    Không có điều này, sổ tay cứ làm theo phản biện cũ ở mọi vòng: Planner giao lại cùng nhiệm vụ (một ca thật đã giao
+    TRACE_PATHS 4 lần liền, 1,18 triệu token) mà không bao giờ phản biện lại để biết vấn đề đã hết chưa.
+    """
+    if critique_task is None:
+        return issues
+    critique_rounds = [int(h["round"]) for h in history if h.get("task_type") == critique_task]
+    if not critique_rounds:
+        return issues
+    since = max(critique_rounds)
+    done = {str(h["task_type"]) for h in history if int(h["round"]) > since and h.get("ok")}
+    return [i for i in issues if str(i.get("suggested_task")) not in done]
+
+
+def situation_from_context(context: Mapping[str, Any], critique_task: str | None = None) -> Situation:
+    """Dựng tình huống từ ngữ cảnh đã qua Context builder (mỗi trường là {"label", "value"}).
+
+    `critique_task`: tên nhiệm vụ phản biện của miền (`LoopPolicy.critique_task`), để biết vấn đề nào đã được xử lý."""
     report = _obj(context, "verdict.sufficiency")
     provisional = report.get("provisional")
     missing = _rows(report.get("missing"))
     conflicts = _rows(report.get("conflicts"))
     has_critique = isinstance(_value(context, "critique.latest"), dict)
-    issues = _rows(_obj(context, "critique.latest").get("issues"))
+    all_issues = _rows(_obj(context, "critique.latest").get("issues"))
     history = _rows(_value(context, "tasks.history"))
+    issues = _unaddressed(all_issues, history, critique_task)
     return Situation(
         rtype=str(_value(context, "requirement.rtype") or ""),
         provisional=str(cast("dict[str, Any]", provisional)["label"]) if isinstance(provisional, dict) else "NONE",
         needs=frozenset(str(m["need"]) for m in missing),
         missing=tuple((str(m["need"]), str(m["variant"]) if m.get("variant") else None) for m in missing),
         conflicts=tuple((str(c["kind"]), c.get("aspect")) for c in conflicts),
-        critique="none" if not has_critique else ("issues" if issues else "clean"),
+        critique="none" if not has_critique else ("issues" if issues else ("stale" if all_issues else "clean")),
         critique_kinds=tuple(str(i["kind"]) for i in issues),
         critique_evidence=tuple(str(i["evidence_id"]) for i in issues if i.get("evidence_id")),
         dispatched=frozenset(str(h["task_type"]) for h in history),
@@ -208,8 +231,8 @@ def validate_playbook(
         for lab in r.when.provisional:
             if lab != "NONE" and lab not in labels:
                 errors.append(f"{r.id}: nhãn tạm '{lab}' không tồn tại")
-        if r.when.critique not in (None, "none", "clean", "issues"):
-            errors.append(f"{r.id}: critique phải là none|clean|issues")
+        if r.when.critique not in (None, "none", "clean", "issues", "stale"):
+            errors.append(f"{r.id}: critique phải là none|clean|issues|stale")
         for s in r.suggest:
             definition = tasks.get(s.task_type)
             if definition is None:
@@ -246,7 +269,12 @@ def _describe_when(w: When) -> str:
         parts.append("có mâu thuẫn" if w.conflict else "không có mâu thuẫn")
     if w.critique:
         parts.append(
-            {"none": "chưa phản biện", "clean": "phản biện sạch", "issues": "phản biện nêu vấn đề"}[w.critique]
+            {
+                "none": "chưa phản biện",
+                "clean": "phản biện sạch",
+                "issues": "phản biện nêu vấn đề",
+                "stale": "mọi vấn đề phản biện đã được xử lý",
+            }[w.critique]
         )
     if w.critique_kind:
         parts.append(f"vấn đề {w.critique_kind}")

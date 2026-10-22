@@ -20,7 +20,9 @@ Gợi ý, không bắt buộc. Làm khác thì ghi `rationale_code = DEVIATE_PLA
 - `R1-C` khi loại C; vòng 1 → SELECT_TESTS + LOCATE(aspects=['ORDER_STATE', 'REACTION']) (`INITIAL_TYPE_C`). Chạy kiểm thử và tìm mã song song vì hai việc độc lập.
 - `R1-D` khi loại D; vòng 1 → LOCATE(aspects=['EFFECT']) + STATIC_QUERY (`INITIAL_TYPE_D`). Loại D không chạy kiểm thử: bằng chứng tĩnh.
 - `R2-critique-before-compliant` khi nhãn tạm COMPLIANT; chưa phản biện → CRITIQUE (`CRITIQUE_BEFORE_COMPLIANT`).
+- `R2-recritique-after-fix` khi nhãn tạm COMPLIANT; mọi vấn đề phản biện đã được xử lý → CRITIQUE (`CRITIQUE_BEFORE_COMPLIANT`).
 - `R3-critique-on-conflict` khi có mâu thuẫn; chưa phản biện → CRITIQUE (`RESOLVE_CONFLICT`).
+- `R3-recritique-after-fix` khi có mâu thuẫn; mọi vấn đề phản biện đã được xử lý → CRITIQUE (`RESOLVE_CONFLICT`).
 - `R3-recheck-conflict` khi có mâu thuẫn; phản biện sạch → RECHECK(aspect←conflict.aspect) (`RESOLVE_CONFLICT`).
 - `R4-follow-contradiction` khi phản biện nêu vấn đề; vấn đề CONTRADICTION → RECHECK(aspect←conflict.aspect, evidence_id←critique.evidence_id) (`FOLLOW_CRITIQUE`).
 - `R4-follow-missing_path` khi phản biện nêu vấn đề; vấn đề MISSING_PATH → TRACE_PATHS (`FOLLOW_CRITIQUE`).

@@ -61,7 +61,8 @@ def ctx(
 
 def advice(**kw: Any) -> Advice | None:
     reg = current_registry()
-    return advise(situation_from_context(ctx(**kw)), reg.playbook, reg.tasks, HANDLED)
+    sit = situation_from_context(ctx(**kw), reg.loop_policy().critique_task)
+    return advise(sit, reg.playbook, reg.tasks, HANDLED)
 
 
 def names(a: Advice | None) -> list[str]:
@@ -247,3 +248,61 @@ async def test_playbook_runner_delegates_other_roles_and_builds_valid_plans() ->
     assert isinstance(plan, PlanAction) and [t.task_type for t in plan.tasks] == ["SELECT_TESTS", "LOCATE"]
     stop = runner.plan(ctx("A", history=ONE_ROUND))
     assert stop.action == "stop" and stop.rationale_code == "INFEASIBLE"
+
+
+def row(round: int, task_type: str, *, ok: bool = True) -> dict[str, Any]:
+    return {"round": round, "task_type": task_type, "target": "x", "ok": ok}
+
+
+MISSING_PATH = {"issues": [{"kind": "MISSING_PATH", "evidence_id": None, "suggested_task": "TRACE_PATHS"}]}
+AFTER_FIRST_CRITIQUE = [row(1, "SELECT_TESTS"), row(1, "LOCATE"), row(2, "CRITIQUE")]
+
+
+def test_a_critique_issue_is_followed_once_and_then_the_critique_is_repeated_not_the_fix() -> None:
+    """Ca thật: Verifier nêu MISSING_PATH một lần, Planner giao TRACE_PATHS bốn vòng liền (1,18 triệu token) mà không
+    phản biện lại. Sau khi nhiệm vụ đề xuất đã chạy xong, sổ tay phải gợi ý phản biện lại."""
+    first = advice(provisional="COMPLIANT", critique=MISSING_PATH, history=AFTER_FIRST_CRITIQUE)
+    assert names(first) == ["TRACE_PATHS"] and first is not None and first.rule_id == "R4-follow-missing_path"
+    fixed = advice(
+        provisional="COMPLIANT", critique=MISSING_PATH, history=[*AFTER_FIRST_CRITIQUE, row(3, "TRACE_PATHS")]
+    )
+    assert names(fixed) == ["CRITIQUE"] and fixed is not None and fixed.rule_id == "R2-recritique-after-fix"
+
+
+def test_a_fix_that_failed_is_retried_and_a_new_critique_reopens_the_issue() -> None:
+    failed = [*AFTER_FIRST_CRITIQUE, row(3, "TRACE_PATHS", ok=False)]
+    assert names(advice(provisional="COMPLIANT", critique=MISSING_PATH, history=failed)) == ["TRACE_PATHS"]
+    again = [*AFTER_FIRST_CRITIQUE, row(3, "TRACE_PATHS"), row(4, "CRITIQUE")]  # phản biện mới vẫn nêu vấn đề
+    assert names(advice(provisional="COMPLIANT", critique=MISSING_PATH, history=again)) == ["TRACE_PATHS"]
+
+
+def test_only_the_addressed_issues_are_dropped() -> None:
+    both = {
+        "issues": [
+            {"kind": "MISSING_PATH", "evidence_id": None, "suggested_task": "TRACE_PATHS"},
+            {"kind": "MISSING_VARIANT", "evidence_id": None, "suggested_task": "SELECT_TESTS"},
+        ]
+    }
+    miss = [{"need": "T3", "variant": "boundary:record.length=16641", "reason": "x"}]
+    a = advice(
+        provisional="COMPLIANT", critique=both, history=[*AFTER_FIRST_CRITIQUE, row(3, "TRACE_PATHS")], missing=miss
+    )
+    assert names(a) == ["SELECT_TESTS"]  # MISSING_PATH đã xử lý; MISSING_VARIANT còn nguyên
+
+
+def test_situation_distinguishes_stale_from_clean_and_none() -> None:
+    reg = current_registry()
+    task = reg.loop_policy().critique_task
+
+    def kind(**kw: Any) -> str:
+        return situation_from_context(ctx(**kw), task).critique
+
+    assert kind(provisional="COMPLIANT") == "none"
+    assert kind(provisional="COMPLIANT", critique={"issues": []}) == "clean"
+    assert kind(provisional="COMPLIANT", critique=MISSING_PATH, history=AFTER_FIRST_CRITIQUE) == "issues"
+    done = [*AFTER_FIRST_CRITIQUE, row(3, "TRACE_PATHS")]
+    assert kind(provisional="COMPLIANT", critique=MISSING_PATH, history=done) == "stale"
+    # không biết tên nhiệm vụ phản biện thì giữ hành vi cũ (vấn đề luôn còn)
+    assert (
+        situation_from_context(ctx(provisional="COMPLIANT", critique=MISSING_PATH, history=done)).critique == "issues"
+    )

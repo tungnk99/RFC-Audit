@@ -311,7 +311,7 @@ class ExecutionLoop:
         Chỉ để quan sát: lỗi dựng tình huống không được làm hỏng vòng điều tra.
         """
         try:
-            sit = situation_from_context(self._ctx.build(self._loop.planner_role, available))
+            sit = situation_from_context(self._ctx.build(self._loop.planner_role, available), self._loop.critique_task)
             advice = advise(sit, current_registry().playbook, self._tasks, frozenset(self._handlers))
         except (KeyError, TypeError, ValueError) as exc:
             self._log("plan_context_error", {"error": type(exc).__name__}, requirement_id, round=round)
