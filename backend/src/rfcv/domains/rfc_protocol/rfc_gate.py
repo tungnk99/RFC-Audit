@@ -35,7 +35,8 @@ _KEYWORD_RE = re.compile(r"\b(" + "|".join(k.replace(" ", r"\s+") for k in KEYWO
 _ABBREV = ("e.g.", "i.e.", "etc.", "Sec.", "cf.", "vs.")
 _SENT_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9\"“(])")
 _PN_SECTION = re.compile(r"^section-([0-9A-Za-z.]+)$")
-_PN_PARA = re.compile(r"^section-([0-9A-Za-z.]+)-(\d+)$")
+# Đoạn trực tiếp của mục có pn `section-5.2-4`; đoạn trong danh sách hay định nghĩa lồng có pn `section-5.2-4.3.1`.
+_PN_PARA = re.compile(r"^section-([0-9A-Za-z.]+)-(\d+(?:\.\d+)*)$")
 
 
 @dataclass(frozen=True)
@@ -43,12 +44,53 @@ class RfcSentence:
     sentence_id: str
     rfc: int
     section: str
-    paragraph: int
+    paragraph: str  # "4" hoặc "4.3.1" với đoạn lồng trong danh sách
     index: int
     modal: str
     text: str
     text_hash: str
     section_path: tuple[str, ...]
+
+
+def _xref(x: ET.Element) -> str:
+    """Chữ mà bản dựng hiển thị cho một `<xref>` (bản prep để trống nội dung, chữ nằm ở `derivedContent`): "Section 4.7.1",
+    "Figure 2", hoặc tài liệu tham khảo dạng "[RFC5280]" kèm mục nếu có."""
+    shown = x.get("derivedContent") or "".join(x.itertext()).strip()
+    if shown.startswith(("Section", "Appendix", "Figure", "Table")):
+        return shown
+    ref = f"[{shown}]" if shown else ""
+    section = x.get("section")
+    if not section or not ref:
+        return ref
+    match x.get("sectionFormat"):
+        case "of":
+            return f"Section {section} of {ref}"
+        case "parens":
+            return f"{ref} (Section {section})"
+        case _:
+            return f"{ref}, Section {section}"
+
+
+def render_text(elem: ET.Element) -> str:
+    """Văn bản một phần tử như người đọc thấy: `<xref>` thành chữ hiển thị, `<sup>14</sup>` thành `^14` (2^14 chứ không
+    phải 214, vì ngưỡng độ dài nằm ở đây), `<sub>` thành `_x`. Khoảng trắng được gộp."""
+
+    def walk(e: ET.Element) -> str:
+        out = [e.text or ""]
+        for child in e:
+            match child.tag:
+                case "xref":
+                    out.append(_xref(child))
+                case "sup":
+                    out.append("^" + walk(child))
+                case "sub":
+                    out.append("_" + walk(child))
+                case _:
+                    out.append(walk(child))
+            out.append(child.tail or "")
+        return "".join(out)
+
+    return " ".join(walk(elem).split())
 
 
 def split_sentences(text: str) -> list[str]:
@@ -90,24 +132,45 @@ def _walk(elem: ET.Element, path: tuple[str, ...]) -> Iterator[tuple[str, tuple[
                 yield from _walk(child, path)
 
 
+def _own(sec: ET.Element, tags: tuple[str, ...]) -> Iterator[ET.Element]:
+    """Phần tử thuộc riêng mục `sec`: duyệt cả danh sách và định nghĩa lồng, nhưng không đi vào mục con."""
+    for child in sec:
+        if child.tag == "section":
+            continue
+        if child.tag in tags:
+            yield child
+        yield from _own(child, tags)
+
+
+def _parts(root: ET.Element) -> list[ET.Element]:
+    """Thân văn bản (`middle`) và phụ lục (`back`): phụ lục cũng chứa câu quy phạm (ví dụ ghi chú triển khai)."""
+    middle = root.find("middle")
+    if middle is None:
+        raise ValueError("không có phần <middle>: có phải bản RFCXML v3 không?")
+    back = root.find("back")
+    return [middle] if back is None else [middle, back]
+
+
+def _all_sections(root: ET.Element) -> Iterator[tuple[str, tuple[str, ...], ET.Element]]:
+    for part in _parts(root):
+        yield from _walk(part, ())
+
+
 def extract_requirements(
     xml_text: str, rfc_number: int, sections_in_scope: Iterable[str] | None = None
 ) -> list[RfcSentence]:
     root = ET.fromstring(xml_text)
-    middle = root.find("middle")
-    if middle is None:
-        raise ValueError("không có phần <middle>: có phải bản RFCXML v3 không?")
     scope = list(sections_in_scope) if sections_in_scope is not None else None
     out: list[RfcSentence] = []
-    for section, sec_path, sec in _walk(middle, ()):
+    for section, sec_path, sec in _all_sections(root):
         if not _in_scope(section, scope):
             continue
-        for t in sec.findall("t"):
+        for t in _own(sec, ("t",)):
             m = _PN_PARA.match(t.get("pn", ""))
-            if not m:
+            if not m or m.group(1) != section:
                 continue
-            para = int(m.group(2))
-            text = " ".join("".join(t.itertext()).split())
+            para = m.group(2)
+            text = render_text(t)
             for idx, sentence in enumerate(split_sentences(text), start=1):
                 modal = primary_modal(sentence)
                 if modal is None:
@@ -130,7 +193,7 @@ def extract_requirements(
 
 # ---- tra một câu theo định danh, kèm gói ngữ cảnh (tài liệu cung cấp RFC, mục 5.3) -------------------------------------
 
-_SENTENCE_ID = re.compile(r"^RFC(\d+)§([0-9A-Za-z.]+)#p(\d+)s(\d+)$")
+_SENTENCE_ID = re.compile(r"^RFC(\d+)§([0-9A-Za-z.]+)#p(\d+(?:\.\d+)*)s(\d+)$")
 _IDENT = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 MAX_DEFINITIONS = 3  # số khối định nghĩa tối đa trong một gói
 MAX_DEFINITION_CHARS = 1200
@@ -179,26 +242,23 @@ class RfcDocument:
 
     def __init__(self, xml_text: str, rfc_number: int) -> None:
         root = ET.fromstring(xml_text)
-        middle = root.find("middle")
-        if middle is None:
-            raise ValueError("không có phần <middle>: có phải bản RFCXML v3 không?")
         self.rfc = rfc_number
-        self._sections = {sec: (path, elem) for sec, path, elem in _walk(middle, ())}
+        self._sections = {sec: (path, elem) for sec, path, elem in _all_sections(root)}
 
     def lookup(self, sentence_id: str) -> RfcContext | None:
         """Câu theo định danh, hoặc None nếu định danh sai, thuộc RFC khác, hay mục/đoạn/câu không có."""
         m = _SENTENCE_ID.match(sentence_id)
         if m is None or int(m.group(1)) != self.rfc:
             return None
-        section, para, idx = m.group(2), int(m.group(3)), int(m.group(4))
+        section, para, idx = m.group(2), m.group(3), int(m.group(4))
         found = self._sections.get(section)
         if found is None:
             return None
         path, elem = found
-        paragraph = next((t for t in elem.findall("t") if t.get("pn") == f"section-{section}-{para}"), None)
+        paragraph = next((t for t in _own(elem, ("t",)) if t.get("pn") == f"section-{section}-{para}"), None)
         if paragraph is None:
             return None
-        text = " ".join("".join(paragraph.itertext()).split())
+        text = render_text(paragraph)
         sentences = split_sentences(text)
         if not 1 <= idx <= len(sentences):
             return None
@@ -221,7 +281,7 @@ class RfcDocument:
         """Khối `sourcecode` hay `artwork` của mục có nhắc tên kiểu, trường, hằng trong câu hay đoạn; nhiều tên nhất trước."""
         names = _distinctive(text)
         scored: list[tuple[int, int, str]] = []
-        for order, block in enumerate([*section.findall("sourcecode"), *section.findall("artwork")]):
+        for order, block in enumerate(_own(section, ("sourcecode", "artwork"))):
             body = "".join(block.itertext()).strip("\n")
             hits = len(names & set(_IDENT.findall(body)))
             if hits:
