@@ -220,7 +220,11 @@ class ExecutionLoop:
                 stop_detail = {"repeated": looped_tasks, "evidence_count": len(evidence)}
                 break
 
-            shared = self._shared_context(report, evidence, inv)
+            # Lịch sử nhiệm vụ cấp cho mọi vai trò có khai báo (Verifier cần nó để biết vấn đề nào đã được xử lý).
+            shared = {
+                **self._shared_context(report, evidence, inv),
+                "tasks.history": Labeled(to_jsonable(history), TrustLabel.DERIVED),
+            }
             results = await asyncio.gather(*(self._dispatch(inv, t, tracker, shared) for t in tasks))
             for t, (outcome, new_evidence) in zip(tasks, results, strict=True):
                 history.append(
@@ -395,6 +399,16 @@ class ExecutionLoop:
             **shared,
             "task.focus": Labeled(to_jsonable(task.params), TrustLabel.DERIVED),
         }
+        # Nhiệm vụ trỏ vào một bằng chứng cụ thể (RECHECK theo phản biện): cấp bản tóm tắt của đúng bằng chứng đó, để agent
+        # biết phải xem lại vị trí nào thay vì tìm lại từ đầu.
+        cited_id = getattr(task.params, "evidence_id", None)
+        if cited_id:
+            cited = [
+                e for e in self._store.for_requirement(inv.requirement.requirement_id) if e.evidence_id == cited_id
+            ]
+            if cited:
+                row = summarize_evidence(cited, inv.vocabulary_terms, {cited_id}).value[0]
+                available["task.recheck_location"] = Labeled(row, TrustLabel.DERIVED)
         outcome, new = await self._run_role(role, inv, body, available, tracker, handler=handler, task=task)
         return outcome, new
 

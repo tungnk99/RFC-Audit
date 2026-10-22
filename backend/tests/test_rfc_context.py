@@ -32,6 +32,7 @@ def test_rfc_text_is_supplied_as_trusted_context_by_the_sentence_id_of_the_rbs(m
     assert pack["sentence_id"] == "RFC8446§5.2#p4s3" and pack["section_path"][-1].startswith("5.2.")
     assert any("} TLSCiphertext;" in d for d in pack["definitions"])
     assert all(ctx[k].label is TrustLabel.TRUSTED for k in ("rfc.sentence", "rfc.paragraph", "rfc.context_pack"))
+    assert any("} TLSCiphertext;" in d for d in ctx["rfc.definitions"].value)  # Test agent nhận khối định nghĩa
 
 
 def test_without_an_rfc_input_store_agents_see_only_the_structured_requirement(
@@ -77,6 +78,9 @@ def test_each_role_receives_exactly_the_rfc_fields_it_declares(
     assert all(built[k]["label"] == "TRUSTED" for k in expected)
 
 
-def test_the_test_agent_does_not_see_rfc_text_it_never_declared(manifest: AdapterManifest, policy: PolicyStore) -> None:
+def test_the_test_agent_sees_only_the_definition_blocks_not_the_sentence(
+    manifest: AdapterManifest, policy: PolicyStore
+) -> None:
+    """Test cần cấu trúc bản ghi (khối struct) để dựng kịch bản, nhưng không nhận câu hay đoạn RFC nó không khai báo."""
     built = ContextBuilder(policy).build("test", investigation(manifest, RFC_DIR).context)
-    assert not [k for k in built if k.startswith("rfc.")]
+    assert [k for k in built if k.startswith("rfc.")] == ["rfc.definitions"]

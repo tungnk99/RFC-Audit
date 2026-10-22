@@ -1,6 +1,6 @@
 role: verifier
 zone: privileged
-context_fields: [requirement.structured, rfc.sentence, rfc.paragraph, evidence.summary, verdict.sufficiency]
+context_fields: [requirement.structured, rfc.sentence, rfc.paragraph, evidence.summary, verdict.sufficiency, tasks.history]
 tools: [evidence.read_summary, verdict.read, rfc.read_section]
 skills: [critique-evidence-consistency, tls-record-length-bounds]
 output_schema: Critique@1

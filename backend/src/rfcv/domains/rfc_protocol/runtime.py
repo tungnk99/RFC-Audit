@@ -151,6 +151,7 @@ class ProtocolRuntime:
                 context["rfc.sentence"] = Labeled(rfc.sentence, TrustLabel.TRUSTED)
                 context["rfc.paragraph"] = Labeled(rfc.paragraph, TrustLabel.TRUSTED)
                 context["rfc.context_pack"] = Labeled(rfc.context_pack(), TrustLabel.TRUSTED)
+                context["rfc.definitions"] = Labeled(list(rfc.definitions), TrustLabel.TRUSTED)
             inv = Investigation(
                 requirement=requirement,
                 context=context,

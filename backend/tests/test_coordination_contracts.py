@@ -29,20 +29,16 @@ HUB_FIELDS = {
     "critique.latest",
     "tasks.history",
     "budget.left",
+    "task.recheck_location",  # khi nhiệm vụ trỏ vào một bằng chứng (evidence_id)
 }
 
 # Khoảng trống năng lực đã biết: vai trò khai báo nhưng chưa có nguồn cung cấp.
 KNOWN_UNSUPPLIED = {
     # rfc.sentence, rfc.paragraph, rfc.context_pack đã được cấp từ Input store của RFC (BL-20, CT-05)
     "rfc.sentence_group",  # nhóm câu cho RFC Analyst: chưa nối (CT-12)
-    "rfc.definitions",
     "rfc.errata",
     "rfc.version_diff",
-    "examples.similar_scenarios",
-    "task.recheck_location",  # RECHECK chưa mang vị trí cần xem lại
     "task.scope",
-    "adapter.dsl_reference",
-    "adapter.rbs_grammar_ref",
     "verdict.record",
     "evidence.cited",
 }
