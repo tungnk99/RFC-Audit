@@ -19,7 +19,7 @@ Mã: [execution_loop.py](../../src/rfcv/core/execution_loop.py). Test: [test_exe
 | EL-4 | Dừng đúng điều kiện: đủ bằng chứng, hết ngân sách (BUDGET), lặp lần thứ ba (LOOP), INFEASIBLE | 100% | Đạt (test) |
 | EL-5 | Nhãn tạm COMPLIANT phải qua một lần phản biện sạch trước khi dừng | 100% | Đạt (test) |
 | EL-6 | Ghi đủ sự kiện để dựng lại luồng: lý do dừng và chi tiết, đầu ra agent, hội thoại khi hỏng | 100% sự kiện cần thiết | Đạt (test) |
-| EL-7 | Không có vòng vô hạn; thời gian một yêu cầu bị chặn bởi ngân sách `seconds` | 100% | Đạt (test) cho giới hạn số vòng; **chưa có test cho ngân sách thời gian** |
+| EL-7 | Không có vòng vô hạn; thời gian một yêu cầu bị chặn bởi ngân sách `seconds` | 100% | Đạt (test) cho giới hạn số vòng và ngân sách thời gian ([test_invariants.py](../../backend/tests/test_invariants.py)) |
 
 ## Context builder và IFC (nhãn tin cậy)
 
@@ -41,7 +41,7 @@ Mã: [tool_gateway.py](../../src/rfcv/gates/tool_gateway.py). Test: [test_gates.
 | TG-1 | Từ chối mặc định mọi lời gọi công cụ không khai báo cho vai trò | 0 lọt qua | Đạt (test) |
 | TG-2 | Kiểm miền tham số; `explore` chỉ chạy lệnh đọc trong danh sách, không qua shell | 0 lệnh ngoài danh sách chạy được | Đạt (test) |
 | TG-3 | Công cụ nguy hiểm (ghi tệp, gọi mạng, chạy lệnh trên máy chủ) không đăng ký được, kể cả từ plugin | 0 | Đạt (test, [test_plugins.py](../../tests/test_plugins.py)) |
-| TG-4 | Mã lỗi từ chối chỉ là mã liệt kê, không kèm chi tiết chính sách | 100% | Đạt (test) cho mã liệt kê; **chưa kiểm riêng** việc không lộ chi tiết chính sách |
+| TG-4 | Mã lỗi từ chối chỉ là mã liệt kê, không kèm chi tiết chính sách | 100% | Đạt (test) cho mã liệt kê và việc không lộ chi tiết chính sách ([test_invariants.py](../../backend/tests/test_invariants.py)) |
 | TG-5 | Chống đối thủ thật: dẫn dắt agent gọi công cụ ngoài quyền | 0 lọt qua | Chưa thử với LLM thật (A3, [CT-08](../management/theo_doi_cai_thien.md#ct-08--p1--chưa-thử-đối-kháng-với-mô-hình-thật)) |
 
 ## Schema gate (T1)
@@ -55,7 +55,7 @@ Mã: [schema_gate.py](../../src/rfcv/domains/rfc_protocol/schema_gate.py). Test:
 | SG-3 | Mỗi cạnh của `call_path` có trong chỉ mục lời gọi hoặc đã hiển thị | 100% | Đạt (test) |
 | SG-4 | `observed` thuộc từ vựng adapter hoặc là số | 100% | Đạt (test); quan sát thật: cổng từ chối 1 lần và mô hình tự sửa |
 | SG-5 | Dòng dẫn được biên dịch theo cờ build (khi chỉ mục có dữ liệu `#if`) | 100% | Đạt (test) |
-| SG-6 | Lỗi cổng trả về agent chỉ là mã liệt kê để agent làm lại tối đa số lần cho phép | 100% | **Chưa có kiểm thử riêng** cho vòng làm lại; quan sát thật: cổng từ chối 1 lần và mô hình tự sửa thành công |
+| SG-6 | Lỗi cổng trả về agent chỉ là mã liệt kê để agent làm lại tối đa số lần cho phép | 100% | Đạt (test, [test_invariants.py](../../backend/tests/test_invariants.py)) cho vòng làm lại có giới hạn; quan sát thật: cổng từ chối 1 lần và mô hình tự sửa thành công |
 
 ## Code gate và Locator
 
@@ -124,7 +124,7 @@ Mã: [llm_gateway.py](../../src/rfcv/core/llm_gateway.py), [runner.py](../../src
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
-| LG-1 | Khoá API chỉ đọc từ biến môi trường và chỉ trong gateway; không có trong hash cấu hình | 0 rò | Đạt (test); quét trace và bằng chứng chưa có ([QS-07](tieu_chuan_he_thong.md#tầng-a-an-toàn-bất-biến-0-vi-phạm)) |
+| LG-1 | Khoá API chỉ đọc từ biến môi trường và chỉ trong gateway; không có trong hash cấu hình | 0 rò | Đạt (test); quét trace và bằng chứng đã có trên lần chạy giả, quét tự động sau mỗi lần chạy thật là BL-62 ([QS-07](tieu_chuan_he_thong.md#tầng-a-an-toàn-bất-biến-0-vi-phạm)) |
 | LG-2 | Khai báo mô hình một lần, gán cho agent ở mục riêng; agent chưa được gán bị từ chối lúc khởi động | 100% | Đạt (test) |
 | LG-3 | Lỗi nhà cung cấp (hết hạn mức, lỗi HTTP, sai định dạng) thành lỗi vai trò có trace, không làm sập lượt chạy | 100% | Đạt (test) |
 | LG-4 | Token đã tiêu trước khi hỏng vẫn tính vào ngân sách | 100% | Đạt (test) |
@@ -145,7 +145,7 @@ Mã: [checker.py](../../src/rfcv/adapters/checker.py). Tài liệu: [mục 12 c�
 
 | Mã | Phải làm được / phải đạt | Ngưỡng | Hiện tại |
 |---|---|---|---|
-| SK-1 | Skill chỉ là văn bản: cấm `scripts/`, `allowed-tools`, symlink; workspace chỉ đọc, không chạy lệnh | 0 vi phạm | Đạt (test, [test_skills.py](../../tests/test_skills.py)) cho `scripts/`, `allowed-tools`, workspace chỉ đọc; **chưa có test cho symlink** |
+| SK-1 | Skill chỉ là văn bản: cấm `scripts/`, `allowed-tools`, symlink; workspace chỉ đọc, không chạy lệnh | 0 vi phạm | Đạt (test, [test_skills.py](../../backend/tests/test_skills.py) và [test_invariants.py](../../backend/tests/test_invariants.py)) cho `scripts/`, `allowed-tools`, symlink, workspace chỉ đọc |
 | SK-2 | Mỗi agent chỉ thấy skill nó khai báo, lọc tất định theo kiểu nhiệm vụ | 100% | Đạt (test) |
 | SK-3 | Skill thực sự giúp ích (so có và không có skill) | Có số đo A/B | Chưa đo ([CT-06](../management/theo_doi_cai_thien.md#ct-06--p2--chưa-biết-skill-có-giúp-ích-không)) |
 | TR-1 | Mọi kết luận truy được về lý do dừng, kế hoạch, đầu ra agent và hội thoại khi hỏng, bằng `rfcv trace` | 100% | Đạt (test) |

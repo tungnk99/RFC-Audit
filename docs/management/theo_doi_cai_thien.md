@@ -191,6 +191,8 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
   quét trace và bằng chứng không chứa khoá API (QS-07); phát hiện `evidence_id` bịa trong `Critique` (VF-6).
 - **Hướng sửa:** viết test cho từng mục; rẻ vì dùng mô hình giả và đồng hồ giả.
 - **Đóng khi:** sáu mục đều có test và tiêu chuẩn tương ứng đổi sang "Đạt (test)".
+- **Kết quả (BL-61):** đã đóng. 14 test trong `backend/tests/test_invariants.py`. VF-6 cần thêm một đoạn nhỏ ở vòng điều phối (ghi `unknown_evidence_ids`
+  vào `critique_result`) vì trước đó chưa có chỗ nào phát hiện mã bịa. QS-07 mới kiểm trên lần chạy giả; quét tự động sau mỗi lần chạy thật là BL-62.
 
 ### CT-22 · P1 · Phạm vi hỗ trợ RFC chưa chốt
 - **Bằng chứng:** nhu cầu thực tế là "hỗ trợ mọi RFC cần lọc và không bỏ sót đoạn mã triển khai sai RFC" ([yêu cầu đầu ra](../quality/tieu_chuan_dau_ra.md)).

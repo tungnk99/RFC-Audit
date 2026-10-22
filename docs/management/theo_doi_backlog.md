@@ -111,7 +111,7 @@ quyết định số đo của mọi lần chạy sau.
 
 | ID | Việc cần làm | Đáp ứng | Phụ thuộc | Cỡ | Giai đoạn | Xong khi | Trạng thái |
 |---|---|---|---|---|---|---|---|
-| BL-61 | Viết test cho sáu bất biến chưa có kiểm thử riêng: vòng làm lại của Schema gate, không lộ chi tiết chính sách khi từ chối, ngân sách thời gian, skill có symlink, quét khoá API, phát hiện `evidence_id` bịa | CT-21, YD-52, QS-07 | – | M | Ngay | Sáu test pass; tiêu chuẩn tương ứng chuyển sang "Đạt (test)" | Chưa làm |
+| BL-61 | Viết test cho sáu bất biến chưa có kiểm thử riêng: vòng làm lại của Schema gate, không lộ chi tiết chính sách khi từ chối, ngân sách thời gian, skill có symlink, quét khoá API, phát hiện `evidence_id` bịa | CT-21, YD-52, QS-07 | – | M | Ngay | Sáu test pass; tiêu chuẩn tương ứng chuyển sang "Đạt (test)" | Xong |
 | BL-62 | Quét trace, bằng chứng và artifacts: không chứa khoá API, không chứa nội dung tệp ngoài `code_scope` | YD-51, QS-07, LG-1 | BL-61 | S | G1 | Quét tự động sau mỗi lần chạy cho kết quả 0 | Chưa làm |
 | BL-60 | Kịch bản tấn công A1–A7 (chú thích độc, nhật ký độc, công cụ ngoài quyền, đọc tệp khoá, giả mạo bằng chứng, cạn tài nguyên, mã nhận ra kiểm thử ba mức) và chạy với LLM thật, so với B1 | YD-50, CT-08, QS-10 | BL-04 | L | DNS | Đổi nhãn dưới A1–A6: 0 ca; không chuỗi độc trong ngữ cảnh Planner và Verifier | Chưa làm |
 | BL-63 | Thử mô hình cục bộ (endpoint tương thích OpenAI, ví dụ vLLM) cho mã không được gửi ra ngoài | YD-51 | – | M | T2 | Một lần chạy đầu-cuối bằng mô hình cục bộ; ghi chất lượng so với mô hình ngoài | Chưa làm |
