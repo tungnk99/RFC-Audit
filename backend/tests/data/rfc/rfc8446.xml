@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Trích rút rút gọn của RFC 8446 mục 5.2 cho kiểm thử: giữ đúng cấu trúc pn và các câu quy phạm, bỏ phần còn lại. -->
+<rfc number="8446"><front/><middle>
+ <section pn="section-5"><name>Record Protocol</name>
+  <section pn="section-5.2"><name>Record Payload Protection</name>
+   <t pn="section-5.2-1">The record protection functions translate a TLSPlaintext structure into a TLSCiphertext structure.</t>
+   <sourcecode pn="section-5.2-2.1" type="">
+struct {
+    ContentType opaque_type = application_data; /* 23 */
+    ProtocolVersion legacy_record_version = 0x0303; /* TLS v1.2 */
+    uint16 length;
+    opaque encrypted_record[TLSCiphertext.length];
+} TLSCiphertext;
+   </sourcecode>
+   <sourcecode pn="section-5.2-2.2" type="">
+struct {
+    opaque content[TLSPlaintext.length];
+    ContentType type;
+    uint8 zeros[length_of_padding];
+} TLSInnerPlaintext;
+   </sourcecode>
+   <t pn="section-5.2-4">The length (in bytes) of the following TLSCiphertext.encrypted_record, which is the sum of the lengths of the content and the padding. The length <bcp14>MUST NOT</bcp14> exceed 2^14 + 256 bytes. An endpoint that receives a record that exceeds this length <bcp14>MUST</bcp14> terminate the connection with a "record_overflow" alert.</t>
+  </section>
+ </section>
+</middle></rfc>

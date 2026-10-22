@@ -18,6 +18,7 @@ from agents.verifier.handler import NoopHandler
 from rfcv.core.execution_loop import Investigation
 from rfcv.core.ifc import Labeled, TrustLabel
 from rfcv.domains.rfc_protocol.adapter_view import to_vocabulary, vocabulary_terms
+from rfcv.domains.rfc_protocol.rfc_gate import load_rfc_documents, lookup_sentence
 from rfcv.domains.rfc_protocol.rules import ProtocolRequirement
 from rfcv.domains.rfc_protocol.sandbox.driver import TestDriver
 from rfcv.domains.rfc_protocol.schema_gate import SchemaGate
@@ -81,6 +82,7 @@ class ProtocolRuntime:
         vocab = to_vocabulary(manifest)
         terms = vocabulary_terms(manifest)
         locator = self._locators.get(getattr(rt, "run_id", None) or "")
+        rfc_docs = load_rfc_documents(manifest, getattr(getattr(rt, "config", None), "rfc_dir", None))
         hints = {k: {kk: list(vv) for kk, vv in v.items()} for k, v in manifest.locator_hints.items()}
         out: list[Investigation] = []
         for f in sorted(source.glob("*.rbs")):
@@ -97,7 +99,7 @@ class ProtocolRuntime:
             )
             if locator is not None:
                 locator.register(rbs.requirement_id, requirement_keywords(rbs))
-            context = {
+            context: dict[str, Labeled[Any]] = {
                 "requirement.structured": Labeled(rbs.model_dump(mode="json"), TrustLabel.TRUSTED),
                 "requirement.rbs": Labeled(rbs.model_dump(mode="json"), TrustLabel.TRUSTED),
                 "adapter.vocabulary": Labeled(sorted(terms), TrustLabel.TRUSTED),
@@ -105,6 +107,13 @@ class ProtocolRuntime:
                 "adapter.component_taxonomy": Labeled(list(manifest.component_taxonomy), TrustLabel.TRUSTED),
                 "adapter.locator_hints": Labeled(hints, TrustLabel.TRUSTED),
             }
+            # Câu RFC gốc, đoạn chứa câu và gói ngữ cảnh, lấy theo trường nguồn của RBS qua RFC gate (RFC là đầu vào TRUSTED).
+            # Không có bản RFC trong Input store thì agent làm việc chỉ với RBS có cấu trúc, như trước.
+            rfc = lookup_sentence(rfc_docs, rbs.sentence_id)
+            if rfc is not None:
+                context["rfc.sentence"] = Labeled(rfc.sentence, TrustLabel.TRUSTED)
+                context["rfc.paragraph"] = Labeled(rfc.paragraph, TrustLabel.TRUSTED)
+                context["rfc.context_pack"] = Labeled(rfc.context_pack(), TrustLabel.TRUSTED)
             out.append(
                 Investigation(
                     requirement=requirement,

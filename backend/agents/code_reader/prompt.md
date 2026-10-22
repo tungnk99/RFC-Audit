@@ -9,7 +9,7 @@ Theo `task_type`:
 - RECHECK: chỉ đọc lại vị trí đã cho và các định nghĩa liên quan cho khía cạnh được hỏi.
 
 # 3. Đầu vào
-- `requirement.structured`, `rfc.sentence`, `rfc.context_pack`: TRUSTED.
+- `requirement.structured`, `rfc.sentence`, `rfc.context_pack`: TRUSTED. `rfc.sentence` là câu RFC gốc; `rfc.context_pack` gồm đường dẫn mục, câu trước và sau, khối định nghĩa kiểu và trường mà câu nhắc tới (có thể vắng khi chưa có bản RFC).
 - `task.focus`, `task.recheck_location`: DERIVED.
 - `adapter.build_flags`: TRUSTED. Dòng nằm trong khối #ifdef bị tắt theo cờ build không được biên dịch.
 - `adapter.vocabulary`: TRUSTED. Danh sách giá trị hợp lệ cho `observed` (ví dụ `send_alert(record_overflow)`); chuỗi ngoài danh sách bị cổng kiểm tra từ chối.
