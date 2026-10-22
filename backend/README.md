@@ -21,7 +21,7 @@ uv run rfcv agents                     # bản đồ agent: thư mục, vùng ti
 uv run rfcv adapter check adapters/tls13
 uv run rfcv skills check skills --adapter tls13
 uv run rfcv rbs check adapters/tls13/examples/TLS13-0042.rbs --adapter adapters/tls13
-uv run rfcv run --adapter adapters/tls13     # lắp ráp runtime; báo rõ thành phần còn thiếu
+uv run rfcv run --adapter adapters/tls13     # lắp ráp runtime; báo rõ thành phần còn thiếu; sau lần chạy quét rò rỉ khoá API và tệp ngoài phạm vi (leak_scan.json, thoát mã 3 nếu có)
 uv run rfcv verify runs/<run_id>
 uv run python scripts/e2e_live.py faulty        # thử cả vòng điều tra với LLM thật (SUT và mã giả); đo cải thiện, xem bên dưới
 uv run python scripts/analyze_run.py runs/e2e-faulty

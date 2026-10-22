@@ -338,9 +338,17 @@ def run(
         verdicts = asyncio.run(rt.run_all(source or adapter / "examples"))
     finally:
         rt.close()
+    scan = rt.scan_leaks()  # QS-07: khoá API và tệp ngoài phạm vi không được xuất hiện trong dữ liệu lần chạy
     typer.echo(
-        json.dumps({"run_id": rt.run_id, "verdicts": [v.to_json() for v in verdicts]}, ensure_ascii=False, indent=2)
+        json.dumps(
+            {"run_id": rt.run_id, "verdicts": [v.to_json() for v in verdicts], "leak_scan": scan.to_json()},
+            ensure_ascii=False,
+            indent=2,
+        )
     )
+    if not scan.clean:
+        typer.echo(f"CẢNH BÁO: phát hiện {len(scan.leaks)} dấu vết rò rỉ; xem {rt.run_id}/leak_scan.json", err=True)
+        raise typer.Exit(3)
 
 
 @app.command()

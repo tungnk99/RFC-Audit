@@ -91,6 +91,12 @@ class LLMGateway:
         if bad:
             raise UnknownProviderError(f"nhà cung cấp chưa đăng ký: {bad} (có: {sorted(known)})")
 
+    def api_keys(self) -> dict[str, str]:
+        """Tên biến → giá trị của các khoá đã đặt, chỉ để bộ quét rò rỉ tìm dấu vết sau lần chạy (QS-07). Không đưa ra
+        ngoài LLM gateway và bộ quét; kết quả quét không bao giờ chứa giá trị."""
+        names = {s.api_key_env for s in self._config.models.values()}
+        return {n: v for n in sorted(names) if (v := self._env.get(n))}
+
     def uncovered(self, agents: Iterable[str]) -> list[str]:
         """Agent chưa được gán mô hình (gán theo `agent` hoặc theo `agent.luồng`)."""
         assigned = self._config.agents
