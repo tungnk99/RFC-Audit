@@ -1,6 +1,6 @@
 ---
 name: write-tlsfuzzer-scenarios
-description: How to build and debug a TLS 1.3 test scenario in the rfcv scenario DSL - reaching the precondition state, sending the trigger with a variant-bound value, checking it on the reference implementation with test__run_scenario, and reading the probe result. Use for every SELECT_TESTS task on a TLS requirement of type A, B or C.
+description: How to build and debug a TLS 1.3 test scenario in the rfcv scenario DSL - reaching the precondition state, sending the trigger with a variant-bound value, checking it on the reference implementation with tester__run_scenario, and reading the probe result. Use for every SELECT_TESTS task on a TLS requirement of type A, B or C.
 metadata:
   rfcv-task-types: SELECT_TESTS
   version: "3"
@@ -14,7 +14,7 @@ and a faulty one fails for the right reason.
 
 ## Build
 
-1. `test__list_examples` for the requirement type; start from the closest template and set `example_id`.
+1. `tester__list_examples` for the requirement type; start from the closest template and set `example_id`.
 2. Precondition: for state `connected` use `connect` then `complete_handshake`; for a trigger before or during the handshake use
    `connect` and the handshake messages up to that point.
 3. Trigger: send exactly the thing named in `trigger` with the field from `where` bound to the variant, for example
@@ -25,7 +25,7 @@ and a faulty one fails for the right reason.
 
 ## Debug with the probe
 
-`test__run_scenario(scenario, variant)` runs one variant on a reference implementation and writes no evidence.
+`tester__run_scenario(scenario, variant)` runs one variant on a reference implementation and writes no evidence.
 
 | Probe result | Meaning | Fix |
 |---|---|---|

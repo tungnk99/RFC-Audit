@@ -17,6 +17,9 @@ dependencies = [
     "typer>=0.15,<1",
     "jinja2>=3.1,<4",
     "pydantic-ai-harness[skills]==0.59.0",
+    # Giao diện web (`rfcv serve`): API HTTP + SSE. Chỉ lớp rfcv.api nhập hai gói này.
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.30,<1",
 ]
 
 [project.optional-dependencies]
@@ -68,6 +71,9 @@ src = ["src", "tests", "."]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
 ignore = ["RUF001", "RUF002", "RUF003", "E501"]  # tiếng Việt trong chuỗi/chú thích; formatter lo độ dài dòng của mã
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends"]  # `user: User = Depends(...)` là cách FastAPI khai báo phụ thuộc
 
 [tool.pyright]
 include = ["src", "agents"]

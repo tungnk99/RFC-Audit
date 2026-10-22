@@ -20,7 +20,7 @@ sys.path[:0] = [str(ROOT / "src")]
 from rfcv.core.trace import TraceLog  # noqa: E402
 from rfcv.runtime.pydantic_ai.runner import LOAD_TOOL, _tool_args, loaded_skills  # noqa: E402
 
-WORKERS = ("code_reader", "test", "verifier", "code_indexer")
+WORKERS = ("code_reader", "tester", "verifier", "code_indexer")
 
 
 def skill_usage(events: list[dict[str, Any]]) -> tuple[list[str], int, int]:

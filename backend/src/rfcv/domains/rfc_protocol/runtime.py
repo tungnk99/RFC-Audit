@@ -14,7 +14,7 @@ from agents.code_indexer.handler import ComponentMapHandler
 from agents.code_reader.handler import LocationHandler
 from agents.common import ORACLE_KEY, TaskType
 from agents.locator.service import Locator, requirement_keywords
-from agents.test.handler import ScenarioHandler
+from agents.tester.handler import ScenarioHandler
 from agents.verifier.handler import NoopHandler
 from rfcv.core.execution_loop import Investigation
 from rfcv.core.ifc import Labeled, TrustLabel
@@ -62,7 +62,7 @@ class ProtocolRuntime:
         return specs
 
     def attach_driver(self, driver: TestDriver) -> None:
-        """Cho `test.run_scenario` dùng đúng Test driver của lần chạy (nơi lắp ráp tự dựng driver thay vì gọi `handlers`)."""
+        """Cho `tester.run_scenario` dùng đúng Test driver của lần chạy (nơi lắp ráp tự dựng driver thay vì gọi `handlers`)."""
         self._driver = driver
 
     def _agent_tools(self, rt: Any) -> AgentTools:

@@ -12,7 +12,7 @@ from agents import (
     planner,
     report,
     rfc_analyst,
-    test,
+    tester,
     verifier,
 )
 from rfcv.spi import AgentSpec
@@ -20,7 +20,7 @@ from rfcv.spi import AgentSpec
 AGENTS: tuple[AgentSpec, ...] = (
     rfc_analyst.SPEC,
     planner.SPEC,
-    test.SPEC,
+    tester.SPEC,
     verifier.SPEC,
     report.SPEC,
     code_indexer.SPEC,

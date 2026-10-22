@@ -73,7 +73,7 @@ def test_planner_schema_is_built_from_registered_tasks(registry: Registry) -> No
         {
             "action": "dispatch",
             "rationale_code": "INITIAL_TYPE_B",
-            "tasks": [{"task_type": "LOCATE", "target_role": "test"}],
+            "tasks": [{"task_type": "LOCATE", "target_role": "tester"}],
         },  # sai đích
         {"action": "dispatch", "rationale_code": "MADE_UP", "tasks": []},
         {

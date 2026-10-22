@@ -22,7 +22,7 @@ DOMAIN_DIR = Path(__file__).resolve().parents[1] / "src" / "rfcv" / "domains" / 
 EXPECTED = {
     "rfc_analyst",
     "planner",
-    "test",
+    "tester",
     "verifier",
     "report",
     "code_indexer",
@@ -97,7 +97,7 @@ def test_agents_outside_the_task_flow_are_declared_as_such() -> None:
     specs = {a.name: a for a in AGENTS}
     assert specs["planner"].wired and specs["planner"].stage == "planning"
     assert not specs["rfc_analyst"].wired and specs["rfc_analyst"].stage == "pre"
-    assert not specs["report"].wired and specs["report"].stage == "post"
+    assert specs["report"].wired and specs["report"].stage == "post"  # nối qua ExecutionLoop.explain (BL-30)
 
 
 def test_agents_command_lists_every_agent_and_names_the_unwired_ones() -> None:

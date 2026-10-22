@@ -359,6 +359,129 @@ def run(
 
 
 @app.command()
+def serve(
+    host: Annotated[str, typer.Option(help="Địa chỉ nghe; mặc định chỉ máy cục bộ")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(help="Cổng")] = 8765,
+    root: Annotated[Path, typer.Option(help="Thư mục backend (có adapters/, runs/, config/, skills/)")] = Path("."),
+    frontend: Annotated[Path | None, typer.Option(help="Thư mục giao diện; mặc định ../frontend")] = None,
+    code_root: Annotated[
+        list[Path] | None, typer.Option("--code-root", help="Thư mục người dùng được chọn làm mã nguồn (lặp được)")
+    ] = None,
+    env_file: Annotated[
+        Path | None,
+        typer.Option(help="Tệp .env để nạp RIÊNG khoá mô hình khai báo trong models.yaml (không nạp biến khác)"),
+    ] = None,
+    read_only: Annotated[
+        bool, typer.Option("--read-only", help="Chỉ xem: chặn chạy, huỷ, ghi nhận định và sửa tệp")
+    ] = False,
+    no_auth: Annotated[
+        bool, typer.Option("--no-auth", help="Tắt đăng nhập (chỉ dùng trên máy cá nhân; mọi người là admin cục bộ)")
+    ] = False,
+) -> None:
+    """Mở giao diện web: chọn giao thức RFC và mã nguồn, chạy, theo dõi agent trực tiếp, xem trace, duyệt và phản hồi."""
+    from rfcv.api.server import load_model_keys
+    from rfcv.api.server import serve as make_server
+
+    root = root.resolve()
+    if env_file is not None:
+        try:
+            names = load_model_keys(env_file, root / "config" / "models.yaml")
+        except (OSError, ValueError) as exc:
+            typer.echo(f"LỖI: {exc}", err=True)
+            raise typer.Exit(1) from exc
+        typer.echo(f"Đã nạp khoá từ {env_file}: {', '.join(names) or 'không có biến mới'}")
+    typer.echo(f"rfcv UI: http://{host}:{port}/   (tài liệu API: /docs; Ctrl+C để dừng)")
+    make_server(
+        root,
+        host=host,
+        port=port,
+        frontend=frontend or root.parent / "frontend",
+        code_roots=code_root or [root.parent],
+        read_only=read_only,
+        auth=not no_auth,
+    )
+
+
+users_app = typer.Typer(help="Tài khoản giao diện web (admin | member).", no_args_is_help=True)
+app.add_typer(users_app, name="users")
+
+
+def _auth_store(root: Path) -> Any:
+    from rfcv.api.auth import AuthStore
+
+    return AuthStore(root.resolve() / ".rfcv-ui" / "auth.db")
+
+
+_ROOT_OPT = Annotated[Path, typer.Option("--root", help="Thư mục backend")]
+
+
+def _auth_call(fn: Any) -> None:
+    from rfcv.api.auth import AuthError
+
+    try:
+        fn()
+    except AuthError as exc:
+        typer.echo(f"LỖI: {exc.message}", err=True)
+        raise typer.Exit(1) from exc
+
+
+@users_app.command("list")
+def users_list(root: _ROOT_OPT = Path(".")) -> None:
+    """Liệt kê tài khoản."""
+    for u in _auth_store(root).users():
+        typer.echo(f"{u.username:<20} {u.role:<7} {'đã khoá' if u.disabled else 'hoạt động'}")
+
+
+@users_app.command("add")
+def users_add(
+    username: str,
+    role: Annotated[str, typer.Option(help="admin | member")] = "member",
+    display: Annotated[str, typer.Option(help="Tên hiển thị")] = "",
+    root: _ROOT_OPT = Path("."),
+) -> None:
+    """Tạo tài khoản (hỏi mật khẩu, không hiện khi gõ)."""
+    password = typer.prompt("Mật khẩu", hide_input=True, confirmation_prompt=True)
+    _auth_call(lambda: _auth_store(root).create(username, password, role, display, actor="CLI"))
+    typer.echo(f"Đã tạo {username} ({role})")
+
+
+@users_app.command("passwd")
+def users_passwd(username: str, root: _ROOT_OPT = Path(".")) -> None:
+    """Đặt lại mật khẩu (thu hồi mọi phiên đang đăng nhập của tài khoản)."""
+    password = typer.prompt("Mật khẩu mới", hide_input=True, confirmation_prompt=True)
+    _auth_call(lambda: _auth_store(root).set_password(username, password, actor="CLI"))
+    typer.echo("Đã đổi mật khẩu")
+
+
+@users_app.command("role")
+def users_role(username: str, role: str, root: _ROOT_OPT = Path(".")) -> None:
+    """Đổi vai trò (admin | member)."""
+    _auth_call(lambda: _auth_store(root).set_role(username, role, actor="CLI"))
+    typer.echo("Đã đổi vai trò")
+
+
+@users_app.command("disable")
+def users_disable(username: str, root: _ROOT_OPT = Path(".")) -> None:
+    """Khoá tài khoản."""
+    _auth_call(lambda: _auth_store(root).set_disabled(username, True, actor="CLI"))
+    typer.echo("Đã khoá")
+
+
+@users_app.command("enable")
+def users_enable(username: str, root: _ROOT_OPT = Path(".")) -> None:
+    """Mở khoá tài khoản."""
+    _auth_call(lambda: _auth_store(root).set_disabled(username, False, actor="CLI"))
+    typer.echo("Đã mở khoá")
+
+
+@users_app.command("remove")
+def users_remove(username: str, root: _ROOT_OPT = Path(".")) -> None:
+    """Xoá tài khoản."""
+    _auth_call(lambda: _auth_store(root).delete(username, actor="CLI"))
+    typer.echo("Đã xoá")
+
+
+@app.command()
 def specs(run_id: str) -> None:
     """Duyệt đặc tả bất đồng và mẫu 10%."""
     typer.echo(f"specs: {_NOT_YET}", err=True)
@@ -381,8 +504,8 @@ def rerun(run_id: str, commit: Annotated[str, typer.Option()]) -> None:
 
 @app.command()
 def review(run_id: str) -> None:
-    """Bảng duyệt yêu cầu NEEDS_REVIEW."""
-    typer.echo(f"review: {_NOT_YET}", err=True)
+    """Bảng duyệt yêu cầu NEEDS_REVIEW: dùng giao diện web (`rfcv serve`, mục Duyệt & phản hồi)."""
+    typer.echo(f"Mở giao diện: rfcv serve, rồi vào #/runs/{run_id}/tab/summary (mục Duyệt & phản hồi).", err=True)
     raise typer.Exit(2)
 
 

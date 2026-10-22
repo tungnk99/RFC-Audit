@@ -120,7 +120,17 @@ def split_sentences(text: str) -> list[str]:
     return out
 
 
+# Câu nói về chính các từ khoá (mẫu BCP 14 của mọi RFC, hay "bản này không dùng MUST, SHOULD"), không đặt yêu cầu nào.
+_KEYWORD_BOILERPLATE = re.compile(
+    r"interpreted as described in (?:BCP\s*14|RFC\s*2119)|does not use the (?:oft[- ]used )?expressions",
+    re.IGNORECASE,
+)
+
+
 def primary_modal(sentence: str) -> str | None:
+    """Từ khoá BCP 14 đầu tiên của câu; None nếu không có hoặc câu chỉ nói về chính các từ khoá."""
+    if _KEYWORD_BOILERPLATE.search(sentence):
+        return None
     found = [" ".join(m.group(1).split()) for m in _KEYWORD_RE.finditer(sentence)]
     return found[0] if found else None
 

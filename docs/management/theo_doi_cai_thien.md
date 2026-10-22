@@ -44,6 +44,10 @@ Mỗi cấu hình nên chạy mỗi ca **ít nhất 3 lần** vì kết quả c�
 | 5 | 2026-10-22 | như trên | correct | COMPLIANT V5 (3/3) | 4 | 60-66 | 926.789 / 772.441 / 729.933 | 26%, 0%, 0% | 1/6, 0/5, 0/5 | 0 nạp lại |
 | 6 | 2026-10-22 | #5 + sau mỗi lời gọi công cụ agent thấy ngân sách còn lại, còn 20% thì được nhắc trả kết quả | faulty | VIOLATION V2 (3/3) | 1 | 20-25 | 208.562 / 240.332 / 283.420 | 0% | 0/2 (3 lần) | 0 nạp lại |
 | 6 | 2026-10-22 | như trên | correct | COMPLIANT V5 (3/3) | 4, 5, 4 | 68-91 | 800.557 / 1.144.621 / 925.966 | 0% | 0/5, 0/6, 0/5 | 0 nạp lại |
+| 7 | 2026-10-22 | #6 + Code Reader nhận `task.prior_findings` (tóm tắt vị trí đã tìm) ở LOCATE và TRACE_PATHS, và quy tắc "tìm rỗng thì đổi cách" | faulty | VIOLATION V2 (3/3) | 1 | 20-24 | 279.653 / 310.378 / 196.948 | 0% | 0/2 (3 lần) | 0 nạp lại |
+| 7 | 2026-10-22 | như trên | correct | **NEEDS_REVIEW V7 (3/3)** | 3, 3, 3 | 47-57 | 708.379 / 576.907 / 638.468 | 0% | 0/4 (3 lần) | 0 nạp lại |
+| 8 | 2026-10-22 | #7 + Schema gate chặn THRESHOLD MISMATCH khi `observed` bằng giá trị trong `where` (`THRESHOLD_EQUALS_EXPECTED`) + Report agent và Output gate | faulty | VIOLATION V2 (3/3) | 1 | 20-26 | 243.512 / 255.126 / 277.047 | 0% | 0/2 (3 lần) | 0 nạp lại |
+| 8 | 2026-10-22 | như trên | correct | COMPLIANT V5 (3/3) | 4, 4, 4 | 62-70 | 715.827 / 749.436 / 767.078 | 0% | 0/5 (3 lần) | 0 nạp lại |
 
 \* Lãng phí = token tiêu trong các lần chạy agent bị hỏng, chia tổng token. Mỗi ca mới chạy **một lần**, chưa đủ để nói về
 độ ổn định. Khi thêm dòng, ghi thêm thay đổi so với lần trước vào cột Cấu hình.
@@ -84,6 +88,7 @@ Mức: **P0** chặn đánh giá thật, **P1** ảnh hưởng độ tin cậy h
 - **Hướng sửa (cũ):** nâng `llm_calls` của `code_reader` trong `agents/code_reader/role.yaml` (thử 20). Tài liệu ghi đây là giá trị
   khởi điểm cần hiệu chỉnh.
 - **Đóng khi:** không còn `UsageLimitExceeded` ở Code Reader qua ít nhất 3 lần chạy mỗi ca, và token mỗi ca không tăng.
+- **Kết quả (BL-11):** Nhật ký đo #6 (3 lần faulty, 3 lần correct): không còn lần chạy agent nào hỏng vì giới hạn. Token mỗi ca tăng (faulty ~210-280k, correct 0,8-1,1 triệu) nhờ prompt và skill viết lại ở #5, đó là chi phí đọc mã thật, chuyển sang CT-25.
 
 ### CT-03 · P2 · `evidence.summary` phình theo số bằng chứng T3
 - **Bằng chứng:** Verifier nhận 55.229 token đầu vào, Planner 30.915 ở vòng cuối, vì tóm tắt liệt kê từng dòng T3 (khoảng 60 dòng).
@@ -241,6 +246,12 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 - **Hướng sửa:** thầy chốt danh sách RFC và giao thức trong phạm vi, kèm mức hỗ trợ (đầy đủ, mức chứng minh, chưa hỗ trợ). Cài bộ phân tích TXT hoặc chọn RFC
   có bản XML. Đưa bảng phạm vi vào báo cáo.
 - **Đóng khi:** bảng phạm vi được chốt và có trong báo cáo; RFC gate tách đúng câu trên mọi RFC trong phạm vi (đo trên 30 câu mỗi giao thức).
+- **Đã đo (BL-22, 2026-10-22), bản TXT:** DNS (RFC 6891, 1034, 1035, 2181) 45 câu, SSH (4253, 4252, 4254) 236 câu, HPACK (7541) 20 câu. Mẫu ngẫu nhiên 30 câu mỗi
+  nhóm (hạt giống 7), đọc từng câu: ranh giới đúng ở cả 90 câu, trừ hai loại không phải câu văn xuôi: 31 dòng bảng của RFC 4253 (ví dụ "diffie-hellman-group1-sha1 REQUIRED …")
+  và câu cụt trước khối ABNF ("This identification string MUST be"). Tiêu chí máy trên mọi câu: 4/236 câu SSH không kết thúc bằng dấu câu, hai nhóm còn lại 0.
+  Lỗi tìm được: câu mẫu BCP 14 ("The key words … are to be interpreted as described in RFC 2119", "This memo does not use … MUST") bị tính là yêu cầu ở cả TXT và XML; đã loại,
+  chỉ số câu giữ nguyên nên định danh không đổi. Hạn chế còn lại: nhãn của danh sách định nghĩa dính vào câu đầu của mục ("cookie The 'cookie' MUST be …"), 1 trường hợp
+  trong mẫu; RFC 1034, 1035, 2181 viết "must" thường nên cho 0 câu quy phạm (chỉ làm ngữ cảnh). RFC 4253 có 31 dòng bảng và 2 câu văn xuôi bị bỏ sót ở bản TXT.
 
 ### CT-23 · P1 · RFC 8446 không có bản XML chính thức; RBS mẫu trỏ vào câu của RFC 8446
 - **Bằng chứng:** `https://www.rfc-editor.org/rfc/rfc8446.xml` trả 404; RFC Editor chỉ có `.txt` và `.html` cho RFC 8446, còn RFC 9846 có `.xml`
@@ -270,6 +281,7 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 - **Bằng chứng (Nhật ký đo #6):** ca correct 800.557-1.144.621 token, gấp khoảng 3 lần #4; ở lần 1.144.621, Code Reader dùng 671.346 token qua 3 lần chạy với 71 lời gọi công cụ (LOCATE, TRACE_PATHS, RECHECK). Không còn lần chạy hỏng nào, nên đây là chi phí đọc mã thật chứ không phải lãng phí.
 - **Hậu quả:** chi phí mỗi yêu cầu loại B có bản đúng cao; với 20-60 yêu cầu mỗi giao thức là đáng kể.
 - **Hướng sửa:** đo trên mã thật (wolfSSL) trước khi tối ưu, vì mã giả nhỏ không đại diện; ứng viên: tóm tắt lịch sử hội thoại giữa các lời gọi công cụ, cho TRACE_PATHS dùng lại vị trí T1 đã có thay vì tìm lại từ đầu.
+- **Đã làm (BL-14, Nhật ký đo #7, #8):** Code Reader nhận `task.prior_findings` ở LOCATE và TRACE_PATHS thay vì tìm lại từ đầu. Ca bản đúng: token Code Reader 524.000 giảm còn 396.000 (-24%), tổng 957.000 giảm còn 744.000 (-22%); ca bản lỗi (chỉ một lượt LOCATE) không đổi (244.000 và 258.000, trong nhiễu). T1 giữ nguyên: 6/6 nhãn đúng, mọi khía cạnh đúng. Chi phí mỗi ca bản đúng vẫn cao (~740.000 token); phần còn lại nằm ở ngữ cảnh cố định (~8.000 token) gửi lại mỗi bước và ở lời gọi công cụ lặp trong một lượt.
 - **Đóng khi:** có số đo trên wolfSSL thật và quyết định ngưỡng chi phí chấp nhận.
 
 ## Đã xử lý
@@ -290,6 +302,7 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 | R-12 | Prompt của Planner, Verifier, Test, RFC Analyst, Report hứa công cụ không tồn tại (`registry__read`, `evidence__read_summary`, `verdict__read`, `rfc__*`, `test__list_examples`, `test__run_scenario`): chỉ 11 công cụ có mã (`code.*`, `locator.suggest`), các vai trò kia chạy với 0 công cụ; Test được bảo "chạy tới trigger trên bản tham chiếu" mà không có cách chạy | khai báo công cụ (catalog và `role.yaml`) và lời nhắc viết trước khi có mã cài đặt, không có test nào đối chiếu hai phía | [agent_tools.py](../../backend/src/rfcv/domains/rfc_protocol/agent_tools.py): 8 công cụ thật (`evidence.read_summary`, `verdict.read`, `rfc.get_sentences/read_section/search/get_definition`, `test.list_examples`, `test.run_scenario`); bỏ `registry.read` và `rfc.get_errata`; `tasks.history` có `new_evidence` và `failure`; [test_agent_tools.py](../../backend/tests/test_agent_tools.py) kiểm mọi công cụ khai báo đều có mã | Lời nhắc phải khớp với cái agent thật sự có; test đối chiếu khai báo với cài đặt. Đo thật: Test gọi `list_examples` rồi chạy thử 4 biến thể trước khi nộp; Verifier đọc `verdict`, T1 và từng ca T3 |
 | R-13 | Miền RFC giao thức còn gắn TLS, nên thêm DNS, HTTP/2, QUIC, SSH không đi được mà không sửa lõi: quy tắc mâu thuẫn REACTION chỉ hiểu `send_alert(...)`; từ vựng chỉ có khoá `alerts`, `content_types`, `handshake_msgs` và tập thuật ngữ chỉ sinh `send_alert(x)`; prompt Test cố định bảng tham số DSL của tlsfuzzer; mô tả công cụ đọc mã (mọi giao thức đều thấy) lấy ví dụ wolfSSL | adapter đầu tiên là TLS, các chỗ "chung" được viết theo nó | khoá `enums` chung trong [adapter_view.py](../../backend/src/rfcv/domains/rfc_protocol/adapter_view.py); `_REACTION_CALL` trong [rules.py](../../backend/src/rfcv/domains/rfc_protocol/rules.py); `DslSpec` trong [dsl.py](../../backend/src/rfcv/domains/rfc_protocol/sandbox/dsl.py), backend khai báo DSL riêng, `test__list_examples` trả DSL cho Test; ví dụ trung lập trong [code_gate.py](../../backend/src/rfcv/gates/code_gate.py) | Thêm giao thức thứ hai mới lộ chỗ lõi gắn giao thức thứ nhất; số dòng lõi phải đổi lần này là dữ liệu cho BL-82 |
 | R-14 | Oracle sai với `where f != v`: không có ca đối chứng ở `v` và `random` có thể lấy trúng `v` (giá trị hợp lệ) mà vẫn đòi phản ứng; RBS có `boundary` nằm phía hợp lệ của `where` vẫn biên dịch được | trình biên dịch chỉ xét `>`, `>=`, `<`, `<=`; RBS mẫu TLS chỉ dùng `>` | `_control_value`/`_trigger_range` trong [oracle_compiler.py](../../backend/src/rfcv/domains/rfc_protocol/spec/oracle_compiler.py); kiểm biên phía kích hoạt trong [vocabulary.py](../../backend/src/rfcv/domains/rfc_protocol/spec/vocabulary.py); test trong [test_spec.py](../../backend/tests/test_spec.py) | Lộ ra khi viết RBS cho PING của HTTP/2 (`length != 8`); mỗi phép so sánh của ngữ pháp cần một test oracle |
+| R-15 | Cấp kết quả trước cho Code Reader làm 3/3 ca bản đúng rơi từ COMPLIANT V5 xuống NEEDS_REVIEW V7 (Nhật ký đo #7): ở lượt TRACE_PATHS, Code Reader ghi THRESHOLD MISMATCH với `observed` = 16640 (đúng bằng ngưỡng) trong khi `note` của chính nó nói "khớp đúng giá trị where"; T1 bác bỏ thì V7 | giảm token bằng cách cấp ngữ cảnh làm agent bớt tính lại, và không có gì chặn một khía cạnh tự mâu thuẫn | `THRESHOLD_EQUALS_EXPECTED` trong [schema_gate.py](../../backend/src/rfcv/domains/rfc_protocol/schema_gate.py) (số đã tính bằng ngưỡng thì không được là MISMATCH; agent làm lại trong ngân sách); [test_gates.py](../../backend/tests/test_gates.py); sau sửa, cổng bắt 2/3 ca bản đúng và Code Reader tự sửa | Giảm chi phí không được đo riêng token: mỗi thay đổi phải đo nhãn và từng khía cạnh T1 (đã đo được vì Nhật ký đo có cột nhãn). Mâu thuẫn nội tại của đầu ra (số khớp mà bảo lệch) là thứ cổng tất định bắt được, không cần chờ prompt tốt hơn |
 
 ## Hạn chế đã biết (cho phần hạn chế của luận văn)
 

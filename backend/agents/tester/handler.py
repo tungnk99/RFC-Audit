@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from agents.common import ORACLE_KEY
-from agents.test.schema import ScenarioProposal
+from agents.tester.schema import ScenarioProposal
 from rfcv.core.execution_loop import Investigation
 from rfcv.domains.rfc_protocol.coverage_linker import link_pending
 from rfcv.domains.rfc_protocol.sandbox.driver import ScenarioRejected, TestDriver

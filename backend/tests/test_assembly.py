@@ -26,7 +26,7 @@ from rfcv.manifest import diff
 from rfcv.plugins import Registry, use_registry
 
 LOCATE = TaskSpec(task_type="LOCATE", target_role="code_reader", params=TaskParams(aspects=["CONDITION", "REACTION"]))  # type: ignore[list-item]
-SELECT = TaskSpec(task_type="SELECT_TESTS", target_role="test")
+SELECT = TaskSpec(task_type="SELECT_TESTS", target_role="tester")
 
 
 class ScriptedRunner:
@@ -48,7 +48,7 @@ class ScriptedRunner:
                 rationale_code="INITIAL_TYPE_B" if first else "DECISIVE_VIOLATION",
             )
             return RoleOutcome(action, 10)
-        if role == "test":
+        if role == "tester":
             return RoleOutcome(SCENARIO, 10)
         if role == "code_reader":
             await self.gateway.call(session, "code.read_range", {"file": "src/internal.c", "start": 810, "end": 830})
@@ -120,7 +120,7 @@ async def test_k3_runs_end_to_end_to_violation(tmp_path: Path) -> None:
     assert v.rules_version == rt.rules.version
     assert "scenario_result" in kinds and "location" in kinds
     assert chain_ok and stored == "VIOLATION"
-    assert runner.calls[0] == "planner" and "test" in runner.calls and "code_reader" in runner.calls
+    assert runner.calls[0] == "planner" and "tester" in runner.calls and "code_reader" in runner.calls
 
 
 def test_run_manifest_records_every_input_digest(tmp_path: Path) -> None:

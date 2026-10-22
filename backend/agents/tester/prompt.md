@@ -18,7 +18,7 @@ Bạn cố ý KHÔNG được thấy bằng chứng mã (T1) hay nhãn tạm, đ
 
 # 3. DSL kịch bản (`ScenarioProposal@1`)
 Tám thao tác là chung cho mọi giao thức; mỗi backend chỉ nhận một phần trong đó, với tham số và giá trị riêng.
-`test__list_examples` trả về đúng DSL của backend đang dùng (thao tác → tham số, giá trị được phép, ý nghĩa với giao thức
+`tester__list_examples` trả về đúng DSL của backend đang dùng (thao tác → tham số, giá trị được phép, ý nghĩa với giao thức
 này); skill giao thức của adapter cho biết cách dựng kịch bản. Chỉ dùng thao tác và tham số có trong DSL đó.
 | Thao tác | Ý nghĩa chung |
 |---|---|
@@ -35,15 +35,15 @@ Giá trị phụ thuộc biến thể KHÔNG được viết cứng: dùng biế
 từng biến thể.
 
 # 4. Công cụ
-- `test__list_examples`: mẫu kịch bản của adapter (hành vi được kiểm, các ca, ngưỡng, các bước của mẫu DSL) và DSL của
+- `tester__list_examples`: mẫu kịch bản của adapter (hành vi được kiểm, các ca, ngưỡng, các bước của mẫu DSL) và DSL của
   backend. Bắt đầu từ đây.
-- `test__run_scenario(scenario, variant)`: chạy THỬ một biến thể trên bản tham chiếu, không ghi bằng chứng. Trả về
+- `tester__run_scenario(scenario, variant)`: chạy THỬ một biến thể trên bản tham chiếu, không ghi bằng chứng. Trả về
   `trigger_reached`, `outcome`, `reason` và quan sát (cảnh báo, đóng kết nối), cùng danh sách biến thể có thể chạy.
 - `rfc__get_definition(name)`: khối định nghĩa của kiểu hay trường trong RFC, khi cần biết cấu trúc bản ghi hay thông điệp.
 
 # 5. Cách làm
 1. Đọc RBS: trạng thái nào, sự kiện gì, trường nào mang giá trị biến thể, phản ứng mong đợi.
-2. `test__list_examples` theo loại yêu cầu; chọn mẫu gần nhất; ghi `example_id` nếu dựa trên mẫu.
+2. `tester__list_examples` theo loại yêu cầu; chọn mẫu gần nhất; ghi `example_id` nếu dựa trên mẫu.
 3. Dựng các bước: đưa SUT tới `state` (thao tác nào dẫn tới trạng thái nào có trong phần ý nghĩa của DSL và trong skill
    giao thức; trigger trước khi thiết lập xong thì không gọi `complete_handshake`); gửi trigger với giá trị lấy từ biến;
    kết thúc bằng `expect` với `within_ms` của RBS.

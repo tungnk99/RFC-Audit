@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RFC-Audit · Kiểm chứng tuân thủ đặc tả giao thức</title>
+  <script>
+    (function () {
+      var t = new URLSearchParams(location.search).get('theme') || localStorage.getItem('rfcv-theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <div class="shell" id="shell">
+    <aside class="sidebar" id="sidebar" aria-label="Điều hướng chính"></aside>
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn only-mobile" id="menu-btn" aria-label="Mở menu"></button>
+        <nav class="crumbs grow" id="crumbs" aria-label="Vị trí"></nav>
+        <div id="live-slot"></div>
+        <button class="search-btn" id="search-btn" aria-label="Tìm kiếm và lệnh nhanh"><span id="search-ic"></span><span>Tìm lần chạy, agent, skill…</span><kbd>Ctrl K</kbd></button>
+      </header>
+      <main id="view" class="page" tabindex="-1"></main>
+    </div>
+  </div>
+  <div id="auth" class="auth-root" hidden></div>
+  <div class="scrim" id="scrim" hidden></div>
+  <aside class="drawer" id="drawer" hidden aria-label="Chi tiết">
+    <div class="drawer-head"><div id="drawer-title"></div><button class="icon-btn" id="drawer-close" aria-label="Đóng"></button></div>
+    <div class="drawer-body" id="drawer-body"></div>
+  </aside>
+  <div class="modal" id="modal" hidden></div>
+  <div class="cmdk" id="cmdk" hidden></div>
+  <div id="toasts" aria-live="polite"></div>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

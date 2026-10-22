@@ -82,5 +82,5 @@ def test_the_test_agent_sees_only_the_definition_blocks_not_the_sentence(
     manifest: AdapterManifest, policy: PolicyStore
 ) -> None:
     """Test cần cấu trúc bản ghi (khối struct) để dựng kịch bản, nhưng không nhận câu hay đoạn RFC nó không khai báo."""
-    built = ContextBuilder(policy).build("test", investigation(manifest, RFC_DIR).context)
+    built = ContextBuilder(policy).build("tester", investigation(manifest, RFC_DIR).context)
     assert [k for k in built if k.startswith("rfc.")] == ["rfc.definitions"]

@@ -12,7 +12,7 @@ There is no existing SSH conformance suite to wrap, so every scenario is written
 
 ## Build
 
-1. `test__list_examples`: start from the closest DSL template and set `example_id`; read the `DSL` block for operations and values.
+1. `tester__list_examples`: start from the closest DSL template and set `example_id`; read the `DSL` block for operations and values.
 2. Reach the state of the requirement:
    - `version_exchanged`: `connect` only (TCP and identification strings).
    - `authenticating`: `connect`, then `complete_handshake` with `until: kex` (key exchange done, NEWKEYS exchanged).

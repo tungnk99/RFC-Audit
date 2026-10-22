@@ -5,7 +5,7 @@ Kiểm tra (tài liệu khám phá mã, Bảng 8; tài liệu khả thi, mục 6
 2. mọi dòng được dẫn thuộc tập dòng đã hiển thị cho agent trong phiên;
 3. mỗi cạnh của call_path có trong chỉ mục lời gọi (hoặc công cụ cấu trúc đã hiển thị cạnh đó), hoặc là cạnh
    `textual`: một dòng đã hiển thị nằm trong thân ký hiệu gọi và nhắc tới tên ký hiệu được gọi (con trỏ hàm, bảng xử lý);
-4. observed thuộc từ vựng adapter hoặc là số;
+4. observed thuộc từ vựng adapter hoặc là số; THRESHOLD không tự mâu thuẫn (MISMATCH mà số đúng bằng ngưỡng của yêu cầu);
 5. dòng được dẫn phải được biên dịch theo cờ build (nếu có dữ liệu tiền xử lý/độ phủ).
 """
 
@@ -15,7 +15,7 @@ import re
 from collections.abc import Callable, Iterable
 from typing import Literal
 
-from rfcv.domains.rfc_protocol.payloads import AspectCheck, Producer, T1Payload, Tier
+from rfcv.domains.rfc_protocol.payloads import AspectCheck, AspectName, AspectValue, Producer, T1Payload, Tier
 from rfcv.domains.rfc_protocol.schemas import LocationClaim
 from rfcv.evidence.models import EvidenceDraft
 from rfcv.gates.code_gate import CodeIndex
@@ -54,8 +54,16 @@ class SchemaGate:
         return False
 
     def check_location(
-        self, claim: LocationClaim, session: ToolSession, *, run_id: str, requirement_id: str, msg_id: str
+        self,
+        claim: LocationClaim,
+        session: ToolSession,
+        *,
+        run_id: str,
+        requirement_id: str,
+        msg_id: str,
+        threshold: int | None = None,
     ) -> GateResult:
+        """`threshold`: giá trị số trong `where` của yêu cầu, nếu có (để kiểm THRESHOLD không tự mâu thuẫn)."""
         errors: list[str] = []
 
         sym = self._index.symbol_in_file(claim.file, claim.symbol)
@@ -86,6 +94,15 @@ class SchemaGate:
             if isinstance(aspect.observed, str) and aspect.observed not in self._terms:
                 errors.append("OBSERVED_NOT_IN_VOCABULARY")
                 break
+
+        # Số đã tính đúng bằng ngưỡng của yêu cầu mà vẫn tuyên bố lệch là tự mâu thuẫn (đo: sau khi cấp kết quả trước,
+        # Code Reader ghi THRESHOLD MISMATCH kèm "khớp đúng giá trị where" trong note, và nhãn rơi xuống NEEDS_REVIEW).
+        # Hướng so sánh sai hay đại lượng sai thuộc khía cạnh CONDITION, không phải THRESHOLD.
+        if threshold is not None and any(
+            a.aspect is AspectName.THRESHOLD and a.value is AspectValue.MISMATCH and a.observed == threshold
+            for a in claim.aspects
+        ):
+            errors.append("THRESHOLD_EQUALS_EXPECTED")
 
         if self._compiled is not None:
             compiled = self._compiled(claim.file)

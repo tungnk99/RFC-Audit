@@ -235,3 +235,6 @@ eval/out/
 backend/eval/work/
 backend/eval/out/
 backend/inputs/
+
+# Lịch sử sửa và nhật ký kiểm toán của giao diện web (git mới là lịch sử chính thức)
+backend/.rfcv-ui/

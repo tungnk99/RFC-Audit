@@ -241,6 +241,31 @@ def test_schema_gate_rejections(index: InMemoryCodeIndex) -> None:
     assert "OBSERVED_NOT_IN_VOCABULARY" in check(g, bad_obs, s)
 
 
+def threshold_claim(value: AspectValue, observed: int) -> LocationClaim:
+    aspects = claim().aspects
+    return claim(
+        aspects=[*aspects, AspectClaim(aspect=AspectName.THRESHOLD, value=value, observed=observed, lines=(812, 812))]
+    )
+
+
+def test_threshold_that_equals_the_expected_value_cannot_be_claimed_as_a_mismatch(index: InMemoryCodeIndex) -> None:
+    """Đo: sau khi cấp kết quả trước, Code Reader ghi THRESHOLD MISMATCH với observed=16640 trong khi note nói "khớp đúng"."""
+    g, s = gate(index), shown_session()
+    contradictory = threshold_claim(AspectValue.MISMATCH, 16640)
+    errors = g.check_location(contradictory, s, run_id="r", requirement_id="X-1", msg_id="m", threshold=16640).errors
+    assert errors == ("THRESHOLD_EQUALS_EXPECTED",)
+    # Cùng số nhưng MATCH, hay số khác mà MISMATCH (ngưỡng thật của mã thấp hơn), hay không biết ngưỡng: được nhận.
+    for value, observed, threshold in (
+        (AspectValue.MATCH, 16640, 16640),
+        (AspectValue.MISMATCH, 16486, 16640),
+        (AspectValue.MISMATCH, 16640, None),
+    ):
+        ok = g.check_location(
+            threshold_claim(value, observed), s, run_id="r", requirement_id="X-1", msg_id="m", threshold=threshold
+        )
+        assert ok.accepted, (value, observed, threshold)
+
+
 def test_schema_gate_rejects_lines_not_compiled(index: InMemoryCodeIndex) -> None:
     # Dòng SendAlert nằm trong #ifdef bị tắt (tài liệu khả thi, mục 4.5)
     g = gate(index, compiled={812, 813})
