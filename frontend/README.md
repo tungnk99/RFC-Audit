@@ -41,7 +41,7 @@ uv run rfcv serve --env-file .env      # mở http://127.0.0.1:8765/
 
 Tài liệu OpenAPI tương tác ở `/docs`, đặc tả JSON ở `/api/openapi.json`.
 
-Máy chủ chỉ nghe `127.0.0.1` theo mặc định, chặn `Host` lạ và `POST` không phải JSON. Chưa có xác thực người dùng: đừng mở ra mạng (`--host 0.0.0.0`) khi chưa có lớp bảo vệ phía trước.
+Máy chủ chỉ nghe `127.0.0.1` theo mặc định, chặn `Host` lạ và `POST` không phải JSON. Mặc định có đăng nhập (vai trò admin/member; tạo tài khoản bằng `rfcv users add`); `--no-auth` tắt đăng nhập và chỉ nên dùng trên máy cá nhân. Đừng mở ra mạng (`--host 0.0.0.0`) khi chưa có lớp bảo vệ phía trước (TLS, tường lửa).
 
 ## Bằng chứng trên mã và trình duyệt mã
 

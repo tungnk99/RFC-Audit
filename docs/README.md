@@ -3,6 +3,8 @@
 Tài liệu đi kèm luận văn *"Kiểm chứng tự động và an toàn sự tuân thủ đặc tả giao thức mạng dựa trên bằng chứng, sử dụng hệ
 thống AI đa tác tử"* (Nguyễn Kỳ Tùng, GVHD TS. Tống Văn Vạn). Mỗi tài liệu có mục lục riêng ở đầu trang.
 
+> **English readers:** the project summary, quick start and status are in the [root README](../README.md). These documents are written in Vietnamese; start with the [system overview](overview/tong_quan_he_thong.md).
+
 ## Cấu trúc
 
 ```

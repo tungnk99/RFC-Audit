@@ -44,10 +44,11 @@ class RequirementView:
     rtype: str
     modal: str
     # Nguồn đặc tả của yêu cầu, ghi nguyên vào kết luận (BL-26): kết luận chỉ có giá trị cho đúng văn bản đã đọc.
-    # Rỗng khi miền hay lần chạy không có văn bản nguồn (agent chỉ thấy RBS).
-    spec_ref: str = ""  # định danh câu, ví dụ RFC8446§5.2#p9s3
-    spec_hash: str = ""  # băm văn bản câu
-    spec_doc: str = ""  # tài liệu nguồn: "<tên> <định dạng> <băm tài liệu>", ví dụ "RFC8446 txt sha256:..."
+    # Rỗng khi miền hay lần chạy không có văn bản nguồn (agent chỉ thấy RBS). Chỉ-theo-tên để lớp con của miền khác vẫn
+    # dựng được bằng tham số vị trí.
+    spec_ref: str = field(default="", kw_only=True)  # định danh câu, ví dụ RFC8446§5.2#p9s3
+    spec_hash: str = field(default="", kw_only=True)  # băm văn bản câu
+    spec_doc: str = field(default="", kw_only=True)  # tài liệu nguồn: "<tên> <định dạng> <băm tài liệu>"
 
 
 @dataclass(frozen=True)

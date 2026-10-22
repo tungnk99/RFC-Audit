@@ -50,11 +50,11 @@ hết ngân sách hoặc phát hiện lặp. Chi tiết: [phối hợp agent](..
 |---|---|---|---|
 | Planner | đặc quyền | chọn nhiệm vụ tiếp theo, không gán nhãn | có |
 | Code Reader | **cách ly** | tự khám phá mã, trả vị trí và nhận định có cấu trúc | có |
-| Test | đặc quyền | chọn kịch bản kiểm thử trong DSL giới hạn | có |
+| Test (thư mục `tester/`) | đặc quyền | chọn kịch bản kiểm thử trong DSL giới hạn | có |
 | Verifier | đặc quyền | phản biện bằng chứng, không đọc mã | có |
 | Code Indexer | **cách ly** | lập bản đồ hàm → thành phần | có (chưa thử với LLM thật) |
 | RFC Analyst | đặc quyền | dịch câu RFC sang RBS | **chưa nối** |
-| Report | đặc quyền | giải thích kết luận | **chưa nối** |
+| Report | đặc quyền | giải thích kết luận, qua Output gate; lệnh `rfcv report` chưa nối | có |
 | Locator (tất định) | không LLM | truy vấn phân tích tĩnh (loại D) | **chưa nối** |
 
 Agent đọc mã nằm trong **vùng cách ly** vì mã nguồn là dữ liệu không tin cậy. Agent đặc quyền (Planner, Verifier…) không bao giờ

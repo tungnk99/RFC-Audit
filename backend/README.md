@@ -11,7 +11,7 @@ Lõi **không biết RFC, TLS hay bất kỳ miền nào**. Tri thức đặc th
 ```bash
 uv python install 3.12 && uv sync
 
-uv run pytest -q                       # gần 300 kiểm thử, không gọi LLM thật
+uv run pytest -q                       # hơn 460 kiểm thử, không gọi LLM thật
 uv run ruff check src tests
 uv run pyright                         # kiểu, strict
 uv run lint-imports                    # 6 hợp đồng kiến trúc = ranh giới quyền
@@ -132,9 +132,10 @@ Phép thử tổng quát: [tests/toy_domain.py](tests/toy_domain.py) là một m
 | **Chạy trên bản triển khai thật (wolfSSL)** | ⏳ chưa: thiếu backend kiểm thử thật và bộ chạy SUT. Chưa có số liệu thực nghiệm nào |
 | Chỉ mục mã tree-sitter → SQLite (C, Rust, Go), bản sao phạm vi tại commit, bộ chạy lệnh trong container, `locator.suggest`, MAP_COMPONENTS | ✅ cài đặt (`rfcv.codeindex`); ⏳ chưa chạy trên wolfSSL thật |
 | `DockerSutLauncher`, `TlsfuzzerBackend.run/sanity` | ⏳ |
-| Handler STATIC_QUERY; RFC Analyst hai luồng; Report/Output gate | ⏳ |
-| CLI `specs`, `status`, `rerun`, `review`, `report` | ⏳ (trả mã 2) |
-| Giao diện web (`rfcv serve`, `frontend/`): chọn giao thức RFC và yêu cầu, chọn mã nguồn, theo dõi agent trực tiếp (SSE), hội thoại LLM, bằng chứng gắn vào dòng mã, trình duyệt mã, **vòng phản hồi của Reviewer (BR3, ghi vào kho `reviews`)**, **soạn thảo có kiểm soát** RBS/prompt/skill/mô hình qua cổng kiểm tra của lõi, lịch sử, phát lại | ✅ cài đặt và kiểm thử (`tests/test_api.py`); chế độ *mã thật* chờ bộ chạy SUT (⏳ bên trên); chưa có xác thực người dùng |
+| Output gate, agent Report, bộ dựng báo cáo (`ui/report.py`: JSON, HTML, SARIF) | ✅ cài đặt và kiểm thử (`test_output_gate.py`, `test_report.py`) |
+| Handler STATIC_QUERY; RFC Analyst hai luồng | ⏳ |
+| CLI `specs`, `status`, `rerun`, `review`, `report` | ⏳ (trả mã 2; `report` chưa nối vào `ui/report.py`) |
+| Giao diện web (`rfcv serve`, `frontend/`): chọn giao thức RFC và yêu cầu, chọn mã nguồn, theo dõi agent trực tiếp (SSE), hội thoại LLM, bằng chứng gắn vào dòng mã, trình duyệt mã, **vòng phản hồi của Reviewer (BR3, ghi vào kho `reviews`)**, **soạn thảo có kiểm soát** RBS/prompt/skill/mô hình qua cổng kiểm tra của lõi, lịch sử, phát lại | ✅ cài đặt và kiểm thử (`tests/test_api.py`); chế độ *mã thật* chờ bộ chạy SUT (⏳ bên trên); có đăng nhập và vai trò admin/member (`tests/test_auth.py`) |
 | Lớp dịch vụ: hàng đợi bền, Postgres, đa tenant, OpenTelemetry, secrets provider | ⏳ đã chừa chỗ (Protocol repository, `tenant`, `TraceSink`) |
 
 ### Nối agent với mã nguồn (tài liệu khám phá mã)
