@@ -73,7 +73,7 @@ Chiều phụ thuộc: `domains`, `backends`, `runtime` phụ thuộc lõi, **kh
 | Muốn thêm | Làm gì | Nhóm entry point |
 |---|---|---|
 | Một miền mới (chính sách, API, chuẩn an ninh…) | viết `DomainPack`: loại bằng chứng, nhiệm vụ, bộ quy tắc, vai trò, lời nhắc | `rfcv.domains` |
-| Bộ quy tắc kết luận | `RuleSet` thuần, ví dụ `rfc-protocol@7`; `version` = hash nội dung | `rfcv.rule_sets` |
+| Bộ quy tắc kết luận | `RuleSet` thuần, ví dụ `rfc-protocol@8`; `version` = hash nội dung | `rfcv.rule_sets` |
 | Backend, chỉ mục mã, bộ chạy lệnh/SUT | factory `(manifest, config) -> đối tượng` | `rfcv.backends`, `rfcv.code_indexes`, `rfcv.executors`, `rfcv.sut_launchers` |
 | Nhà cung cấp LLM | factory `(ModelSpec, api_key) -> handle` | `rfcv.llm_providers` |
 | Runtime agent khác PydanticAI | factory trả `RoleRunner` | `rfcv.agent_runtimes` |

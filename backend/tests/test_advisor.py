@@ -104,13 +104,23 @@ def test_provisional_compliant_is_critiqued_once_then_left_alone() -> None:
 
 def test_conflict_goes_critique_then_recheck_on_the_named_aspect() -> None:
     conflict = [{"kind": "T1_vs_T3", "evidence_ids": ["e1", "e2"], "aspect": "REACTION"}]
-    assert names(advice(conflicts=conflict, history=ONE_ROUND)) == ["CRITIQUE"]
+    direct = advice(conflicts=conflict, history=ONE_ROUND)
+    assert (
+        direct is not None
+        and names(direct) == ["RECHECK"]
+        and direct.rule_id == "R3-recheck-direct"
+        and direct.deterministic
+    )
+    rechecked = [*ONE_ROUND, {"round": 2, "task_type": "RECHECK", "target": "code_reader", "ok": True}]
+    assert names(advice(conflicts=conflict, history=rechecked)) == [
+        "CRITIQUE"
+    ]  # xem lại trực tiếp rồi mà vẫn mâu thuẫn: nhờ phản biện
     issue = {"kind": "CONTRADICTION", "evidence_id": "sha256:aa", "suggested_task": "RECHECK"}
-    a = advice(conflicts=conflict, history=ONE_ROUND, critique={"issues": [issue]})
+    a = advice(conflicts=conflict, history=rechecked, critique={"issues": [issue]})
     assert names(a) == ["RECHECK"] and a is not None and a.rationale_code == "FOLLOW_CRITIQUE"
     p = a.tasks[0].params
     assert (p.aspect.value, p.evidence_id) == ("REACTION", "sha256:aa")  # type: ignore[attr-defined]
-    b = advice(conflicts=conflict, history=ONE_ROUND, critique={"issues": []})
+    b = advice(conflicts=conflict, history=rechecked, critique={"issues": []})
     assert names(b) == ["RECHECK"] and b is not None and b.tasks[0].params.evidence_id is None  # type: ignore[attr-defined]
 
 

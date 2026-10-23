@@ -119,7 +119,13 @@ class ProtocolRuntime:
         )
         self._driver = driver
         adapter_dir = getattr(getattr(rt, "config", None), "adapter_dir", None)
-        location = LocationHandler(rt, gate)
+        executor = getattr(rt.providers, "executor", None)
+        cc_tools: dict[str, Any] = {}
+        if index is not None and executor is not None:
+            from rfcv.gates.code_tools import build_cc_tools
+
+            cc_tools = {s.name: s for s in build_cc_tools(index, executor, flags, bool(manifest.build_config_complete))}
+        location = LocationHandler(rt, gate, cc_tools)
         scenario = ScenarioHandler(rt, driver, Path(adapter_dir) / "templates" if adapter_dir is not None else None)
         run_id = getattr(rt, "run_id", None) or ""
         return {

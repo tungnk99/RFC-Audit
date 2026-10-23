@@ -23,6 +23,12 @@ Bạn không gán nhãn. Nhưng nhận định của bạn có hậu quả thậ
 - `task.recheck_location` (DERIVED, chỉ khi xem lại): bản tóm tắt của bằng chứng cần xem lại (tệp, hàm, dòng, các khía cạnh).
 - `task.prior_findings` (DERIVED, chỉ khi đã có kết quả trước): tóm tắt tối đa hai vị trí bạn đã tìm được cho yêu cầu này
   (tệp, hàm, dòng, `finding`, từng khía cạnh với giá trị đã tính, `call_path`, số mục `unexplored`). Đó là điểm xuất phát.
+- `behavior.diagnosis` (DERIVED, khi kiểm thử đã cho thấy lỗi): kiểu lỗi suy từ kết quả chạy thật (`signature`: reaction_absent, wrong_alert, no_close,
+  threshold_off), giả thuyết (`hypothesis`) và việc nên làm (`next_step`). BẮT ĐẦU từ giả thuyết này và kiểm chứng nó bằng mã, đừng mò từ đầu. Ví dụ
+  reaction_absent (mọi ca vượt ngưỡng không có cảnh báo nào) nghĩa là ngưỡng trong mã không giải thích được hành vi: phải tìm vì sao phản ứng không chạy.
+- `code.candidates` (UNTRUSTED, khi có chẩn đoán): kết quả `code__grep` mã cảnh báo yêu cầu (mọi nơi phát, kèm hàm chứa và dòng ngữ cảnh) và `defined()`
+  của macro bảo vệ chúng, đã chạy sẵn; các dòng đó tính là đã đọc, bạn dẫn được. Đọc điều kiện bảo vệ từng nơi phát; macro bảo vệ có `giá trị: 0` nghĩa là
+  khối đó bị biên dịch bỏ: khai `disabled_by` và REACTION = MISMATCH. Không gọi lại những gì đã có ở đây.
 - `adapter.build_flags` (TRUSTED): cờ biên dịch của bản đang kiểm. Dòng trong khối `#if` bị tắt thì KHÔNG có trong bản chạy.
 - `adapter.vocabulary` (TRUSTED): danh sách giá trị được phép cho `observed` dạng chuỗi. Chuỗi ngoài danh sách bị cổng từ chối.
 
@@ -76,7 +82,7 @@ Mô tả đầy đủ và schema tham số đi kèm từng công cụ; đường
 
 # 5. Cách điều tra
 ## Nhịp làm việc (áp dụng cho mọi nhiệm vụ)
-Mục tiêu: chỉ ĐÚNG chỗ yêu cầu bị vi phạm (nơi phản ứng thiếu hay sai), giải thích được vì sao, và không kết luận điều chưa kiểm. Xong trong khoảng 3 lượt, không quá 12 lần gọi công cụ. Mỗi lượt gọi NHIỀU công cụ song song:
+Nếu có `behavior.diagnosis` và `code.candidates`, lượt 1 đã xong: sang thẳng lượt 2 (đọc điều kiện bảo vệ của từng nơi phát). Mục tiêu: chỉ ĐÚNG chỗ yêu cầu bị vi phạm (nơi phản ứng thiếu hay sai), giải thích được vì sao, và không kết luận điều chưa kiểm. Xong trong khoảng 3 lượt, không quá 12 lần gọi công cụ. Mỗi lượt gọi NHIỀU công cụ song song:
 1. Lượt 1: `code__grep` mã phản ứng trong `expect` (ví dụ `record_overflow`, `type: "c"`, `context: 4`: một lệnh liệt kê MỌI nơi phát
    phản ứng kèm hàm chứa), cùng `code__eval` cho các hằng của `where`/ngưỡng.
 2. Lượt 2: `code__read` song song điều kiện bảo vệ của TỪNG nơi phát vừa thấy (mỗi nơi 40–80 dòng; hoặc cả hàm bằng `symbol`).

@@ -290,7 +290,10 @@ def _reaction_conflicts(v: _View) -> list[Conflict]:
             if not t3.valid or t3.variant_class == "control" or t3.side == "valid":
                 continue
             seen = t3.observed.get("alert")
-            if isinstance(seen, str) and seen not in ("none", claimed):
+            # Mã nói phản ứng chạy (MATCH) mà chạy thật không có cảnh báo nào ở ca vượt ngưỡng: dấu hiệu khối mã bị biên dịch bỏ hay
+            # nằm sau điều kiện không đúng. Không tính khi T1 vốn nói phản ứng thiếu (MISMATCH) hoặc ca không FAIL.
+            silent = seen == "none" and reaction.value is AspectValue.MATCH and t3.outcome is Outcome.FAIL
+            if isinstance(seen, str) and (seen not in ("none", claimed) or silent):
                 conflicts.append(Conflict("T1_vs_T3", (e1.evidence_id, e3.evidence_id), "REACTION"))
     return conflicts
 
@@ -342,7 +345,7 @@ def _gaps(req: RequirementView, v: _View) -> tuple[Sequence[Missing], Sequence[C
 
 
 RULE_SET = RuleSet(
-    name=PROFILE + "@7",
+    name=PROFILE + "@8",
     rules=(
         Rule("V0", _v0, OBSERVABLE, "T3 không nhất quán"),
         Rule("V1", _v1, OBSERVABLE, "không có nhân chứng dương"),

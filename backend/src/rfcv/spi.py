@@ -97,6 +97,8 @@ class LoopPolicy:
     critique_followups: int = 2
     # Nhãn tạm cần ít nhất một lần định vị mã (T1) trước khi dừng, và nhiệm vụ định vị. Mã chỉ cần khi nó thêm thông tin: VIOLATION cần
     # vị trí lỗi để giải thích; COMPLIANT chỉ cần khi chế độ kỹ lưỡng hoặc kiểm toán còn khoảng trống (V6 không đòi T1).
+    # Số vòng xử lý mâu thuẫn bằng chứng (ví dụ T1 nói phản ứng chạy mà T3 không thấy) trước khi chấp nhận nhãn tạm.
+    conflict_rounds: int = 1
     locate_task: str | None = None
     locate_before: frozenset[str] = frozenset()
     # Mã lý do Planner phải khai khi cố ý làm khác sổ tay; dùng để ghi trace "đi theo hay chệch sổ tay".

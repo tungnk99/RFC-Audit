@@ -171,6 +171,7 @@ class ExecutionLoop:
         critiqued_clean = False
         post_critique_rounds = 0  # số vòng đã chạy sau lần phản biện đầu tiên
         located = False  # đã giao nhiệm vụ định vị mã chưa
+        conflict_attempts = 0  # số vòng đã giao việc để xử lý mâu thuẫn
         unresolved: list[dict[str, Any]] = []
         stop: StopReason
         stop_detail: dict[str, Any] = {}
@@ -209,6 +210,13 @@ class ExecutionLoop:
                 and report.provisional.label.value in self._loop.locate_before
                 and not any(str(e.tier) == "T1" for e in evidence)
             )
+            # Mâu thuẫn bằng chứng (T1 nói phản ứng chạy, T3 không thấy) chưa được xử lý: một vòng xem lại có chẩn đoán trước khi dừng.
+            needs_resolve = (
+                report.provisional is not None
+                and bool(report.conflicts)
+                and conflict_attempts < self._loop.conflict_rounds
+            )
+            needs_locate = needs_locate or needs_resolve
             if (
                 needs_critique
                 and not critiqued_clean
@@ -278,6 +286,8 @@ class ExecutionLoop:
             tasks = [t for t in plan.tasks if self._task_valid(t, req.requirement_id, tracker.rounds)]
             if self._loop.locate_task is not None and any(t.task_type == self._loop.locate_task for t in tasks):
                 located = True
+            if needs_resolve and tasks:
+                conflict_attempts += 1
             looped_tasks: list[dict[str, Any]] = []
             for t in tasks:
                 params = t.params.model_dump(mode="json")
@@ -567,7 +577,15 @@ class ExecutionLoop:
             if prior:
                 rows = summarize_evidence(prior, inv.vocabulary_terms, {e.evidence_id for e in prior}).value
                 available["task.prior_findings"] = Labeled(rows, TrustLabel.DERIVED)
-        outcome, new = await self._run_role(role, inv, body, available, tracker, handler=handler, task=task)
+        # Handler có thể chuẩn bị ngữ cảnh bằng luật (tất định, không tốn token): chẩn đoán từ hành vi chạy thật, gói ứng viên mã.
+        enrich: Any = getattr(handler, "enrich", None)
+        seed_shown: frozenset[tuple[str, int]] = frozenset()
+        if enrich is not None:
+            extra, seed_shown = await enrich(inv, task)
+            available = {**available, **extra}
+        outcome, new = await self._run_role(
+            role, inv, body, available, tracker, handler=handler, task=task, seed_shown=seed_shown
+        )
         return outcome, new
 
     async def _run_role(
@@ -580,6 +598,7 @@ class ExecutionLoop:
         *,
         handler: TaskHandler | None = None,
         task: TaskSpec | None = None,
+        seed_shown: frozenset[tuple[str, int]] = frozenset(),
     ) -> tuple[RoleOutcome, int]:
         env = self._envelope(inv, role, body, tracker)
         self._trace_envelope(env)
@@ -587,6 +606,9 @@ class ExecutionLoop:
         profile = self._policy.profile(role)
         session = ToolSession(
             self.run_id, role, inv.requirement.requirement_id, max_tool_calls=profile.budget_per_task.tool_calls
+        )
+        session.shown_lines |= (
+            seed_shown  # dòng mã đã nằm trong ngữ cảnh chuẩn bị sẵn: agent được phép dẫn như khi tự đọc
         )
         precheck: Any = getattr(handler, "precheck", None)
         if precheck is not None:

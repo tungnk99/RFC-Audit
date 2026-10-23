@@ -74,6 +74,7 @@ Gợi ý theo kinh nghiệm, quy tắc số ưu tiên nhỏ trước. Khối dư
 - `R2-locate-C` khi loại C; nhãn tạm COMPLIANT/VIOLATION; chưa giao LOCATE → LOCATE(aspects=['ORDER_STATE', 'REACTION']) (`FILL_MISSING_VARIANT`). Đã có nhãn tạm mà chưa định vị mã: đọc mã có hướng (chẩn đoán từ kiểm thử) để chỉ ra nơi lỗi hoặc xác nhận.
 - `R2-critique-before-compliant` khi nhãn tạm COMPLIANT; chưa phản biện → CRITIQUE (`CRITIQUE_BEFORE_COMPLIANT`).
 - `R2-recritique-after-fix` khi nhãn tạm COMPLIANT; mọi vấn đề phản biện đã được xử lý → CRITIQUE (`CRITIQUE_BEFORE_COMPLIANT`).
+- `R3-recheck-direct` khi có mâu thuẫn; chưa phản biện; chưa giao RECHECK → RECHECK(aspect←conflict.aspect) (`RESOLVE_CONFLICT`). Xem lại đúng khía cạnh đang mâu thuẫn, kèm chẩn đoán từ hành vi chạy thật.
 - `R3-critique-on-conflict` khi có mâu thuẫn; chưa phản biện → CRITIQUE (`RESOLVE_CONFLICT`).
 - `R3-recritique-after-fix` khi có mâu thuẫn; mọi vấn đề phản biện đã được xử lý → CRITIQUE (`RESOLVE_CONFLICT`).
 - `R3-recheck-conflict` khi có mâu thuẫn; phản biện sạch → RECHECK(aspect←conflict.aspect) (`RESOLVE_CONFLICT`).

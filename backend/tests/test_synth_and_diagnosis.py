@@ -77,3 +77,47 @@ def test_waived_valid_side_and_untrusted_cases_do_not_drive_the_diagnosis() -> N
     waived = _case("valid#0", Outcome.FAIL, "record_overflow", valid=True, refs=(Outcome.FAIL, Outcome.FAIL))
     unreliable = _case("random#9", Outcome.FAIL, "none", refs=())  # không có nhân chứng dương
     assert diagnose("record_overflow", [waived, unreliable]).signature == NONE
+
+
+async def test_enrich_gives_the_code_reader_a_diagnosis_and_a_candidate_pack(store, trace, tmp_path: Path) -> None:  # type: ignore[no-untyped-def]
+    """T3 thấy phản ứng thiếu: Code Reader nhận chẩn đoán + mọi nơi phát mã cảnh báo kèm `defined()` của macro bảo vệ, trước khi tự đọc."""
+    from types import SimpleNamespace
+
+    from agents.code_reader.handler import LocationHandler
+    from agents.common import RBS_KEY
+    from helpers import REQ
+    from rfcv.core.execution_loop import Investigation
+    from rfcv.gates.code_gate import InMemoryCodeIndex, SymbolInfo, build_code_tools
+    from rfcv.gates.explore_policy import CodeScope
+
+    for i in range(3):
+        store.append(t3(f"random:record.length#{i}", Outcome.FAIL, variant_class="random", alert="none"))
+
+    class Exec:
+        async def run(self, segments, timeout_s):  # type: ignore[no-untyped-def]
+            return (
+                "./src/internal.c-5-#ifdef HAVE_MAX_FRAGMENT\n"
+                "./src/internal.c:7:        SendAlert(ssl, alert_fatal, record_overflow);\n"
+                "./src/internal.c-8-#endif\n"
+            )
+
+    src = [f"/* {i} */" for i in range(1, 30)]
+    index = InMemoryCodeIndex(
+        sources={"src/internal.c": src}, symbols=[SymbolInfo("src/internal.c", "DoProcessReplyEx", "function", 1, 29)]
+    )
+    tools = {s.name: s for s in build_code_tools(index, Exec(), CodeScope(root=tmp_path), ("-DWOLFSSL_TLS13",), True)}
+    rt = SimpleNamespace(store=store, trace=trace, run_id="run-test")
+    handler = LocationHandler(rt, gate=None, code_tools=tools)  # type: ignore[arg-type]
+    rbs = parse_rbs(RBS_TEXT)
+    inv = Investigation(
+        requirement=SimpleNamespace(requirement_id=REQ),
+        context={},
+        vocabulary_terms=frozenset(),
+        domain_state={RBS_KEY: rbs},
+    )  # type: ignore[arg-type]
+    context, shown = await handler.enrich(inv, None)
+    assert context["behavior.diagnosis"].value["signature"] == "reaction_absent"
+    candidates = str(context["code.candidates"].value)
+    assert "SendAlert(ssl, alert_fatal, record_overflow)" in candidates and "defined(HAVE_MAX_FRAGMENT)" in candidates
+    assert ("src/internal.c", 7) in shown
+    assert next(iter(trace.events("enriched")))["payload"]["signature"] == "reaction_absent"

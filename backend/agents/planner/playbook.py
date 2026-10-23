@@ -73,6 +73,19 @@ def _rules() -> list[PlaybookRule]:
             deterministic=True,
         )
     )
+    # Mâu thuẫn T1-T3 (ví dụ mã nói phản ứng chạy, kiểm thử không thấy): xem lại ngay đúng khía cạnh đó với chẩn đoán từ hành vi chạy
+    # thật, một lần, trước khi nhờ phản biện (LLM) phân loại. Chỉ khi vẫn còn mâu thuẫn mới tới R3-critique-on-conflict.
+    rules.append(
+        PlaybookRule(
+            "R3-recheck-direct",
+            When(conflict=True, critique="none", not_dispatched=frozenset({T.RECHECK.value})),
+            (Suggest(T.RECHECK.value, bind={"aspect": "conflict.aspect"}),),
+            R.RESOLVE_CONFLICT.value,
+            priority=29,
+            note="Xem lại đúng khía cạnh đang mâu thuẫn, kèm chẩn đoán từ hành vi chạy thật.",
+            deterministic=True,
+        )
+    )
     # Nhãn tạm COMPLIANT là kết luận dễ sai nhất: luôn phản biện một lần trước khi dừng.
     rules.append(
         PlaybookRule(

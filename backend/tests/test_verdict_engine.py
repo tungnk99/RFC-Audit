@@ -308,3 +308,13 @@ def test_summary_marks_waived_valid_side_cases() -> None:
     rows = summarize_evidence(chain([waived, normal]), {"record_overflow"}).value
     flags = {str(r["variant"]): r["waived"] for r in rows}
     assert flags == {"valid_random:record.length@8": True, "boundary:record.length=16641": False}
+
+
+def test_t1_saying_the_reaction_runs_while_t3_saw_none_is_a_conflict() -> None:
+    """Mã nói `send_alert(record_overflow)` chạy (MATCH) mà mọi ca vượt ngưỡng FAIL với alert=none: khối mã có thể bị biên dịch bỏ."""
+    silent = t3("boundary:record.length=16641", Outcome.FAIL, alert="none")
+    report = assess(REQ_B, chain([silent, t1()]))
+    assert any(c.kind == "T1_vs_T3" and c.aspect == "REACTION" for c in report.conflicts)
+    # T1 vốn nói phản ứng thiếu (MISMATCH): khớp với T3, không mâu thuẫn
+    consistent = assess(REQ_B, chain([silent, t1(reaction=AspectValue.MISMATCH)]))
+    assert not [c for c in consistent.conflicts if c.kind == "T1_vs_T3"]
