@@ -47,7 +47,7 @@ KNOWN_UNSUPPLIED = {
 
 UNAVAILABLE_TASKS = {"STATIC_QUERY"}  # có trong danh mục nhưng chưa có handler
 
-PINNED_RULES_VERSION = "sha256:f720145130601c38258a2c925eab1421b5c0a2f25bc5f6b1c62a812279be88f1"
+PINNED_RULES_VERSION = "sha256:7012c1b4c2e2bcab392f3f3d0d8bafc8f774befca6e571ed9f995bc0fdc88263"
 
 
 def _domain_fields(manifest: AdapterManifest) -> set[str]:

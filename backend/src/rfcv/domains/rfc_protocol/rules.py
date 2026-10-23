@@ -299,6 +299,27 @@ def _conflicts(req: RequirementView, v: _View) -> Sequence[Conflict]:
     return _reaction_conflicts(v) if req.rtype in OBSERVABLE else []
 
 
+ERROR_SHARE_LIMIT = 0.2  # quá tỉ lệ T3 ERROR này thì môi trường chạy không đủ tin cậy để bỏ qua phản biện
+
+
+def _audit(req: RequirementView, v: _View) -> tuple[str, ...]:
+    """Khoảng trống của một nhãn tạm COMPLIANT mà engine chưa nhìn thấy. Rỗng = sạch: không cần gọi LLM phản biện.
+
+    Engine đã bảo đảm đủ biến thể PASS, nhất quán, không T1/T2 bác bỏ. Kiểm toán thêm ba thứ nó không xét: phía kích hoạt có ca
+    nào thiếu nhân chứng dương không, các bản tham chiếu có bất đồng nhau không, và môi trường có chập chờn (nhiều T3 ERROR) không."""
+    gaps: list[str] = []
+    trigger = [(e, t) for e, t in v.t3 if t.side != "valid" and t.variant_class != "control" and t.trigger_reached]
+    if any(not t.witness.has_positive for _, t in trigger):
+        gaps.append("trigger_case_without_positive_witness")
+    if any({r.outcome for r in t.witness.positive} >= {Outcome.PASS, Outcome.FAIL} for _, t in v.t3):
+        gaps.append("references_disagree")
+    if v.t3 and sum(1 for _, t in v.t3 if t.outcome is Outcome.ERROR) / len(v.t3) > ERROR_SHARE_LIMIT:
+        gaps.append("many_errors")
+    if v.suspicious:
+        gaps.append("suspicious_branch")
+    return tuple(gaps)
+
+
 def _ignored_for_critique(req: RequirementView, v: _View) -> frozenset[str]:
     return frozenset(e.evidence_id for e, _ in v.waived)
 
@@ -321,7 +342,7 @@ def _gaps(req: RequirementView, v: _View) -> tuple[Sequence[Missing], Sequence[C
 
 
 RULE_SET = RuleSet(
-    name=PROFILE + "@6",
+    name=PROFILE + "@7",
     rules=(
         Rule("V0", _v0, OBSERVABLE, "T3 không nhất quán"),
         Rule("V1", _v1, OBSERVABLE, "không có nhân chứng dương"),
@@ -340,5 +361,6 @@ RULE_SET = RuleSet(
     gaps=_gaps,
     conflicts=_conflicts,
     ignored_for_critique=_ignored_for_critique,
+    audit=_audit,
     fallback_rule="V9",
 )

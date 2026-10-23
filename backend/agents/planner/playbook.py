@@ -33,16 +33,32 @@ def _locate(rtype: str) -> Suggest:
 
 def _rules() -> list[PlaybookRule]:
     rules: list[PlaybookRule] = []
-    # Vòng 1: song song theo loại yêu cầu (Bảng 10).
+    # Vòng 1 của loại quan sát được (A–C): CHỈ chạy kiểm thử. Hành vi chạy thật cho biết lỗi kiểu gì trước khi ai đọc mã, và đa số nhãn
+    # (COMPLIANT theo V6, VIOLATION theo V2) không cần T1 để được quyết định. Đọc mã chỉ khi nó thêm thông tin (xem R2-locate).
     for rtype in ("A", "B", "C"):
         rules.append(
             PlaybookRule(
                 f"R1-{rtype}",
                 When(rtypes=frozenset({rtype}), first_round=True),
-                (Suggest(T.SELECT_TESTS.value), _locate(rtype)),
+                (Suggest(T.SELECT_TESTS.value),),
                 INITIAL[rtype].value,
                 priority=10,
-                note="Chạy kiểm thử và tìm mã song song vì hai việc độc lập.",
+                note="Kiểm thử trước: hành vi chạy thật định hướng việc đọc mã sau đó và thường đã đủ để có nhãn.",
+                deterministic=True,
+            )
+        )
+        rules.append(
+            PlaybookRule(
+                f"R2-locate-{rtype}",
+                When(
+                    rtypes=frozenset({rtype}),
+                    provisional=frozenset({"VIOLATION", "COMPLIANT"}),
+                    not_dispatched=frozenset({T.LOCATE.value}),
+                ),
+                (_locate(rtype),),
+                R.FILL_MISSING_VARIANT.value,
+                priority=15,
+                note="Đã có nhãn tạm mà chưa định vị mã: đọc mã có hướng (chẩn đoán từ kiểm thử) để chỉ ra nơi lỗi hoặc xác nhận.",
                 deterministic=True,
             )
         )

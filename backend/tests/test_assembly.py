@@ -190,7 +190,8 @@ async def test_agent_claim_contradicting_passing_tests_is_not_concluded(tmp_path
     """SUT thực sự đúng (mọi T3 PASS) nhưng agent đọc mã báo REACTION sai: hệ thống không ra COMPLIANT lẫn VIOLATION."""
     runner = ScriptedRunner()
     providers = make_providers(runner, backend=FakeBackend(sut_alert="record_overflow", buggy_impl="wolfssl"))
-    rt = build_runtime(make_config(tmp_path), providers)
+    # Chế độ kỹ lưỡng: luôn đọc mã trước COMPLIANT. Chế độ hiệu quả bỏ T1 khi kiểm toán tất định sạch, nên không thấy khẳng định sai này.
+    rt = build_runtime(make_config(tmp_path, effort="thorough"), providers)
     runner.gateway = rt.gateway
     try:
         (verdict,) = await rt.run_all(ADAPTER_DIR / "examples")

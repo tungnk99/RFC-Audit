@@ -313,7 +313,7 @@ async def test_plan_context_records_what_the_playbook_would_have_advised(
     await make_loop(store, trace, policy, runner, handlers, RequirementBudget(rounds=1)).investigate(inv())
     (ctx,) = payloads(trace, "plan_context")
     assert ctx["rtype"] == "B" and ctx["planned"] == ["SELECT_TESTS", "LOCATE"]
-    assert ctx["advice"]["rule"] == "R1-B" and sorted(ctx["advice"]["tasks"]) == ["LOCATE", "SELECT_TESTS"]
+    assert ctx["advice"]["rule"] == "R1-B" and ctx["advice"]["tasks"] == ["SELECT_TESTS"]
     assert ctx["adherence"] == "followed"
 
 
@@ -521,3 +521,96 @@ async def test_a_failed_task_hands_the_decision_back_to_the_planner_llm(
     )
     await loop.investigate(inv())
     assert "planner" in [c.to_role for c in runner.calls]  # sau lỗi tác vụ, cần phán đoán chứ không chỉ làm theo luật
+
+
+def _efficient_loop(
+    store: EvidenceStore,
+    trace: TraceLog,
+    policy: PolicyStore,
+    runner: FakeRunner,
+    handlers: dict[TaskType, Any],
+    *,
+    locate_compliant: bool = False,
+) -> ExecutionLoop:
+    from dataclasses import replace
+
+    from rfcv.plugins import current_registry
+
+    base = current_registry().loop_policy()
+    loop_policy = replace(base, locate_before=base.locate_before | ({"COMPLIANT"} if locate_compliant else set()))
+    return ExecutionLoop(
+        run_id="run-test",
+        runner=runner,
+        policy=policy,
+        store=store,
+        trace=trace,
+        handlers=handlers,
+        loop=loop_policy,
+        scripted_plans=True,
+        audit_skips_critique=True,
+    )
+
+
+async def test_efficient_mode_stops_a_clean_compliant_without_reading_code_or_calling_the_critic(
+    store: EvidenceStore, trace: TraceLog, policy: PolicyStore
+) -> None:
+    runner = FakeRunner(lambda n: plan(CRITIQUE), OUTPUTS)
+    handlers = {
+        TaskType.SELECT_TESTS: WriteOnce(store, full_passing_set),
+        TaskType.LOCATE: Noop(),
+        TaskType.CRITIQUE: Noop(),
+    }
+    verdict = await _efficient_loop(store, trace, policy, runner, handlers).investigate(inv())
+    assert (verdict.label, verdict.rule) == (Label.COMPLIANT, "V6")
+    # Chỉ Tester chạy (handler giả không dựng được kịch bản từ mẫu): không Planner, không Code Reader, không Verifier.
+    assert [c.to_role for c in runner.calls] == ["tester"]
+    assert payloads(trace, "critique_skipped")[0]["reason"] == "audit_clean"
+
+
+async def test_a_violation_is_localised_before_the_loop_stops(
+    store: EvidenceStore, trace: TraceLog, policy: PolicyStore
+) -> None:
+    runner = FakeRunner(lambda n: plan(CRITIQUE), OUTPUTS)
+    handlers = {
+        TaskType.SELECT_TESTS: WriteOnce(store, lambda: [t3(outcome=Outcome.FAIL, alert="none")]),
+        TaskType.LOCATE: WriteOnce(
+            store, lambda: [t1(reaction=AspectValue.MISMATCH, observed="send_alert(record_overflow)")]
+        ),
+    }
+    verdict = await _efficient_loop(store, trace, policy, runner, handlers).investigate(inv())
+    assert (verdict.label, verdict.rule) == (Label.VIOLATION, "V2")
+    assert [c.to_role for c in runner.calls] == [
+        "tester",
+        "code_reader",
+    ]  # T3 trước, rồi đúng một lần định vị, không Planner LLM
+
+
+async def test_audit_gaps_bring_the_critic_back(store: EvidenceStore, trace: TraceLog, policy: PolicyStore) -> None:
+    def disagreeing() -> list[EvidenceDraft]:
+        drafts = full_passing_set()
+        drafts[1] = t3("boundary:record.length=16641", Outcome.PASS, refs=(Outcome.PASS, Outcome.FAIL))
+        return drafts
+
+    runner = FakeRunner(lambda n: plan(CRITIQUE), OUTPUTS)
+    handlers = {
+        TaskType.SELECT_TESTS: WriteOnce(store, disagreeing),
+        TaskType.LOCATE: Noop(),
+        TaskType.CRITIQUE: Noop(),
+    }
+    await _efficient_loop(store, trace, policy, runner, handlers).investigate(inv())
+    assert payloads(trace, "audit_gaps")[0]["gaps"] == ["references_disagree"]
+    assert "verifier" in [c.to_role for c in runner.calls]
+
+
+async def test_thorough_mode_reads_code_before_stopping_with_compliant(
+    store: EvidenceStore, trace: TraceLog, policy: PolicyStore
+) -> None:
+    runner = FakeRunner(lambda n: plan(CRITIQUE), OUTPUTS)
+    handlers = {
+        TaskType.SELECT_TESTS: WriteOnce(store, full_passing_set),
+        TaskType.LOCATE: Noop(),
+        TaskType.CRITIQUE: Noop(),
+    }
+    loop = _efficient_loop(store, trace, policy, runner, handlers, locate_compliant=True)
+    await loop.investigate(inv())
+    assert "code_reader" in [c.to_role for c in runner.calls]

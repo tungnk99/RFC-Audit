@@ -141,9 +141,11 @@ class ExecutionLoop:
         loop_detector: Callable[[], LoopDetector] | None = None,
         progress_of: Callable[[SufficiencyReport, int], Hashable] | None = None,
         scripted_plans: bool = False,
+        audit_skips_critique: bool = False,
     ) -> None:
         reg = current_registry()
         self._scripted_plans = scripted_plans
+        self._audit_skips_critique = audit_skips_critique
         self.run_id = run_id
         self._runner = runner
         self._policy = policy
@@ -168,6 +170,7 @@ class ExecutionLoop:
         critique: Critique | None = None
         critiqued_clean = False
         post_critique_rounds = 0  # số vòng đã chạy sau lần phản biện đầu tiên
+        located = False  # đã giao nhiệm vụ định vị mã chưa
         unresolved: list[dict[str, Any]] = []
         stop: StopReason
         stop_detail: dict[str, Any] = {}
@@ -197,7 +200,29 @@ class ExecutionLoop:
                 and self._loop.critique_task is not None
                 and report.provisional.label.value in self._loop.critique_before
             )
-            if report.provisional is not None and (not needs_critique or critiqued_clean):
+            # Nhãn tạm thuộc `locate_before` mà chưa có T1 và chưa thử định vị: chưa dừng, cần vị trí mã (đọc mã có hướng, sau khi T3 đã
+            # cho biết lỗi kiểu gì) để giải thích. Chỉ thử một lần: Code Reader hỏng thì vẫn dừng với nhãn đã có.
+            needs_locate = (
+                report.provisional is not None
+                and self._loop.locate_task is not None
+                and not located
+                and report.provisional.label.value in self._loop.locate_before
+                and not any(str(e.tier) == "T1" for e in evidence)
+            )
+            if (
+                needs_critique
+                and not critiqued_clean
+                and not needs_locate
+                and self._audit_skips_critique
+                and self._rules.audit is not None
+            ):
+                gaps = self._rules.audit(req, self._rules.prepare(req, evidence))
+                if not gaps:  # kiểm toán tất định sạch: không cần gọi LLM phản biện
+                    critiqued_clean = True
+                    self._log("critique_skipped", {"reason": "audit_clean"}, req.requirement_id, round=tracker.rounds)
+                else:
+                    self._log("audit_gaps", {"gaps": list(gaps)}, req.requirement_id, round=tracker.rounds)
+            if report.provisional is not None and not needs_locate and (not needs_critique or critiqued_clean):
                 stop = StopReason.SUFFICIENT
                 stop_detail = {
                     "label": report.provisional.label.value,
@@ -208,6 +233,7 @@ class ExecutionLoop:
             if (
                 report.provisional is not None
                 and needs_critique
+                and not needs_locate
                 and critique is not None
                 and post_critique_rounds >= self._loop.critique_followups
             ):
@@ -250,6 +276,8 @@ class ExecutionLoop:
                 continue
 
             tasks = [t for t in plan.tasks if self._task_valid(t, req.requirement_id, tracker.rounds)]
+            if self._loop.locate_task is not None and any(t.task_type == self._loop.locate_task for t in tasks):
+                located = True
             looped_tasks: list[dict[str, Any]] = []
             for t in tasks:
                 params = t.params.model_dump(mode="json")

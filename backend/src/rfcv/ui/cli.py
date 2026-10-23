@@ -313,6 +313,12 @@ def run(
     ] = None,
     sut_launcher: Annotated[str | None, typer.Option(help="Tên bộ chạy SUT trong registry")] = None,
     tenant: Annotated[str, typer.Option()] = "default",
+    effort: Annotated[
+        str,
+        typer.Option(
+            help="efficient (mặc định): bỏ bước không thêm thông tin; thorough: luôn đọc mã và phản biện trước COMPLIANT"
+        ),
+    ] = "efficient",
     explain: Annotated[
         bool,
         typer.Option(
@@ -336,6 +342,7 @@ def run(
         executor=executor,
         sut_launcher=sut_launcher,
         explain=explain,
+        effort=effort,
     )
     from rfcv.codeindex.workspace import WorkspaceError
 

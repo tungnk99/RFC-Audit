@@ -50,6 +50,8 @@ def pack() -> DomainPack:
             planner_role="planner",
             report_role="report",
             critique_task=schemas.TaskType.CRITIQUE.value,
+            locate_task=schemas.TaskType.LOCATE.value,
+            locate_before=frozenset({"VIOLATION"}),
             deviation_code=schemas.RationaleCode.DEVIATE_PLAYBOOK.value,
         ),
         adapter_checks=[adapter_checks.check_protocol_adapter],

@@ -123,6 +123,9 @@ class RuleSet:
     # Mã bằng chứng mà quy tắc đã loại khỏi kết luận (ví dụ khẳng định phía hợp lệ không tham chiếu độc lập nào xác nhận). Phản
     # biện nêu vấn đề trên chúng vô nghĩa: lõi bỏ các vấn đề đó thay vì đuổi theo tới hết ngân sách.
     ignored_for_critique: Callable[[Any, Any], frozenset[str]] = lambda req, data: frozenset()
+    # Kiểm toán tất định cho nhãn tạm cần phản biện: trả danh sách khoảng trống (rỗng = sạch, không cần gọi LLM phản biện).
+    # None: miền không có kiểm toán, luôn cần phản biện.
+    audit: Callable[[Any, Any], tuple[str, ...]] | None = None
     fallback_rule: str = "V9"
     version: str = field(init=False)
 
@@ -140,6 +143,7 @@ class RuleSet:
                     _source_hash(self.gaps),
                     _source_hash(self.conflicts),
                     _source_hash(self.ignored_for_critique),
+                    _source_hash(self.audit) if self.audit is not None else "",
                 ],
             }
         )

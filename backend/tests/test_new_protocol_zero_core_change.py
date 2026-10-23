@@ -28,7 +28,7 @@ adapter: toyline
 version: 0.1.0
 backend: toyline-runner
 domain: rfc_protocol
-verdict_profile: rfc-protocol@6
+verdict_profile: rfc-protocol@7
 specs:
   - {doc: RFC9999, role: primary}
 vocabulary:

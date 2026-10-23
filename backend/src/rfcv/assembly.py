@@ -75,6 +75,9 @@ class RuntimeConfig:
     executor: str | None = None  # tên trong registry `rfcv.executors`
     sut_launcher: str | None = None  # tên trong registry `rfcv.sut_launchers`
     enable_skills: bool = True
+    # "efficient": bỏ bước không thêm thông tin (T1 và phản biện LLM cho nhãn đã qua kiểm toán tất định); "thorough": như thiết kế
+    # gốc, luôn đọc mã và phản biện trước COMPLIANT (dùng để đo tỉ lệ COMPLIANT sai của chế độ hiệu quả).
+    effort: str = "efficient"
     scripted_plans: bool = (
         True  # luật sổ tay tất định thì hub tự lập kế hoạch, không gọi Planner LLM (xem PlaybookRule.deterministic)
     )
@@ -296,8 +299,12 @@ def build_runtime(
             for spec in domain_tools(rt):
                 gateway.register(spec)
         handlers: Mapping[str, Any] = pack.runtime.handlers(rt) if pack.runtime else {}
+        loop_policy = pack.loop
+        if config.effort == "thorough":
+            loop_policy = replace(loop_policy, locate_before=loop_policy.locate_before | {"COMPLIANT"})
         rt.loop = ExecutionLoop(
             scripted_plans=config.scripted_plans,
+            audit_skips_critique=config.effort == "efficient",
             run_id=run_id,
             runner=runner,
             policy=policy,
@@ -306,7 +313,7 @@ def build_runtime(
             handlers=handlers,
             budget=config.budget,
             tasks=reg.tasks,
-            loop=pack.loop,
+            loop=loop_policy,
             rules=rules,
         )
         return rt

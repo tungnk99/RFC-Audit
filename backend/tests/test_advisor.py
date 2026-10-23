@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -70,24 +71,33 @@ def names(a: Advice | None) -> list[str]:
     return [t.task_type for t in a.tasks]
 
 
-def test_round_one_follows_table_10_per_type() -> None:
-    assert names(advice(rtype="A")) == ["SELECT_TESTS", "LOCATE"]
+def test_round_one_runs_the_tests_first_and_reads_code_only_once_a_label_exists() -> None:
+    """A–C: vòng 1 chỉ kiểm thử (hành vi chạy thật định hướng việc đọc mã); định vị mã đến sau khi có nhãn tạm (R2-locate)."""
+    assert names(advice(rtype="A")) == ["SELECT_TESTS"]
     b = advice(rtype="B")
-    assert b is not None and b.rationale_code == "INITIAL_TYPE_B"
-    assert [a.value for a in b.tasks[1].params.aspects] == ["CONDITION", "THRESHOLD", "REACTION"]  # type: ignore[attr-defined]
-    assert names(advice(rtype="C")) == ["SELECT_TESTS", "LOCATE"]
+    assert b is not None and b.rationale_code == "INITIAL_TYPE_B" and b.deterministic
+    assert names(advice(rtype="C")) == ["SELECT_TESTS"]
+    tests_done = [{"round": 1, "task_type": "SELECT_TESTS", "target": "tester", "ok": True}]
+    for label in ("VIOLATION", "COMPLIANT"):
+        locate = advice(rtype="B", provisional=label, history=tests_done)
+        assert locate is not None and names(locate) == ["LOCATE"] and locate.rule_id == "R2-locate-B"
+        assert [a.value for a in locate.tasks[0].params.aspects] == ["CONDITION", "THRESHOLD", "REACTION"]  # type: ignore[attr-defined]
     assert names(advice(rtype="D")) == ["LOCATE"]  # STATIC_QUERY chưa có handler: bị bỏ, không gợi ý suông
 
 
 def test_never_suggests_a_task_without_a_handler() -> None:
     reg = current_registry()
     sit = situation_from_context(ctx("A"))
-    assert names(advise(sit, reg.playbook, reg.tasks, {"LOCATE"})) == ["LOCATE"]
+    assert names(advise(sit, reg.playbook, reg.tasks, {"SELECT_TESTS"})) == ["SELECT_TESTS"]
+    assert advise(sit, reg.playbook, reg.tasks, {"LOCATE"}) is None  # LOCATE không phải việc vòng 1 của loại A
     assert advise(sit, reg.playbook, reg.tasks, set()) is None
 
 
 def test_provisional_compliant_is_critiqued_once_then_left_alone() -> None:
-    rows = [{"round": 1, "task_type": "SELECT_TESTS", "target": "tester", "ok": True}]
+    rows = [
+        {"round": 1, "task_type": "SELECT_TESTS", "target": "tester", "ok": True},
+        {"round": 2, "task_type": "LOCATE", "target": "code_reader", "ok": True},
+    ]
     assert names(advice(provisional="COMPLIANT", history=rows)) == ["CRITIQUE"]
     assert advice(provisional="COMPLIANT", history=rows, critique={"issues": []}) is None  # không bịa thêm việc
 
@@ -134,7 +144,7 @@ def test_adherence_is_classified() -> None:
     a = advice(rtype="A")
     assert a is not None
     assert adherence(a, "dispatch", a.tasks, "INITIAL_TYPE_A", "DEVIATE_PLAYBOOK") == "followed"
-    assert adherence(a, "dispatch", a.tasks[:1], "DEVIATE_PLAYBOOK", "DEVIATE_PLAYBOOK") == "deviated_declared"
+    assert adherence(a, "dispatch", (), "DEVIATE_PLAYBOOK", "DEVIATE_PLAYBOOK") == "deviated_declared"
     assert adherence(a, "stop", (), "INFEASIBLE", "DEVIATE_PLAYBOOK") == "deviated_unannounced"
     assert adherence(None, "stop", (), "INFEASIBLE", "DEVIATE_PLAYBOOK") == "no_advice"
 
@@ -151,8 +161,8 @@ def test_a_plan_that_contains_all_advised_tasks_is_followed_even_with_extras() -
     superset = [*a.tasks, *extra.tasks]
     assert adherence(a, "dispatch", superset, "INITIAL_TYPE_B", "DEVIATE_PLAYBOOK") == "followed"
     # Thiếu một nhiệm vụ được gợi ý thì vẫn là chệch; đổi sang việc khác hoàn toàn cũng vậy.
-    both = advice(rtype="A")
-    assert both is not None and len(both.tasks) > 1
+    both = dataclasses.replace(a, tasks=(*a.tasks, *extra.tasks))
+    assert len(both.tasks) > 1
     assert adherence(both, "dispatch", both.tasks[:1], "INITIAL_TYPE_B", "DEVIATE_PLAYBOOK") == "deviated_unannounced"
     assert adherence(a, "dispatch", extra.tasks, "INITIAL_TYPE_B", "DEVIATE_PLAYBOOK") == "deviated_unannounced"
 
@@ -245,7 +255,7 @@ async def test_playbook_runner_delegates_other_roles_and_builds_valid_plans() ->
     out = await runner.run(_env("code_reader"), {}, None)  # type: ignore[arg-type]
     assert out.tokens == 7
     plan = runner.plan(ctx("A"))
-    assert isinstance(plan, PlanAction) and [t.task_type for t in plan.tasks] == ["SELECT_TESTS", "LOCATE"]
+    assert isinstance(plan, PlanAction) and [t.task_type for t in plan.tasks] == ["SELECT_TESTS"]
     stop = runner.plan(ctx("A", history=ONE_ROUND))
     assert stop.action == "stop" and stop.rationale_code == "INFEASIBLE"
 

@@ -65,10 +65,13 @@ FOLLOW_CRITIQUE (làm theo phản biện), DEVIATE_PLAYBOOK (cố ý làm khác 
 Gợi ý theo kinh nghiệm, quy tắc số ưu tiên nhỏ trước. Khối dưới được sinh từ dữ liệu sổ tay của miền (không sửa tay; chạy
 `sync_prompt` trong playbook.py).
 <!-- playbook:begin -->
-- `R1-A` khi loại A; vòng 1 → SELECT_TESTS + LOCATE(aspects=['CONDITION', 'THRESHOLD']) (`INITIAL_TYPE_A`). Chạy kiểm thử và tìm mã song song vì hai việc độc lập.
-- `R1-B` khi loại B; vòng 1 → SELECT_TESTS + LOCATE(aspects=['CONDITION', 'THRESHOLD', 'REACTION']) (`INITIAL_TYPE_B`). Chạy kiểm thử và tìm mã song song vì hai việc độc lập.
-- `R1-C` khi loại C; vòng 1 → SELECT_TESTS + LOCATE(aspects=['ORDER_STATE', 'REACTION']) (`INITIAL_TYPE_C`). Chạy kiểm thử và tìm mã song song vì hai việc độc lập.
+- `R1-A` khi loại A; vòng 1 → SELECT_TESTS (`INITIAL_TYPE_A`). Kiểm thử trước: hành vi chạy thật định hướng việc đọc mã sau đó và thường đã đủ để có nhãn.
+- `R1-B` khi loại B; vòng 1 → SELECT_TESTS (`INITIAL_TYPE_B`). Kiểm thử trước: hành vi chạy thật định hướng việc đọc mã sau đó và thường đã đủ để có nhãn.
+- `R1-C` khi loại C; vòng 1 → SELECT_TESTS (`INITIAL_TYPE_C`). Kiểm thử trước: hành vi chạy thật định hướng việc đọc mã sau đó và thường đã đủ để có nhãn.
 - `R1-D` khi loại D; vòng 1 → LOCATE(aspects=['EFFECT']) + STATIC_QUERY (`INITIAL_TYPE_D`). Loại D không chạy kiểm thử: bằng chứng tĩnh.
+- `R2-locate-A` khi loại A; nhãn tạm COMPLIANT/VIOLATION; chưa giao LOCATE → LOCATE(aspects=['CONDITION', 'THRESHOLD']) (`FILL_MISSING_VARIANT`). Đã có nhãn tạm mà chưa định vị mã: đọc mã có hướng (chẩn đoán từ kiểm thử) để chỉ ra nơi lỗi hoặc xác nhận.
+- `R2-locate-B` khi loại B; nhãn tạm COMPLIANT/VIOLATION; chưa giao LOCATE → LOCATE(aspects=['CONDITION', 'THRESHOLD', 'REACTION']) (`FILL_MISSING_VARIANT`). Đã có nhãn tạm mà chưa định vị mã: đọc mã có hướng (chẩn đoán từ kiểm thử) để chỉ ra nơi lỗi hoặc xác nhận.
+- `R2-locate-C` khi loại C; nhãn tạm COMPLIANT/VIOLATION; chưa giao LOCATE → LOCATE(aspects=['ORDER_STATE', 'REACTION']) (`FILL_MISSING_VARIANT`). Đã có nhãn tạm mà chưa định vị mã: đọc mã có hướng (chẩn đoán từ kiểm thử) để chỉ ra nơi lỗi hoặc xác nhận.
 - `R2-critique-before-compliant` khi nhãn tạm COMPLIANT; chưa phản biện → CRITIQUE (`CRITIQUE_BEFORE_COMPLIANT`).
 - `R2-recritique-after-fix` khi nhãn tạm COMPLIANT; mọi vấn đề phản biện đã được xử lý → CRITIQUE (`CRITIQUE_BEFORE_COMPLIANT`).
 - `R3-critique-on-conflict` khi có mâu thuẫn; chưa phản biện → CRITIQUE (`RESOLVE_CONFLICT`).
