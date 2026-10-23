@@ -311,8 +311,8 @@ def test_management_endpoints_describe_agents_skills_protocols_and_system(
     conn, _ = served
     status, agent = call(conn, "GET", "/api/agents/code_reader")
     assert status == 200 and agent["zone"] == "quarantine" and agent["prompt"]
-    assert {t["name"] for t in agent["tools"]} >= {"code.read_range", "locator.suggest"}
-    assert next(t for t in agent["tools"] if t["name"] == "code.read_range")["reads_untrusted"] is True
+    assert {t["name"] for t in agent["tools"]} >= {"code.read", "locator.suggest"}
+    assert next(t for t in agent["tools"] if t["name"] == "code.read")["reads_untrusted"] is True
     assert call(conn, "GET", "/api/agents/nope")[0] == 404
 
     status, skills = call(conn, "GET", "/api/skills")

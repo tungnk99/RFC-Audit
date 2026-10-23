@@ -10,10 +10,14 @@ Output gate kiểm đầu ra của bạn trước khi xuất (mục 5). Giải t
   `stop_reason`, `modal` (MUST, SHOULD...), `evidence_ids` (bằng chứng làm căn cứ cho nhãn).
 - `evidence.cited` (DERIVED): tóm tắt đúng các bằng chứng trong `evidence_ids`, mỗi hàng có `evidence_id` và `tier`:
   - T1 (vị trí mã): `file`, `symbol`, `lines`, `finding`, `aspects` (CONDITION, THRESHOLD, REACTION... mỗi khía cạnh MATCH,
-    MISMATCH hay UNCLEAR, `observed` là giá trị mã thật), `call_path`, `unexplored_count`.
-  - T3 (kết quả chạy): `variant`, `variant_class`, `outcome`, `alert` (mã lỗi SUT phát ra), `closed`, `linked` (kiểm thử đã đi
+    MISMATCH hay UNCLEAR, `observed` là giá trị mã thật, `lines` là dòng căn cứ của khía cạnh đó), `call_path`, `unexplored_count`,
+    `disabled_by` (macro mà cổng đã xác minh là KHÔNG bật trong bản dựng, khiến khối mã thực hiện yêu cầu bị biên dịch bỏ),
+    `defect_location` (khi phản ứng thiếu: hàm và dòng nơi phản ứng LẼ RA có, do cổng suy ra từ chỉ mục; đây là nơi lỗi, nêu nó trước).
+  - T3 (kết quả chạy): `waived` (true: khẳng định phía hợp lệ mà mọi bản tham chiếu độc lập đều từ chối; đã loại khỏi kết luận, KHÔNG dùng làm căn cứ), `variant`, `variant_class`, `outcome`, `alert` (mã lỗi SUT phát ra), `closed`, `linked` (kiểm thử đã đi
     qua đúng đoạn mã T1), `witness_positive` (bản tham chiếu đã PASS ca này); các ca PASS thường được gộp (`count`).
   - T2 (phân tích tĩnh, nhánh nghi vấn): `suspicious_on_path`, `rule_id`...
+- `critique.unresolved` (DERIVED): vấn đề Verifier nêu mà hệ thống đã đuổi theo đủ số vòng cho phép nhưng chưa giải quyết (`kind`, `evidence_id`). Không rỗng
+  thì giải thích phải nêu chúng như điểm còn ngỏ, đừng im lặng.
 - `rfc.sentence` (TRUSTED, có thể vắng): câu RFC gốc của yêu cầu. Chỉ trích câu này, đừng nhớ lại RFC từ trí nhớ.
 
 # 3. Công cụ
@@ -32,6 +36,17 @@ Mở đầu bằng một câu nêu nhãn và lý do chính, rồi các căn cứ
 - NEEDS_REVIEW: nêu đúng quy tắc gây nhãn (V0, V1, V4, V7) và điều người duyệt phải xem: mâu thuẫn giữa bằng chứng nào, nhánh
   nghi vấn nào, khía cạnh nào MISMATCH, ca đối chứng hỏng. Đây là nhãn "máy không chắc", không phải lỗi hay đạt.
 - UNVERIFIABLE: nêu `stop_reason` (hết ngân sách, không làm được loại bằng chứng nào) và còn thiếu gì.
+Ca `waived` (đối chứng, `valid_random` bị tham chiếu từ chối): nhắc tới tối đa MỘT lần, nói rõ khẳng định phía hợp lệ không có tham chiếu độc lập nào xác nhận
+nên đã loại khỏi kết luận; không dùng chúng chứng minh một ngưỡng nào là "mốc đúng".
+Nguyên nhân gốc của VIOLATION (viết thành một đoạn riêng, ngắn, cho người không đọc mã cũng hiểu):
+- T3 không có phản ứng (`alert` là "none") ở MỌI ca vượt ngưỡng, kể cả xa ngưỡng, nghĩa là phản ứng bắt buộc KHÔNG xảy ra; ngưỡng
+  sai chỉ làm phản ứng đến sớm hay muộn, không làm nó biến mất. Khi đó đừng trình bày ngưỡng trong mã là nguyên nhân.
+- REACTION MISMATCH nghĩa là phản ứng đúng KHÔNG chạy. `lines` của khía cạnh đó là chỗ luồng thực sự rơi vào (thường là nhánh
+  mặc định); đừng viết rằng mã gọi lời gọi gửi cảnh báo ở đó.
+- `disabled_by` không rỗng: nói đúng chiều: khối mã gửi cảnh báo bị biên dịch bỏ VÌ macro đó KHÔNG được bật trong bản dựng (không
+  phải "khi bật macro thì vô hiệu"). Hướng sửa tương ứng: đưa lời gọi gửi cảnh báo ra khỏi điều kiện của macro đó (hoặc bật macro),
+  rồi chạy lại các biến thể đã nêu. Chỉ đề xuất đổi ngưỡng khi dữ liệu T3 cho thấy phản ứng có xảy ra nhưng ở độ dài sai.
+- THRESHOLD MISMATCH mà không giải thích được hành vi T3 chỉ nêu như thông tin phụ.
 Dùng đúng tên nhãn của kết luận; không nhắc tới nhãn khác. Số, tên hàm, mã lỗi chép đúng từ bằng chứng.
 
 # 5. Output gate: bị từ chối thì sửa

@@ -55,6 +55,8 @@ class AdapterManifest(_M):
     consistency_rules: tuple[dict[str, Any], ...] = ()
     locator_hints: dict[str, dict[str, tuple[str, ...]]] = Field(default_factory=dict)
     build_flags: tuple[str, ...] = ()
+    # build_flags là cấu hình ĐẦY ĐỦ của bản dựng (macro không có trong đó và không có #define trong kho là không bật).
+    build_config_complete: bool = False
     sut: SutSpec
     references: tuple[str, ...] = ()
     code_scope: CodeScopeSpec

@@ -1,0 +1,3 @@
+# Ngữ cảnh build SUT chỉ cần mã wolfSSL đã clone (COPY eval/work/wolfssl). tlsfuzzer và tlslite-ng được clone trong Dockerfile ở commit ghim.
+*
+!eval/work/wolfssl

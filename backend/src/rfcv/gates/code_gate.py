@@ -335,7 +335,7 @@ TOOL_DOCS: dict[str, str] = {
         "nhiều bước tìm, theo dấu bảng con trỏ hàm.\n"
         "Lệnh được phép: rg/grep (-n -l -c -i -w -F -E -r -e -g -t -A -B -C -m), sg run (-p -l --lang --json), "
         "find (-name -path -type -maxdepth), ls, tree, sed -n 'A,Bp' <tệp>, head/tail -n N, cat -n, wc, sort, uniq, cut; "
-        "nối bằng |. Bị chặn: ; && || > < $ ` &, rg --pre, find -exec/-delete, sed -i, sg -r/-U, mọi lệnh khác.\n"
+        "nối bằng |. Lọc tệp bằng rg -g '*.c' (hoặc --glob), giới hạn bằng -m N, cắt bằng head -n N (hoặc head -N); đầu ra vốn đã bị chặn nên ít khi cần | head. Bị chặn: ; && || > < $ ` &, rg --pre, find -exec/-delete, sed -i, sg -r/-U, mọi lệnh khác.\n"
         "Trả về: đầu ra của lệnh. Lệnh đọc một tệp (sed -n, head, tail, cat -n) được đánh số dòng; dòng dạng "
         "'<tệp>:<dòng>:' của rg -n cũng tính là đã đọc. Tối đa 10 giây, 200 dòng hoặc 16 KB: quá thì bị từ chối "
         "(OUTPUT_TOO_LARGE), hãy thu hẹp lệnh.\n"
@@ -350,7 +350,13 @@ def _strip_dot(text: str) -> str:
     return "\n".join(line.removeprefix("./") for line in text.splitlines())
 
 
-def build_code_tools(index: CodeIndex, executor: SandboxExecutor, scope: explore_policy.CodeScope) -> list[ToolSpec]:
+def build_code_tools(
+    index: CodeIndex,
+    executor: SandboxExecutor,
+    scope: explore_policy.CodeScope,
+    build_flags: Sequence[str] = (),
+    closed_world: bool = False,
+) -> list[ToolSpec]:
     known_files = frozenset(index.files())
 
     def known(file: str) -> bool:
@@ -596,10 +602,13 @@ def build_code_tools(index: CodeIndex, executor: SandboxExecutor, scope: explore
         ("code.search_text", SearchTextParams, search_text),
         ("code.explore", ExploreParams, explore),
     ]
-    return [
+    from rfcv.gates.code_tools import build_cc_tools  # nhập muộn: code_tools dùng lại các hàm của module này
+
+    legacy = [
         ToolSpec(name, TOOL_DOCS[name], params, handler, title=_TITLES[name], read_only=True)
         for name, params, handler in handlers
     ]
+    return [*legacy, *build_cc_tools(index, executor, build_flags, closed_world)]
 
 
 _TITLES = {

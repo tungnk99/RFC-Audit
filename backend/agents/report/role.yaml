@@ -1,6 +1,6 @@
 role: report
 zone: privileged
-context_fields: [verdict.record, evidence.cited, rfc.sentence, rfc.errata, rfc.version_diff]
+context_fields: [verdict.record, critique.unresolved, evidence.cited, rfc.sentence, rfc.errata, rfc.version_diff]
 tools: [evidence.read_summary, verdict.read]
 skills: []
 output_schema: Explanation@1

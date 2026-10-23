@@ -50,6 +50,19 @@ Mỗi cấu hình nên chạy mỗi ca **ít nhất 3 lần** vì kết quả c�
 | 8 | 2026-10-22 | như trên | correct | COMPLIANT V5 (3/3) | 4, 4, 4 | 62-70 | 715.827 / 749.436 / 767.078 | 0% | 0/5 (3 lần) | 0 nạp lại |
 | 9 | 2026-10-22 | #8 trên thế giới khó về REACTION (`e2e_hard.py`): phản ứng ở `HandleError`, xa phép kiểm tra; 3 ca x 3 lần | hard-correct / hard-wrong-alert / hard-no-close | COMPLIANT 3/3, VIOLATION 3/3, VIOLATION 3/3 (đúng đáp án cả 9) | 1-4 | - | Code Reader trung bình 476.000 / 154.000 / 202.000 | - | - | - |
 
+| 10 | 2026-10-23 | **CHẠY THẬT lần đầu**: wolfSSL thật (Docker), tham chiếu OpenSSL + GnuTLS, chỉ mục tree-sitter + DockerExecutor, DeepSeek; RBS gốc TLS13-0042; đã sửa cổng lệnh (`head -N`, `--glob`) | bug | **NEEDS_REVIEW V1** | 1 | 372 | 455.709 | 85% | 1/2 | 0 nạp lại |
+| 10 | 2026-10-23 | như trên | fix | **NEEDS_REVIEW V1** | 1 | 352 | 474.488 | 82% | 1/2 | 0 nạp lại |
+| 10 | 2026-10-23 | như trên | head | **NEEDS_REVIEW V1** | 1 | 348 | 471.274 | 84% | 1/2 | 0 nạp lại |
+| 11 | 2026-10-23 | #10 với RBS **sửa, thăm dò** TLS13-0043 (`record.length > 16401`, miền từ 17) | bug | **VIOLATION V2** | 1 | 399 | 478.393 | 83% | 1/2 | 0 nạp lại |
+| 11 | 2026-10-23 | như trên | fix | COMPLIANT V6 (BEHAVIORAL), dừng BUDGET | 4 | 438 | 1.850.211 | 85% | 4/6 | 0 nạp lại |
+| 11 | 2026-10-23 | như trên | head | COMPLIANT V6 (BEHAVIORAL), dừng BUDGET | 4 | 426 | 1.848.441 | 84% | 4/6 | 0 nạp lại |
+| 12 | 2026-10-23 | **Sau sửa**: chỉ mục C có đường lui (`c_repair`), lược kết quả công cụ cũ + nhắc ngân sách token + cứu đầu ra một phần, `rfc-protocol@4` (phía hợp lệ bị mọi tham chiếu từ chối thì không chặn), miền `record.length` min 17, thử lại ca lỗi hạ tầng; RBS gốc TLS13-0042 | bug | **VIOLATION V2** | 1 | 521 | 382.982 | 0% | 0/2 | 0 nạp lại |
+| 12 | 2026-10-23 | như trên | fix | NEEDS_REVIEW V7 (T1 bác bỏ ngưỡng: 16486 so với 16640) | 1 | 361 | 341.789 | 0% | 0/2 | 0 nạp lại |
+| 12 | 2026-10-23 | như trên | head | NEEDS_REVIEW V7 (như fix) | 1 | 374 | 378.972 | 0% | 0/2 | 0 nạp lại |
+| 13 | 2026-10-23 | #12 với RBS **sửa, thăm dò** TLS13-0043 (`record.length > 16401`) | bug | **VIOLATION V2** | 1 | 488 | 391.884 | 0% | 0/2 | 0 nạp lại |
+| 13 | 2026-10-23 | như trên | fix | NEEDS_REVIEW V7 (T1 bác bỏ ngưỡng: 16422 so với 16402) | 1 | 421 | 407.966 | 0% | 0/2 | 0 nạp lại |
+| 13 | 2026-10-23 | như trên | head | NEEDS_REVIEW V7 (như fix) | 1 | 420 | 372.664 | 0% | 0/2 | 0 nạp lại |
+
 \* Lãng phí = token tiêu trong các lần chạy agent bị hỏng, chia tổng token. Mỗi ca mới chạy **một lần**, chưa đủ để nói về
 độ ổn định. Khi thêm dòng, ghi thêm thay đổi so với lần trước vào cột Cấu hình.
 Dòng 2 (BL-10/11/12): `skill_reloads` = 0 ở cả 6 lần (trước: 3-4 lần nạp lại mỗi ca). Faulty ổn định: 1 vòng, 76-97k token (trước 252k). Verifier nhận
@@ -67,6 +80,15 @@ dừng ở vòng 2, tối đa 303k token. Còn một lần (correct-4) Code Read
 Dòng 4: bỏ `llm_calls` không đủ để hết `UsageLimitExceeded`. Lần hỏng (correct-2) lần này là **giới hạn token của Code Reader** (`total_tokens=258959` so với 250000, sau 27 lời gọi công cụ, mỗi lượt gọi LLM khoảng 9k token vì
 ngữ cảnh tăng dần), nhãn cuối thành NEEDS_REVIEW V7 (cảnh báo giả trên SUT đúng, an toàn nhưng tốn công duyệt). Nghĩa là BL-11 và `worker_first_failures` của BL-10 vẫn chưa đạt, nguyên nhân giờ là ngân sách
 token (`budget_per_task.tokens`) chứ không phải số lượt. Việc 4/5 lần `correct` đạt V5 trong 240-305k token cho thấy 250k sát ngưỡng với ca bình thường. Quyết định cần có: nâng hay bỏ `tokens` của Code Reader.
+
+Dòng 10, 11 (chạy THẬT, chi tiết ở [real_run_report.md](../04_evaluation/real_run_report.md)): đây là lần đầu có SUT thật. Với RBS gốc cả ba phiên bản ra NEEDS_REVIEW (V1) vì
+OpenSSL và GnuTLS cùng FAIL đối chứng `at_limit=16640` (chúng cảnh báo từ 16402): đặc tả suy phía hợp lệ mà RFC không nói (CT-26). Với RBS sửa (thăm dò) nhãn đúng cả ba. Code Reader hỏng ở
+**mọi** lần chạy (hết 400k token, T1 = 0, 83-85% token lãng phí; CT-27). Mỗi cấu hình mới chạy một lần.
+
+Dòng 12, 13 (chạy THẬT sau các sửa của CT-26/27; mỗi cấu hình một lần): Code Reader chạy được ở **cả 6** lần (trước đó 0/6), tạo T1 ở `GetRecordHeader`, 0% token lãng phí, 340-410k token mỗi lần chạy
+(riêng Code Reader khoảng 310k, mục tiêu 200k chưa đạt; tiền tố cố định khoảng 12k token mỗi lượt). Bản lỗi ra VIOLATION đúng cả với RBS gốc lẫn RBS sửa. Bản sửa và head **chưa** ra COMPLIANT: T1 chỉ đọc phép kiểm tra tiêu đề bản ghi (16422/16486)
+nên bác bỏ ngưỡng của RBS; ngưỡng thật nằm ở kiểm tra sau giải mã mà Code Reader chưa lần tới (ghi trong `unexplored`), và vòng điều tra dừng ngay vòng 1 vì V7 đã là nhãn (CT-29). Không có lần nào gán nhãn sai chiều.
+Lưu ý so sánh: dòng 11 ra COMPLIANT chỉ vì lúc đó Code Reader không tạo được T1 (V6). Chỉ số theo dõi: nhãn đúng 3/3 (hiện 1/3 ở cả hai RBS), token Code Reader mỗi nhiệm vụ, lãng phí token, số lần kết luận do V7 mà T3 đủ PASS.
 
 ## Vấn đề đang mở
 
@@ -145,6 +167,7 @@ Mức: **P0** chặn đánh giá thật, **P1** ảnh hưởng độ tin cậy h
 - **Hướng sửa:** dựng theo tài liệu adapter (Bảng 12). Driver đã ghi sẵn `t3_case`; `NotImplementedError` cố ý không bị giấu
   thành ERROR. Cần Docker và mã nguồn wolfSSL.
 - **Đóng khi:** `rfcv run --adapter adapters/tls13` chạy hết một yêu cầu trên wolfSSL thật và ra nhãn.
+- **Kết quả (2026-10-23):** đã cài `DockerSutLauncher`, `TlsfuzzerBackend.run/sanity` (runner trong container), bộ chạy lệnh Docker; `rfcv run` chạy hết TLS13-0042 trên wolfSSL thật ở cả ba phiên bản (Nhật ký đo #10, #11). Điều kiện đóng đạt; còn các vấn đề phát sinh ở CT-26 đến CT-28.
 
 ### CT-10 · P2 · `STATIC_QUERY` (loại D) chưa nối
 - **Bằng chứng:** Locator còn `wired=False`; loại D không thể đạt quy tắc V8, luôn ra UNVERIFIABLE.
@@ -277,6 +300,7 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 - **Hậu quả:** nhãn chuẩn của TLS13-0042 trên wolfSSL (bản lỗi, sửa, mới nhất) và kỳ vọng oracle (`at_limit` = 16640 phải PASS) cần kiểm với SUT thật, vì ngưỡng thật có thể thấp hơn 16640. Đây cũng đúng là ca để đo skill `check-ifdef-compiled-lines`.
 - **Hướng sửa:** khi có SUT thật (BL-03 trở đi), chạy oracle trên ba phiên bản và đối chiếu; ghi nhãn chuẩn cho BL-08 theo kết quả chạy chứ không theo suy luận từ mã.
 - **Đóng khi:** nhãn chuẩn TLS13-0042 cho ba phiên bản wolfSSL được xác nhận bằng kết quả chạy thật.
+- **Kết quả (2026-10-23):** đã đo: với bản ghi mã hoá, wolfSSL sửa/mới, OpenSSL và GnuTLS đều cảnh báo từ ciphertext 16402 (không phải 16640); bản lỗi không cảnh báo khi N > 16640 (và cảnh báo ở 16402-16640). Bảng đầy đủ ở phụ lục A của real_run_report.md. Ngưỡng 16486 suy từ mã trong mục này **chưa** được xác nhận bằng phép đo trên đường kiểm tra TLSCiphertext (đường đó bị đường kiểm tra văn bản bên trong che khuất ở các độ dài này).
 
 ### CT-25 · P2 · Ca bản đúng tốn 0,8-1,1 triệu token, phần lớn ở Code Reader
 - **Bằng chứng (Nhật ký đo #6):** ca correct 800.557-1.144.621 token, gấp khoảng 3 lần #4; ở lần 1.144.621, Code Reader dùng 671.346 token qua 3 lần chạy với 71 lời gọi công cụ (LOCATE, TRACE_PATHS, RECHECK). Không còn lần chạy hỏng nào, nên đây là chi phí đọc mã thật chứ không phải lãng phí.
@@ -286,6 +310,28 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 - **Đóng khi:** có số đo trên wolfSSL thật và quyết định ngưỡng chi phí chấp nhận.
 
 - **BL-41 (đo 2026-10-22):** recall khía cạnh REACTION của Code Reader là 12/12 và nhãn đúng 9/9 ngay cả ở thế giới khó (phản ứng đi qua mã lỗi, `switch` và dòng đóng kết nối; ca gửi sai cảnh báo và ca không đóng), nên không thêm skill REACTION: không còn chỗ cải thiện đo được, mà skill thêm token. Thế giới khó ([hard_world.py](../../backend/src/rfcv/eval/hard_world.py), [e2e_hard.py](../../backend/scripts/e2e_hard.py), [measure_reaction.py](../../backend/scripts/measure_reaction.py)) dùng lại được cho BL-74. Hạn chế: mã giả một tệp, chưa đo trên mã thật.
+
+### CT-26 · P0 · RBS suy phía hợp lệ mà RFC không nói; ngưỡng thật cho bản ghi mã hoá là 16402
+- **Bằng chứng (Nhật ký đo #10, #11):** đối chứng `at_limit=16640` bị cả OpenSSL và GnuTLS FAIL; V1 chặn mọi kết luận nên bug/fix/head cùng NEEDS_REVIEW. Phản ứng thật theo độ dài: phụ lục A của real_run_report.md.
+- **Hậu quả:** đặc tả sai là điểm lỗi duy nhất của chuỗi; với RBS gốc hệ thống không phân biệt được bản lỗi với bản sửa.
+- **Hướng sửa:** RFC Analyst + hai bản dịch độc lập; sinh đối chứng phía hợp lệ chỉ khi câu RFC nêu; đối chiếu RBS với tham chiếu độc lập trước khi tin (cổng "oracle sống sót qua tham chiếu"); sửa miền `record.length` (min 17 cho bản ghi mã hoá).
+- **Đóng khi:** RBS TLS13-0042 do agent dịch cho bug = VIOLATION, fix và head = COMPLIANT trên SUT thật, không cần sửa tay.
+
+### CT-27 · P0 · Code Reader hỏng trên mã thật: T1 = 0, 83-85% token lãng phí
+- **Bằng chứng:** 6/6 lần chạy có Code Reader hỏng (`UsageLimitExceeded`, 400k token); bản sửa/head ở cấu hình B hỏng 4 lần liên tiếp, 1,56 triệu token. Yêu cầu LLM thứ 1 vào 11,8k token, thứ 17 vào 28,6k (tổng vào 383k). Công cụ hoạt động (3 lần `explore` có kết quả); agent đọc đúng mã nhưng không kịp trả vị trí.
+- **Hướng sửa:** kết thúc một phần khi gần hết ngân sách; gọi Code Reader sau T3 và chỉ khi cần; thu gọn ngữ cảnh lặp; tính trước ứng viên bằng bước tất định (`rg record_overflow`, `SendAlert`).
+- **Đóng khi:** Code Reader tạo được T1 đúng vùng sửa của `c18833f52` trên wolfSSL thật, dưới 200k token mỗi nhiệm vụ.
+
+### CT-29 · P0 · Điều phối dừng ở vòng 1 khi T1 mâu thuẫn với T3
+- **Bằng chứng (Nhật ký đo #12, #13):** fix/head có T3 đủ PASS, Code Reader trả T1 với THRESHOLD MISMATCH (16422/16486) từ một đường kiểm tra duy nhất; V7-refuted cho NEEDS_REVIEW và vòng lặp dừng ở vòng 1 (`SUFFICIENT`) dù còn ngân sách.
+- **Hậu quả:** bản đúng không ra COMPLIANT (kết luận được 1/3 mục); mâu thuẫn hành vi/mã bị coi là kết luận thay vì là lý do điều tra tiếp.
+- **Hướng sửa:** thêm luật sổ tay: nhãn tạm V7 do T1 bác bỏ khi T3 đủ PASS thì giao `TRACE_PATHS`/`RECHECK` (lần các đường vào còn lại ghi ở `unexplored`) trước khi dừng; engine không coi V7-refuted là đủ khi còn ngân sách; sau điều tra T1 mới có thể không còn bác bỏ.
+- **Đóng khi:** fix và head ra COMPLIANT (V6) với RBS sửa trên SUT thật mà không nới V7; bug vẫn VIOLATION; ghi số vòng và token thêm.
+
+### CT-28 · P2 · Độ phủ: 0,12-0,19% mã, 1 yêu cầu, kịch bản chỉ chạm 1/5 đường kích hoạt của tlsfuzzer
+- **Bằng chứng:** ca FAIL duy nhất của fix/head (`too big ClientHello`, đệm 16168) nằm ngoài kịch bản; bản lỗi hỏng ở 4 nhóm ca của tlsfuzzer, hệ thống chỉ chạm nhóm ciphertext.
+- **Hướng sửa:** kịch bản ClientHello/Finished có đệm; đo độ phủ mã bằng gcov/lcov (LINKED); chạy T3 song song.
+- **Đóng khi:** bảng độ phủ theo nhóm ca khớp với tlsfuzzer thuần trên cả ba phiên bản.
 
 ## Đã xử lý
 
@@ -309,7 +355,7 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 
 ## Hạn chế đã biết (cho phần hạn chế của luận văn)
 
-- Phép thử đầu-cuối dùng SUT, backend kiểm thử và mã nguồn **giả**; chưa có kết quả trên wolfSSL thật (CT-09).
+- Phép thử đầu-cuối `e2e_live.py` dùng SUT, backend kiểm thử và mã nguồn **giả**. Đã có lần chạy THẬT trên wolfSSL (Nhật ký đo #10, #11): mỗi cấu hình một lần, tham chiếu là OpenSSL + GnuTLS (không phải rustls), không đo độ phủ mã, đồng hồ không đổi giữa các môi trường, nhãn tối đa BEHAVIORAL.
 - Mọi agent dùng một mô hình (DeepSeek, quyết định tạm thời 2026-10-22), nên Verifier và luồng dịch thứ hai chưa độc lập về họ mô hình (CT-07).
 - Chưa kiểm tra đối kháng bằng mô hình thật (CT-08); chưa có số đo thống kê (CT-16).
 - Agent thấy câu RFC gốc khi có bản RFCXML hoặc TXT trong `inputs/rfc/` (BL-20, BL-22); bản TXT bỏ sót câu quy phạm nằm trong bảng (ví dụ RFC 4253 có 31 dòng bảng, RFC 9113 có 19 câu trong bảng); RFC 8446 không có XML chính thức (CT-23, CT-05); loại C và D, Report và RFC Analyst chưa nối đầy đủ (CT-10, CT-11, CT-12).

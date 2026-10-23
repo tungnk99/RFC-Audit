@@ -228,3 +228,34 @@ def test_artifact_store_detects_tampering(tmp_path: Path) -> None:
     path.write_bytes(b"forged")
     with pytest.raises(ValueError, match="sửa đổi"):
         a.get(digest)
+
+
+async def test_a_transient_environment_error_is_retried_once(
+    store: EvidenceStore, trace: TraceLog, tmp_path: Path, oracle: CompiledOracle, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Máy ngủ làm `docker run` quá hạn một lần: ca được thử lại, không để lại ERROR (đo trên lần chạy thật)."""
+    from rfcv.domains.rfc_protocol.sandbox import driver as drv
+
+    monkeypatch.setattr(drv, "ENVIRONMENT_RETRY_DELAY_S", 0.0)
+
+    class Flaky(BrokenLauncher):
+        calls = 0
+
+        def start(self, impl, *, coverage, environment):  # type: ignore[no-untyped-def]
+            Flaky.calls += 1
+            if Flaky.calls == 1:
+                return super().start(impl, coverage=coverage, environment=environment)
+            return FakeLauncher().start(impl, coverage=coverage, environment=environment)
+
+    d = TestDriver(
+        FakeBackend(),
+        Flaky(RuntimeError("docker: timeout")),
+        store,
+        ArtifactStore(tmp_path / "artifacts"),
+        trace,
+        sut_impl="sut",
+        references=["rustls"],
+    )
+    evs = await d.run_requirement(run_id="run-test", oracle=oracle, scenario=SCENARIO, seed=1)
+    cases = [e["payload"] for e in trace.events("t3_case")]
+    assert evs and cases and not any(c["reason"] == "environment_error" for c in cases[:1])

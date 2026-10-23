@@ -141,3 +141,20 @@ async def test_a_full_run_scans_clean_and_a_planted_key_is_caught(tmp_path: Path
     result = rt.scan_leaks()
     assert [(x.kind, x.file, x.detail) for x in result.leaks] == [("api_key", "trace.db", "RFCV_KEY")]
     assert (tmp_path / "runs" / rt.run_id / REPORT_NAME).is_file()
+
+
+def test_the_staged_scope_copy_and_its_index_are_not_run_data(run_dir: Path, repo: Path) -> None:
+    """Hồi quy từ lần chạy thật trên wolfSSL: bản sao phạm vi nằm ở `code/repo/` và chỉ mục ở `code/index.db`. Dòng của tệp ngoài
+    phạm vi trùng với dòng trong bản sao hợp lệ đó đã bị báo nhầm là rò rỉ (164 tệp, cả lần chạy sạch)."""
+    (run_dir / "code" / "repo" / "src").mkdir(parents=True)
+    (run_dir / "code" / "repo" / "src" / "internal.c").write_text(PRIVATE_LINE + "\n", encoding="utf-8")
+    (run_dir / "code" / "index.db").write_bytes(PRIVATE_LINE.encode())
+    assert scan(run_dir, repo, secrets={}).clean
+
+
+def test_the_same_line_in_the_trace_is_still_a_leak(run_dir: Path, repo: Path) -> None:
+    """Bỏ qua bản sao phạm vi không làm mù bộ quét: dòng ngoài phạm vi lọt vào trace vẫn bị bắt."""
+    (run_dir / "code" / "repo").mkdir(parents=True)
+    TraceLog(run_dir / "trace.db").append("run-1", "tool_call", {"output": PRIVATE_LINE})
+    leaks = scan(run_dir, repo, secrets={}).leaks
+    assert [(x.kind, x.file) for x in leaks] == [("out_of_scope", "certs/server.key")]

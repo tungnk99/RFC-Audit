@@ -51,7 +51,7 @@ class ScriptedRunner:
         if role == "tester":
             return RoleOutcome(SCENARIO, 10)
         if role == "code_reader":
-            await self.gateway.call(session, "code.read_range", {"file": "src/internal.c", "start": 810, "end": 830})
+            await self.gateway.call(session, "code.read", {"file": "src/internal.c", "offset": 810, "limit": 21})
             claim = LocationClaim.model_validate(
                 {
                     "file": "src/internal.c",

@@ -21,6 +21,15 @@ models:
     # bị bỏ qua. (`thinking: false` chung của pydantic-ai không được dịch sang tham số này cho endpoint kiểu OpenAI.)
     settings: {temperature: 0, extra_body: {thinking: {type: disabled}}}
 
+  # DeepSeek-V4-Flash qua FPT AI Marketplace (endpoint kiểu OpenAI). Cùng họ mô hình với deepseek-flash nên giữ cùng
+  # `settings`; chưa kiểm tra FPT có nhận `extra_body.thinking` hay không (BL-63 tương tự: chưa thử thật).
+  fpt-deepseek-flash:
+    provider: openai_compatible
+    model: DeepSeek-V4-Flash
+    base_url: https://mkp-api.fptcloud.com/v1
+    api_key_env: FPT_API_KEY
+    settings: {temperature: 0, extra_body: {thinking: {type: disabled}}}
+
 # Hiện chỉ có một mô hình nên mọi agent dùng chung. Khi có thêm mô hình thì khai báo ở `models` rồi đổi dòng tương ứng.
 # Hai chỗ thiết kế muốn KHÁC họ mô hình để lỗi ít tương quan: rfc_analyst.b (luồng dịch thứ hai, M2) và verifier
 # (phản biện độc lập). Dùng chung một mô hình thì độc lập đó chưa có; ghi lại khi đánh giá.

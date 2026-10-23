@@ -228,3 +228,83 @@ def test_valid_side_reaction_is_needs_review_never_violation() -> None:
 def test_trigger_side_fail_is_still_a_violation_even_with_valid_side_evidence() -> None:
     fail = t3("random:record.length@40000", Outcome.FAIL, variant_class="random", alert="none")
     assert label(REQ_VALID, [*full_passing_set(), *_valid_passes(2), fail])[:2] == (Label.VIOLATION, "V2")
+
+
+def _refuted_by_references(variant: str, **kw: object) -> EvidenceDraft:
+    return t3(variant, Outcome.FAIL, refs=(Outcome.FAIL, Outcome.FAIL), alert="record_overflow", side="valid", **kw)  # type: ignore[arg-type]
+
+
+def test_valid_side_check_refuted_by_every_reference_does_not_block_the_label() -> None:
+    """Đo trên wolfSSL: OpenSSL và GnuTLS cũng từ chối độ dài 16640 mà RBS gốc dặn phải chấp nhận. Không có triển khai độc
+    lập nào xác nhận phía hợp lệ thì V1/V7 không được chặn nhãn; mẫu bị miễn nằm trong bằng chứng của nhãn."""
+    waived = _refuted_by_references("valid_random:record.length@8", variant_class="valid_random")
+    drafts = [*full_passing_set(), *_valid_passes(1), waived]
+    verdict = decide(REQ_VALID, chain(drafts), StopReason.SUFFICIENT)
+    assert (verdict.label, verdict.rule) == (Label.COMPLIANT, "V6")
+    assert chain(drafts)[-1].evidence_id in verdict.evidence_ids
+
+
+def test_valid_side_failure_is_still_blocking_when_a_reference_accepts() -> None:
+    bad = t3(
+        "valid_random:record.length@8",
+        Outcome.FAIL,
+        variant_class="valid_random",
+        alert="record_overflow",
+        side="valid",
+        refs=(Outcome.PASS, Outcome.FAIL),
+    )
+    assert label(REQ_VALID, [*full_passing_set(), *_valid_passes(1), bad])[:2] == (Label.NEEDS_REVIEW, "V7")
+
+
+def test_sut_accepting_what_every_reference_rejects_is_not_a_v1_block() -> None:
+    """Bản lỗi wolfSSL chấp nhận độ dài 16640 còn OpenSSL và GnuTLS cùng từ chối: khẳng định phía hợp lệ không có căn cứ,
+    nên không chặn kết luận VIOLATION ở phía kích hoạt (đo lần chạy thật thứ hai)."""
+    ref_reject = t3(
+        "at_limit:record.length=16640",
+        Outcome.PASS,
+        variant_class="control",
+        alert="none",
+        side="valid",
+        refs=(Outcome.FAIL, Outcome.FAIL),
+    )
+    fail = t3("random:record.length@40000", Outcome.FAIL, variant_class="random", alert="none")
+    assert label(REQ_B, [ref_reject, fail])[:2] == (Label.VIOLATION, "V2")
+
+
+def _t1_with_threshold(value: AspectValue, **kw: object) -> EvidenceDraft:
+    from rfcv.domains.rfc_protocol.payloads import AspectCheck, AspectName, T1Payload
+
+    base = t1(**kw)  # type: ignore[arg-type]
+    payload = base.payload
+    assert isinstance(payload, T1Payload)
+    extra = AspectCheck(aspect=AspectName.THRESHOLD, value=value, observed=16486, lines=(812, 812))
+    return base.model_copy(update={"payload": payload.model_copy(update={"aspects": (*payload.aspects, extra)})})
+
+
+def test_a_lone_threshold_mismatch_does_not_block_compliant_once_the_boundary_behaviour_passed() -> None:
+    """Đo trên wolfSSL: bản sửa bị giữ ở NEEDS_REVIEW chỉ vì phép kiểm tra tiêu đề dùng hằng 16486 trong khi mọi ca biên PASS."""
+    drafts = [*full_passing_set(), _t1_with_threshold(AspectValue.MISMATCH)]
+    assert label(REQ_B, drafts) == (Label.COMPLIANT, "V6", Assurance.BEHAVIORAL)
+
+
+def test_other_aspect_mismatches_still_block_compliant() -> None:
+    drafts = [
+        *full_passing_set(),
+        _t1_with_threshold(AspectValue.MISMATCH, reaction=AspectValue.MISMATCH, observed="send_alert(decode_error)"),
+    ]
+    assert label(REQ_B, drafts)[:2] == (Label.NEEDS_REVIEW, "V7")
+
+
+def test_a_t1_without_any_coverage_data_gives_v6_not_v7() -> None:
+    """Không thu được độ phủ thì T1 không thể liên kết; đó không phải bằng chứng dòng mã không được chạy qua."""
+    assert label(REQ_B, [*full_passing_set(), t1()]) == (Label.COMPLIANT, "V6", Assurance.BEHAVIORAL)
+
+
+def test_summary_marks_waived_valid_side_cases() -> None:
+    from rfcv.core.context_builder import summarize_evidence
+
+    waived = _refuted_by_references("valid_random:record.length@8", variant_class="valid_random")
+    normal = t3("boundary:record.length=16641", Outcome.PASS)
+    rows = summarize_evidence(chain([waived, normal]), {"record_overflow"}).value
+    flags = {str(r["variant"]): r["waived"] for r in rows}
+    assert flags == {"valid_random:record.length@8": True, "boundary:record.length=16641": False}

@@ -199,7 +199,13 @@ def build_runtime(
                 include=tuple(manifest.code_scope.include),
                 exclude=tuple(manifest.code_scope.exclude) or CodeScope(code_root).exclude,
             )
-            for spec in build_code_tools(resolved.code_index, resolved.executor, scope):
+            for spec in build_code_tools(
+                resolved.code_index,
+                resolved.executor,
+                scope,
+                tuple(manifest.build_flags),
+                manifest.build_config_complete,
+            ):
                 gateway.register(spec)
         for spec in resolved.extra_tools:
             gateway.register(spec)

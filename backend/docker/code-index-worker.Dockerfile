@@ -36,7 +36,7 @@ RUN pip install --no-cache-dir "tree-sitter>=0.23,<0.26" "tree-sitter-c>=0.23,<0
       "tree-sitter-go>=0.23,<0.26"
 COPY src/rfcv/__init__.py /opt/rfcv/rfcv/__init__.py
 COPY src/rfcv/codeindex/__init__.py src/rfcv/codeindex/__main__.py src/rfcv/codeindex/builder.py \
-     src/rfcv/codeindex/languages.py /opt/rfcv/rfcv/codeindex/
+     src/rfcv/codeindex/languages.py src/rfcv/codeindex/c_repair.py /opt/rfcv/rfcv/codeindex/
 ENV PYTHONPATH=/opt/rfcv PYTHONDONTWRITEBYTECODE=1
 USER 65532:65532
 WORKDIR /repo

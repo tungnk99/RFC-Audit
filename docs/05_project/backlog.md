@@ -64,6 +64,10 @@ quyết định số đo của mọi lần chạy sau.
 | BL-14 | Giảm chi phí Code Reader: rút gọn đầu ra công cụ đọc mã, dừng sớm khi các khía cạnh đã đủ | CT-17, CT-25, CR-5 | BL-10, BL-11, BL-08 | M | G1 | Token Code Reader mỗi ca giảm có số đo mà độ chính xác T1 không đổi | Xong |
 | BL-15 | Thử `MAP_COMPONENTS` với LLM thật; quyết định quy tắc vòng 1 của sổ tay và skill Verifier cho `WRONG_LOCATION` | CT-18, CI-3, CI-4 | – | S | G2 | Có số đo gán thành phần trên 30 hàm; sổ tay và skill được cập nhật theo kết quả | Xong |
 | BL-16 | Thêm một mô hình họ khác vào `models` và gán cho Verifier và `rfc_analyst.b` | CT-07, RA-6 | – | S | G2 | Verifier chạy bằng mô hình khác họ; có số đo so với dùng chung | Chặn |
+| BL-98 | Code Reader chạy được trên mã thật: sửa chỉ mục C (hàm bị tree-sitter bỏ sót, đã có `codeindex/c_repair.py`), lược kết quả công cụ cũ và nhắc ngân sách token, cứu đầu ra một phần; đo lại trên wolfSSL | CT-27 | – | M | Ngay | Code Reader tạo T1 đúng vùng sửa `c18833f52` dưới 200k token mỗi nhiệm vụ, lãng phí token dưới 30% | Chưa làm |
+| BL-99 | Đặc tả phía hợp lệ: thu hẹp V1, khai báo `valid_side` trong RBS, cổng "RBS sống sót qua tham chiếu", nối RFC Analyst | CT-26 | – | L | Ngay | RBS TLS13-0042 do agent dịch cho bug = VIOLATION, fix và head = COMPLIANT trên SUT thật, không sửa tay | Chưa làm |
+| BL-101 | Điều tra tiếp khi T1 mâu thuẫn với T3: luật sổ tay `TRACE_PATHS`/`RECHECK` cho V7 do T1 bác bỏ, điều kiện dừng không coi V7-refuted là đủ khi còn ngân sách | CT-29 | BL-98 | M | Ngay | fix và head ra COMPLIANT (V6) trên SUT thật với RBS sửa, bug vẫn VIOLATION; không nới V7 | Chưa làm |
+| BL-100 | Độ phủ và thông lượng chạy thật: họ ClientHello rõ, họ Finished có đệm, T3 song song, gộp lệnh docker, gcov/lcov | CT-28 | BL-99 | L | G1 | Bảng độ phủ theo nhóm ca khớp tlsfuzzer thuần trên ba phiên bản; thời gian T3 giảm rõ | Chưa làm |
 
 ## EP-3. Bao phủ RFC và RFC Analyst
 

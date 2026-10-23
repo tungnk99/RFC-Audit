@@ -32,6 +32,7 @@ HUB_FIELDS = {
     "task.recheck_location",  # khi nhiệm vụ trỏ vào một bằng chứng (evidence_id)
     "task.prior_findings",  # khi loại nhiệm vụ khai prior_kinds và đã có bằng chứng loại đó
     "verdict.record",  # bước giải thích sau kết luận (ExecutionLoop.explain), chỉ Report nhận
+    "critique.unresolved",  # như trên: vấn đề phản biện còn ngỏ khi hết số vòng đuổi theo
     "evidence.cited",
 }
 
@@ -46,7 +47,7 @@ KNOWN_UNSUPPLIED = {
 
 UNAVAILABLE_TASKS = {"STATIC_QUERY"}  # có trong danh mục nhưng chưa có handler
 
-PINNED_RULES_VERSION = "sha256:e723d7809280ea66b9d05f4698c1f56beb78ce503bd143e8748f9235374ad9ea"
+PINNED_RULES_VERSION = "sha256:f720145130601c38258a2c925eab1421b5c0a2f25bc5f6b1c62a812279be88f1"
 
 
 def _domain_fields(manifest: AdapterManifest) -> set[str]:

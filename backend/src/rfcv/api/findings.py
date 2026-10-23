@@ -16,7 +16,7 @@ from rfcv.api import runstore
 from rfcv.api.catalog import RBS_HEAD
 
 _NUMBERED = re.compile(r"^\s*(\d+) (.*)$")
-_FILE_HEAD = re.compile(r"tool=(?:read_range|read_function)\s+(\S+)")
+_FILE_HEAD = re.compile(r"tool=(?:read_range|read_function|read)\s+(\S+)")
 _RBS_KEYS = ("actor", "state", "trigger", "expect", "forbid", "variants", "accept_alternatives")
 
 RULE_TEXT: dict[str, str] = {

@@ -1,0 +1,4 @@
+# Image chỉ mục/bộ chạy lệnh chỉ cần vài mô-đun của rfcv.codeindex (xem các dòng COPY trong Dockerfile).
+*
+!src/rfcv/__init__.py
+!src/rfcv/codeindex

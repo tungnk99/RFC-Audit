@@ -33,8 +33,10 @@ class SchemaGate:
         index: CodeIndex,
         vocabulary_terms: Iterable[str],
         compiled_lines: Callable[[str], set[int] | None] | None = None,
+        macro_enabled: Callable[[str], bool | None] | None = None,
     ) -> None:
         self._index = index
+        self._macro_enabled = macro_enabled
         self._terms = frozenset(vocabulary_terms)
         self._compiled = compiled_lines
 
@@ -52,6 +54,16 @@ class SchemaGate:
             if text and word.search(text[0]):
                 return True
         return False
+
+    def _defect_location(self, claim: LocationClaim) -> tuple[str | None, tuple[int, int] | None]:
+        """Phản ứng thiếu (REACTION MISMATCH): hàm chứa các dòng của khía cạnh đó, suy từ chỉ mục."""
+        reaction = [a for a in claim.aspects if a.aspect is AspectName.REACTION and a.value is AspectValue.MISMATCH]
+        if not reaction:
+            return None, None
+        lo = min(a.lines[0] for a in reaction)
+        hi = max(a.lines[1] for a in reaction)
+        sym = self._index.containing_symbol(claim.file, lo)
+        return (sym.name if sym is not None else None), (lo, hi)
 
     def check_location(
         self,
@@ -112,9 +124,16 @@ class SchemaGate:
                         errors.append("LINES_NOT_COMPILED")
                         break
 
+        # `disabled_by` chỉ nhận macro mà chỉ mục xác nhận CHẮC CHẮN không bật; nghi ngờ hay đang bật thì từ chối.
+        for macro in claim.disabled_by:
+            if self._macro_enabled is None or self._macro_enabled(macro) is not False:
+                errors.append("DISABLED_BY_NOT_VERIFIED")
+                break
+
         if errors:
             return GateResult(False, tuple(dict.fromkeys(errors)))
 
+        defect_symbol, defect_lines = self._defect_location(claim)
         payload = T1Payload(
             file=claim.file,
             symbol=claim.symbol,
@@ -127,6 +146,9 @@ class SchemaGate:
             call_path=tuple(claim.call_path),
             call_edge_kinds=tuple(edge_kinds),
             unexplored=tuple(claim.unexplored),
+            disabled_by=tuple(claim.disabled_by),
+            defect_symbol=defect_symbol,
+            defect_lines=defect_lines,
         )
         draft = EvidenceDraft(
             run_id=run_id,

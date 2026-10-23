@@ -15,6 +15,8 @@ from functools import cached_property
 
 from rfcv.domains.rfc_protocol.payloads import (
     AspectName,
+    AspectValue,
+    Finding,
     Outcome,
     T1Payload,
     T2StaticPayload,
@@ -60,6 +62,10 @@ class _View:
         self.t3: list[tuple[Evidence, T3Payload]] = []
         # (t3_id, t1_id) đã liên kết qua độ phủ, từ bản ghi coverage_link hoặc trường coverage_link của T3
         self.links: set[tuple[str, str]] = set()
+        # Có thu độ phủ không: có bản ghi liên kết (kể cả linked=False) hoặc T3 mang coverage_link. Không thu được độ phủ thì
+        # "T1 chưa liên kết" chưa nói gì về việc dòng mã có được chạy qua (đo: Code Reader tạo được T1 mà backend không có lcov,
+        # nên mọi bản đúng bị giữ ở V7 thay vì V6).
+        self.coverage_checked = False
         for e in evidence:
             match e.payload:
                 case T1Payload() as p1:
@@ -70,9 +76,12 @@ class _View:
                     self.suspicious.append((e, ps))
                 case T3Payload() as p3:
                     self.t3.append((e, p3))
+                    if p3.coverage_link is not None:
+                        self.coverage_checked = True
                     if p3.coverage_link is not None and p3.coverage_link.linked:
                         self.links.add((e.evidence_id, p3.coverage_link.t1))
                 case T3LinkPayload() as link:
+                    self.coverage_checked = True
                     if link.linked:
                         self.links.add((link.t3, link.t1))
                 case _:
@@ -83,17 +92,31 @@ class _View:
         return [(e, t) for e, t in self.t3 if t.valid]
 
     @cached_property
+    def waived(self) -> list[tuple[Evidence, T3Payload]]:
+        """Kiểm tra phía hợp lệ mà MỌI bản tham chiếu độc lập đều từ chối (kể cả khi SUT chấp nhận, như bản lỗi wolfSSL). Đo trên wolfSSL: RBS gốc dặn "độ dài 16640 phải
+        được chấp nhận" nhưng OpenSSL và GnuTLS đều cảnh báo từ 16402; câu RFC không nói vậy. Khẳng định phía hợp lệ không có
+        triển khai độc lập nào xác nhận thì không phải đặc tả: không chặn nhãn (V1, V7) và không bắt buộc PASS, nhưng được ghi
+        vào bằng chứng của nhãn để người duyệt thấy."""
+        return [
+            (e, t)
+            for e, t in self.valid
+            if (t.variant_class == "control" or t.side == "valid") and t.witness.all_positive_fail
+        ]
+
+    @cached_property
     def passes(self) -> list[tuple[Evidence, T3Payload]]:
         return [(e, t) for e, t in self.valid if t.outcome is Outcome.PASS and t.signature_matches]
 
     @cached_property
     def missing_variants(self) -> list[Missing]:
         passed = {t.variant for _, t in self.passes if t.variant_class in ("required", "control")}
+        passed |= {t.variant for _, t in self.waived if t.variant_class in ("required", "control")}
         out = [Missing("T3", v, "biến thể bắt buộc chưa PASS") for v in sorted(self.required - passed)]
         random_passes = sum(1 for _, t in self.passes if t.variant_class == "random")
         if random_passes < self.random_k:
             out.append(Missing("T3", "random", f"cần {self.random_k} biến thể ngẫu nhiên, có {random_passes}"))
         valid_passes = sum(1 for _, t in self.passes if t.variant_class == "valid_random")
+        valid_passes += sum(1 for _, t in self.waived if t.variant_class == "valid_random")
         if valid_passes < self.valid_random_k:
             out.append(Missing("T3", "valid_random", f"cần {self.valid_random_k} mẫu phía hợp lệ, có {valid_passes}"))
         return out
@@ -104,7 +127,19 @@ class _View:
 
     @cached_property
     def t1_refuting(self) -> list[tuple[Evidence, T1Payload]]:
-        return [(e, t) for e, t in self.t1 if t.refutes]
+        """T1 bác bỏ. Loại A–C (quan sát được từ ngoài): một THRESHOLD MISMATCH đơn lẻ KHÔNG bác bỏ khi biến thể biên và biến
+        thể ngẫu nhiên phía kích hoạt đã PASS (V7 chỉ xét khi `complete`): hành vi ở biên đã được chạy thật kiểm chứng, còn hằng
+        số trong MỘT phép kiểm tra (ví dụ kiểm tra tiêu đề bản ghi 16486, trong khi ngưỡng hiệu lực do kiểm tra khác quyết định) có
+        thể khác mà không vi phạm yêu cầu. Đo: cả bản sửa lẫn bản mới của wolfSSL đều bị giữ ở NEEDS_REVIEW chỉ vì con số này. ABSENT
+        và MISMATCH của khía cạnh khác (CONDITION, REACTION...) vẫn bác bỏ; ca hành vi sai vẫn ra VIOLATION qua V2."""
+        if self.req.rtype not in OBSERVABLE:
+            return [(e, t) for e, t in self.t1 if t.refutes]
+        return [
+            (e, t)
+            for e, t in self.t1
+            if t.finding is Finding.ABSENT
+            or any(a.value is AspectValue.MISMATCH and a.aspect is not AspectName.THRESHOLD for a in t.aspects)
+        ]
 
     @cached_property
     def t2_validated(self) -> list[tuple[Evidence, T2StaticPayload]]:
@@ -137,8 +172,11 @@ def _v0(req: RequirementView, v: _View) -> Decision | None:
 
 
 def _v1(req: RequirementView, v: _View) -> Decision | None:
-    """Kịch bản chính không có nhân chứng dương (mọi bản tham chiếu FAIL): oracle có thể sai."""
-    no_witness = [(e, t) for e, t in v.valid if t.witness.all_positive_fail]
+    """Kịch bản phía kích hoạt không có nhân chứng dương (mọi bản tham chiếu FAIL): oracle có thể sai. Phía hợp lệ có đường
+    riêng (`_View.waived`): ở đó "mọi tham chiếu từ chối" nghĩa là khẳng định phía hợp lệ không có căn cứ, không phải oracle
+    kích hoạt sai."""
+    waived = {e.evidence_id for e, _ in v.waived}
+    no_witness = [(e, t) for e, t in v.valid if t.witness.all_positive_fail and e.evidence_id not in waived]
     return Decision(Label.NEEDS_REVIEW, "V1", _ids(no_witness)) if no_witness else None
 
 
@@ -172,8 +210,13 @@ def _v4(req: RequirementView, v: _View) -> Decision | None:
 def _v7_control(req: RequirementView, v: _View) -> Decision | None:
     """SUT từ chối dữ liệu hợp lệ đúng ngưỡng: biến thể đối chứng at_limit thuộc tập bắt buộc (tài liệu adapter, mục
     6)."""
+    waived = {e.evidence_id for e, _ in v.waived}
     failed = [
-        (e, t) for e, t in v.valid if t.outcome is Outcome.FAIL and (t.variant_class == "control" or t.side == "valid")
+        (e, t)
+        for e, t in v.valid
+        if t.outcome is Outcome.FAIL
+        and (t.variant_class == "control" or t.side == "valid")
+        and e.evidence_id not in waived
     ]
     return Decision(Label.NEEDS_REVIEW, "V7", _ids(failed)) if failed else None
 
@@ -195,19 +238,19 @@ def _v5(req: RequirementView, v: _View) -> Decision | None:
     if not pairs:
         return None
     linked_t1 = tuple(sorted({t1 for _, t1 in pairs}))
-    return Decision(Label.COMPLIANT, "V5", _ids(v.passes) + linked_t1, Assurance.LINKED)
+    return Decision(Label.COMPLIANT, "V5", _ids(v.passes) + _ids(v.waived) + linked_t1, Assurance.LINKED)
 
 
 def _v6(req: RequirementView, v: _View) -> Decision | None:
-    """Như V5 nhưng agent không định vị được T1."""
-    if v.complete and not v.t1:
-        return Decision(Label.COMPLIANT, "V6", _ids(v.passes), Assurance.BEHAVIORAL)
+    """Như V5 nhưng không có liên kết độ phủ: agent không định vị được T1, hoặc chưa thu được độ phủ để liên kết."""
+    if v.complete and (not v.t1 or not v.coverage_checked):
+        return Decision(Label.COMPLIANT, "V6", _ids(v.passes) + _ids(v.waived), Assurance.BEHAVIORAL)
     return None
 
 
 def _v7_unlinked(req: RequirementView, v: _View) -> Decision | None:
-    """PASS nhưng độ phủ không đi qua T1."""
-    if v.complete:
+    """PASS nhưng độ phủ ĐÃ thu và không đi qua T1."""
+    if v.complete and v.coverage_checked:
         return Decision(Label.NEEDS_REVIEW, "V7", _ids(v.passes) + _ids(v.t1))
     return None
 
@@ -256,6 +299,10 @@ def _conflicts(req: RequirementView, v: _View) -> Sequence[Conflict]:
     return _reaction_conflicts(v) if req.rtype in OBSERVABLE else []
 
 
+def _ignored_for_critique(req: RequirementView, v: _View) -> frozenset[str]:
+    return frozenset(e.evidence_id for e, _ in v.waived)
+
+
 def _gaps(req: RequirementView, v: _View) -> tuple[Sequence[Missing], Sequence[Conflict]]:
     if req.rtype in INTERNAL:
         missing: list[Missing] = []
@@ -274,7 +321,7 @@ def _gaps(req: RequirementView, v: _View) -> tuple[Sequence[Missing], Sequence[C
 
 
 RULE_SET = RuleSet(
-    name=PROFILE + "@3",
+    name=PROFILE + "@6",
     rules=(
         Rule("V0", _v0, OBSERVABLE, "T3 không nhất quán"),
         Rule("V1", _v1, OBSERVABLE, "không có nhân chứng dương"),
@@ -292,5 +339,6 @@ RULE_SET = RuleSet(
     prepare=_prepare,
     gaps=_gaps,
     conflicts=_conflicts,
+    ignored_for_critique=_ignored_for_critique,
     fallback_rule="V9",
 )

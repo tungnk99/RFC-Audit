@@ -16,10 +16,19 @@ import time
 from collections.abc import Sequence
 from typing import Any, cast
 
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter, ValidationError
 from pydantic_ai import Agent, ModelRetry, RunContext, Tool, UsageLimits, capture_run_messages
+from pydantic_ai.capabilities import ProcessHistory
 from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior, UsageLimitExceeded
-from pydantic_ai.messages import ModelMessage, ModelMessagesTypeAdapter, ModelResponse
+from pydantic_ai.messages import (
+    ModelMessage,
+    ModelMessagesTypeAdapter,
+    ModelRequest,
+    ModelResponse,
+    ToolCallPart,
+    ToolReturnPart,
+    UserPromptPart,
+)
 from pydantic_ai.settings import ModelSettings
 
 from rfcv.core.context_builder import ContextBuilder
@@ -35,6 +44,15 @@ from rfcv.plugins import current_registry
 from rfcv.runtime.pydantic_ai.skills import skills_capability
 
 LOAD_TOOL = "load_capability"  # tên công cụ nạp skill của harness; chỉ nơi này được biết
+KEEP_TOOL_RESULTS = (
+    4  # số kết quả công cụ gần nhất giữ nguyên văn; cũ hơn bị lược (đo: mỗi lượt gửi lại toàn bộ lịch sử)
+)
+KEEP_TOOLS = frozenset({"code__read", "code__eval"})  # kết quả đọc/tính được giữ lâu hơn kết quả tìm kiếm
+READ_KEEP_CHARS = 60_000  # tối đa ~15k token kết quả đọc cũ được giữ nguyên văn
+CLEARED_HEAD = 160  # ký tự đầu của kết quả cũ còn lại sau khi lược
+CLEAR_ABOVE = 600  # kết quả ngắn hơn mức này không đáng lược
+WRAP_UP_SHARE = 0.7  # quá tỉ lệ ngân sách token này thì nhắc agent trả kết quả ngay
+OUTPUT_TOOL_PREFIX = "final_result"  # tên công cụ đầu ra của PydanticAI
 
 
 def _dump(messages: Sequence[ModelMessage]) -> list[dict[str, Any]]:
@@ -86,6 +104,68 @@ def budget_note(session: ToolSession) -> str:
     if left <= max(1, int(limit * LOW_BUDGET_SHARE)):
         note += " Sắp hết: trả kết quả tốt nhất ngay, ghi phần chưa kiểm vào chỗ dành cho nó."
     return note
+
+
+def thin_history(ctx: RunContext[ToolSession], messages: list[ModelMessage]) -> list[ModelMessage]:
+    """Bộ xử lý lịch sử trước mỗi lượt gọi mô hình. Đo trên wolfSSL: lượt thứ 1 vào 11,8k token, lượt thứ 17 vào 28,6k vì
+    mỗi lượt gửi lại mọi kết quả công cụ cũ; tổng token tính luỹ thừa nên Code Reader cạn 400k trước khi trả lời.
+    1. Lược kết quả công cụ cũ (giữ KEEP_TOOL_RESULTS cái gần nhất và các kết quả đọc/tính mới nhất trong hạn READ_KEEP_CHARS): dòng đã hiển thị vẫn được ghi ở phiên (cổng kiểm tra
+       dựa vào đó, không dựa vào ngữ cảnh), agent cần thì đọc lại.
+    2. Quá WRAP_UP_SHARE ngân sách token thì thêm lời nhắc trả kết quả tốt nhất ngay."""
+    returns = [
+        (i, j)
+        for i, m in enumerate(messages)
+        if isinstance(m, ModelRequest)
+        for j, part in enumerate(m.parts)
+        if isinstance(part, ToolReturnPart)
+    ]
+    # Duyệt từ mới tới cũ. Kết quả đọc mã và tính hằng là thứ agent cần giữ trước mắt để lập luận: lược chúng thì nó đọc lại
+    # (đo: cùng một đoạn bị đọc 4 lần). Chỉ lược khi tổng phần đọc được giữ vượt READ_KEEP_CHARS; kết quả tìm kiếm cũ lược sớm.
+    kept_reads = 0
+    for rank, (i, j) in enumerate(reversed(returns)):
+        request = cast("ModelRequest", messages[i])
+        part = cast("ToolReturnPart", request.parts[j])
+        text = part.content if isinstance(part.content, str) else json.dumps(part.content, ensure_ascii=False)
+        if rank < KEEP_TOOL_RESULTS or len(text) <= CLEAR_ABOVE or text.startswith("[đã lược"):
+            continue
+        if part.tool_name in KEEP_TOOLS and kept_reads + len(text) <= READ_KEEP_CHARS:
+            kept_reads += len(text)
+            continue
+        part.content = f"[đã lược {len(text)} ký tự kết quả cũ] " + text[:CLEARED_HEAD]
+    limit = ctx.deps.max_tokens
+    used = ctx.usage.total_tokens or 0
+    if limit > 0 and used >= limit * WRAP_UP_SHARE and messages and isinstance(messages[-1], ModelRequest):
+        last = messages[-1]
+        left = max(0, limit - used)
+        marker = "[NGÂN SÁCH TOKEN"
+        if not any(isinstance(p, UserPromptPart) and marker in str(p.content) for p in last.parts):
+            last.parts = [
+                *last.parts,
+                UserPromptPart(
+                    f"{marker}: đã dùng {used}/{limit}, còn {left}] Trả kết quả tốt nhất NGAY bằng các dòng đã đọc; "
+                    "ghi phần chưa kiểm vào chỗ dành cho nó. Đừng đọc thêm."
+                ),
+            ]
+    return messages
+
+
+def salvage(messages: Sequence[ModelMessage], output_type: Any) -> BaseModel | None:
+    """Đầu ra gần nhất mà agent đã đề nghị (lời gọi công cụ đầu ra) và còn đúng schema. Dùng khi lần chạy hỏng vì hết ngân
+    sách hay hết lượt làm lại: bỏ đi thì mất cả kết quả đúng (đo: cổng từ chối vị trí đúng vì chỉ mục thiếu hàm, agent làm
+    lại tới cạn ngân sách). Chưa được tin: handler vẫn chạy cổng kiểm tra tất định trên đầu ra này."""
+    adapter = TypeAdapter(output_type)
+    for m in reversed(messages):
+        if not isinstance(m, ModelResponse):
+            continue
+        for part in reversed(m.parts):
+            if isinstance(part, ToolCallPart) and part.tool_name.startswith(OUTPUT_TOOL_PREFIX):
+                try:
+                    out = adapter.validate_python(part.args_as_dict())
+                except (ValidationError, ValueError):
+                    continue
+                if isinstance(out, BaseModel):
+                    return out
+    return None
 
 
 class PydanticAIRoleRunner:
@@ -173,6 +253,7 @@ class PydanticAIRoleRunner:
         role = envelope.to_role
         budget = self._policy.profile(role).budget_per_task
         agent = self.agent(role, model_key)
+        session.max_tokens = budget.tokens
         # Chỉ skill agent khai báo trong role.yaml, lọc tất định theo kiểu nhiệm vụ; mô hình chỉ quyết định nạp skill nào
         # trong số đó.
         task_type = envelope.body.get("task_type")
@@ -187,7 +268,7 @@ class PydanticAIRoleRunner:
                 result = await agent.run(
                     ContextBuilder.render(envelope, context),
                     deps=session,
-                    capabilities=[capability] if capability is not None else None,
+                    capabilities=[ProcessHistory(thin_history), *([capability] if capability is not None else [])],
                     usage_limits=UsageLimits(
                         request_limit=budget.llm_calls,
                         tool_calls_limit=budget.tool_calls,
@@ -216,7 +297,16 @@ class PydanticAIRoleRunner:
                     requirement_id=envelope.requirement_id,
                 )
                 # Token đã tiêu trước khi hỏng vẫn tính vào ngân sách của yêu cầu.
-                return RoleOutcome(None, spent, type(exc).__name__)
+                partial = salvage(captured, current_registry().schemas[self._policy.profile(role).output_schema])
+                if partial is not None:
+                    self._trace.append(
+                        envelope.run_id,
+                        "output_salvaged",
+                        {"msg_id": envelope.msg_id, "after": type(exc).__name__},
+                        role=role,
+                        requirement_id=envelope.requirement_id,
+                    )
+                return RoleOutcome(partial, spent, type(exc).__name__)
 
         usage = result.usage
         tokens = int((usage.input_tokens or 0) + (usage.output_tokens or 0))

@@ -15,8 +15,9 @@ at all. Reading code without the build flags turns that into a false `MATCH`.
 ## Procedure
 
 1. **Find every enclosing directive.** Read upward from the line until you reach the start of the function and, if needed,
-   further. `code__read_function` page 1 lists first-level blocks of long functions; `code__explore` with
-   `sed -n 'A,Bp' <file>` or `rg -n '^\s*#\s*(if|ifdef|ifndef|elif|else|endif)' <file>` shows directives between two lines.
+   further. `code__read` of the whole function shows its `#if` lines in context; `code__grep` with the pattern
+   `^\s*#\s*(if|ifdef|ifndef|elif|else|endif)` on the file shows the directives, and `code__eval` reports whether the lines that define a
+   constant are compiled under the build flags.
    Track nesting: each `#endif` closes the most recent open `#if`; an `#else` flips the branch you are in.
 2. **List the conditions innermost first**, as they apply to your line (inside an `#else`, the condition is the negation).
 3. **Evaluate each one against `adapter.build_flags`**:

@@ -151,6 +151,7 @@ class ExecutionLoop:
         self._handlers = handlers
         self._budget = budget or RequirementBudget()
         self._envelopes = EnvelopeFactory(run_id)
+        self._unresolved: dict[str, list[dict[str, Any]]] = {}
         self._tasks = tasks if tasks is not None else reg.tasks
         self._loop = loop if loop is not None else reg.loop_policy()
         self._rules = rules if rules is not None else reg.default_rule_set()
@@ -164,6 +165,8 @@ class ExecutionLoop:
         history: list[dict[str, Any]] = []
         critique: Critique | None = None
         critiqued_clean = False
+        post_critique_rounds = 0  # số vòng đã chạy sau lần phản biện đầu tiên
+        unresolved: list[dict[str, Any]] = []
         stop: StopReason
         stop_detail: dict[str, Any] = {}
 
@@ -200,11 +203,28 @@ class ExecutionLoop:
                     "critiqued_clean": needs_critique and critiqued_clean,
                 }
                 break
+            if (
+                report.provisional is not None
+                and needs_critique
+                and critique is not None
+                and post_critique_rounds >= self._loop.critique_followups
+            ):
+                # Đã đuổi theo phản biện đủ số vòng cho phép: nhãn vẫn do engine quyết định, vấn đề còn ngỏ được ghi lại.
+                stop = StopReason.SUFFICIENT
+                stop_detail = {
+                    "label": report.provisional.label.value,
+                    "rule": report.provisional.rule,
+                    "critique_unresolved": unresolved,
+                }
+                self._unresolved[req.requirement_id] = unresolved
+                break
             if tracker.exhausted():
                 stop = StopReason.BUDGET
                 stop_detail = {"exhausted_by": tracker.exhausted_by()}
                 break
             tracker.charge_round()
+            if critique is not None:
+                post_critique_rounds += 1
             self._log(
                 "round_start",
                 {"used": tracker.used(), "left": tracker.remaining()},
@@ -264,22 +284,25 @@ class ExecutionLoop:
                     and isinstance(outcome.output, Critique)
                 ):
                     critique = outcome.output
-                    if needs_critique and not critique.issues:
+                    raw_issues = critique.issues
+                    # Vấn đề trỏ vào bằng chứng mà quy tắc đã loại khỏi kết luận (ca phía hợp lệ bị miễn) không đáng đuổi theo.
+                    ignored = self._rules.ignored_for_critique(req, self._rules.prepare(req, evidence))
+                    issues = [i for i in raw_issues if not (i.evidence_id and i.evidence_id in ignored)]
+                    critique = critique.model_copy(update={"issues": issues})  # Planner chỉ thấy vấn đề đáng đuổi theo
+                    unresolved = [{"kind": str(i.kind), "evidence_id": i.evidence_id} for i in issues]
+                    if needs_critique and not issues:
                         critiqued_clean = True
                     # Verifier chỉ được dẫn bằng chứng có thật (VF-6): mã không có trong kho là bịa, ghi lại để đo.
                     known_ids = {e.evidence_id for e in evidence}
                     self._log(
                         "critique_result",
                         {
-                            "issues": [i.model_dump(mode="json") for i in critique.issues],
+                            "issues": [i.model_dump(mode="json") for i in raw_issues],
+                            "ignored_issues": len(raw_issues) - len(issues),
                             "unknown_evidence_ids": sorted(
-                                {
-                                    i.evidence_id
-                                    for i in critique.issues
-                                    if i.evidence_id and i.evidence_id not in known_ids
-                                }
+                                {i.evidence_id for i in raw_issues if i.evidence_id and i.evidence_id not in known_ids}
                             ),
-                            "clean": not critique.issues,
+                            "clean": not issues,
                             "gating": needs_critique,
                             "accepted_as_clean": critiqued_clean,
                         },
@@ -316,6 +339,7 @@ class ExecutionLoop:
         available: dict[str, Labeled[Any]] = {
             **{name: value for name, value in inv.context.items() if name.startswith("rfc.")},
             "verdict.record": Labeled(verdict.to_json(), TrustLabel.DERIVED),
+            "critique.unresolved": Labeled(self._unresolved.get(req_id, []), TrustLabel.DERIVED),
             "evidence.cited": summarize_evidence(basis, inv.vocabulary_terms, {e.evidence_id for e in basis}),
         }
         gate = _ExplanationGate(verdict, evidence)

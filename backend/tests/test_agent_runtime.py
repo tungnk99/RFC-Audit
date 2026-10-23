@@ -54,13 +54,13 @@ def envelope(role: str):
 
 
 async def test_code_reader_tools_go_through_gateway(policy: PolicyStore, trace: TraceLog, tmp_path: Path) -> None:
-    runner = make_runner(policy, trace, tmp_path, {"code_reader": TestModel(call_tools=["code__read_function"])})
+    runner = make_runner(policy, trace, tmp_path, {"code_reader": TestModel(call_tools=["code__read"])})
     session = ToolSession("run-test", "code_reader", "TLS13-0042", max_tool_calls=30)
     outcome = await runner.run(envelope("code_reader"), {}, session)
     assert isinstance(outcome.output, LocationClaim)
     calls = list(trace.events("tool_call")) + list(trace.events("tool_denied"))
     assert calls and all(e["role"] == "code_reader" for e in calls)
-    assert any(e["payload"]["tool"] == "code.read_function" for e in calls)
+    assert any(e["payload"]["tool"] == "code.read" for e in calls)
     runs = list(trace.events("llm_run"))
     assert runs and runs[0]["payload"]["messages"]
 
@@ -75,7 +75,7 @@ async def test_failed_llm_run_keeps_the_conversation_and_the_tokens_spent(
         nonlocal calls
         calls += 1
         if calls == 1:
-            return ModelResponse(parts=[ToolCallPart("code__read_function", {"name": "GetRecordHeader"})])
+            return ModelResponse(parts=[ToolCallPart("code__read", {"symbol": "GetRecordHeader"})])
         raise UnexpectedModelBehavior("mô hình trả lời sai định dạng")
 
     runner = make_runner(policy, trace, tmp_path, {"code_reader": FunctionModel(model_fn)})
@@ -88,7 +88,7 @@ async def test_failed_llm_run_keeps_the_conversation_and_the_tokens_spent(
     assert failure["error"] == "UnexpectedModelBehavior" and failure["tokens"] == outcome.tokens
     assert failure["duration_ms"] >= 0 and failure["tool_calls"] == session.tool_calls
     parts = [p for msg in failure["messages"] for p in msg.get("parts", [])]
-    assert any(p.get("tool_name") == "code__read_function" for p in parts), "lời gọi công cụ trước khi hỏng phải còn"
+    assert any(p.get("tool_name") == "code__read" for p in parts), "lời gọi công cụ trước khi hỏng phải còn"
 
 
 async def test_provider_http_error_is_a_traced_role_failure_not_a_crash(

@@ -8,7 +8,7 @@ import sqlite3
 from collections import OrderedDict
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from rfcv.gates.code_gate import Reference, SymbolInfo
 
@@ -28,6 +28,16 @@ def parse_build_flags(flags: Iterable[str]) -> tuple[dict[str, str], frozenset[s
             undefs.add(f[2:])
             defines.pop(f[2:], None)
     return defines, frozenset(undefs)
+
+
+def _cond_names(c: dict[str, Any], out: set[str]) -> None:
+    """Mọi tên macro xuất hiện trong một điều kiện tiền xử lý đã tách thành cây."""
+    if c.get("op") in ("defined", "ident") and c.get("name"):
+        out.add(str(c["name"]))
+    for key in ("a", "b"):
+        sub = c.get(key)
+        if isinstance(sub, dict):
+            _cond_names(cast("dict[str, Any]", sub), out)
 
 
 def eval_cond(c: dict[str, Any], defines: dict[str, str], undefs: frozenset[str]) -> int | bool | None:
@@ -72,6 +82,7 @@ class SqliteCodeIndex:
         uri = f"file:{path.resolve().as_posix()}?mode=ro"
         self._conn = sqlite3.connect(uri, uri=True, check_same_thread=False)
         self._files: list[str] | None = None
+        self._macros: frozenset[str] | None = None
         self._cache: OrderedDict[str, list[str]] = OrderedDict()
         self._cache_size = cache_files
 
@@ -175,12 +186,42 @@ class SqliteCodeIndex:
         )
         return [self._sym(r) for r in rows]
 
-    def compiled_lines(self, file: str, flags: Iterable[str]) -> set[int] | None:
-        """Dòng được biên dịch theo cờ build. None khi không có nhánh nào chắc chắn bị tắt (không đủ căn cứ để loại)."""
+    def _macro_names(self) -> frozenset[str]:
+        """Tên macro có `#define` ở đâu đó trong kho. Một công tắc cấu hình KHÔNG có `#define` nào trong kho chỉ có thể do cờ
+        build bật."""
+        if self._macros is None:
+            self._macros = frozenset(
+                str(r[0]) for r in self._conn.execute("SELECT DISTINCT name FROM symbols WHERE kind='macro'")
+            )
+        return self._macros
+
+    def macro_state(self, name: str, flags: Iterable[str], *, closed_world: bool = False) -> bool | None:
+        """Macro có bật theo cờ build không: True/False chắc chắn, None nếu chưa rõ. Chỉ khẳng định False khi cờ build là cấu
+        hình đầy đủ và kho không có `#define` nào của nó."""
+        defines, undefs = parse_build_flags(flags)
+        if name in defines:
+            return True
+        if name in undefs:
+            return False
+        return False if closed_world and name not in self._macro_names() else None
+
+    def compiled_lines(self, file: str, flags: Iterable[str], *, closed_world: bool = False) -> set[int] | None:
+        """Dòng được biên dịch theo cờ build. None khi không có nhánh nào chắc chắn bị tắt (không đủ căn cứ để loại).
+
+        `closed_world`: cờ build là cấu hình ĐẦY ĐỦ của bản dựng (ví dụ lấy từ `options.h` do configure sinh). Khi đó macro không
+        có trong cờ và không có `#define` nào trong kho là KHÔNG được định nghĩa, nên `#ifdef` của nó chắc chắn tắt. Không có
+        cờ này thì tên chưa biết vẫn là "chưa rõ" và dòng không bị loại (đo: nhánh `#ifdef HAVE_MAX_FRAGMENT` đã bị biên dịch bỏ
+        mà vẫn được dẫn là nơi gửi cảnh báo)."""
         defines, undefs = parse_build_flags(flags)
         rows = self._conn.execute(
             "SELECT chain,idx,line_start,line_end,cond FROM pp_branches WHERE file=? ORDER BY chain, idx", (file,)
         ).fetchall()
+        if closed_world:
+            known = self._macro_names()
+            names: set[str] = set()
+            for row in rows:
+                _cond_names(json.loads(row[4]), names)
+            undefs = frozenset(undefs | {n for n in names if n not in defines and n not in known})
         disabled: set[int] = set()
         current = None
         taken = False  # đã có nhánh trước chắc chắn đúng

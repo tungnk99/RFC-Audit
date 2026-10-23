@@ -35,6 +35,12 @@ from test_skills import TASKS, write_skill
 # ---------------------------------------------------------------- SG-6: vòng làm lại của Schema gate
 
 
+@pytest.fixture
+def policy(legacy_policy: PolicyStore) -> PolicyStore:
+    """Các test trong tệp này kiểm chính công cụ cũ của Code Reader (đã thay bằng grep/glob/read/eval trong role.yaml)."""
+    return legacy_policy
+
+
 def _runner(policy: PolicyStore, trace: TraceLog) -> PydanticAIRoleRunner:
     llm = LLMGateway(ModelsConfig(), env={}, overrides={"code_reader": TestModel()})
     return PydanticAIRoleRunner(policy, ToolGateway(policy, trace), llm, trace)

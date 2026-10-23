@@ -120,6 +120,9 @@ class RuleSet:
     prepare: Callable[[Any, Sequence[Evidence]], Any]
     gaps: Callable[[Any, Any], tuple[Sequence[Missing], Sequence[Conflict]]]
     conflicts: Callable[[Any, Any], Sequence[Conflict]] = lambda req, data: ()
+    # Mã bằng chứng mà quy tắc đã loại khỏi kết luận (ví dụ khẳng định phía hợp lệ không tham chiếu độc lập nào xác nhận). Phản
+    # biện nêu vấn đề trên chúng vô nghĩa: lõi bỏ các vấn đề đó thay vì đuổi theo tới hết ngân sách.
+    ignored_for_critique: Callable[[Any, Any], frozenset[str]] = lambda req, data: frozenset()
     fallback_rule: str = "V9"
     version: str = field(init=False)
 
@@ -132,7 +135,12 @@ class RuleSet:
                     [r.id, sorted(r.applies_to) if r.applies_to else None, r.description, _source_hash(r.decide)]
                     for r in self.rules
                 ],
-                "hooks": [_source_hash(self.prepare), _source_hash(self.gaps), _source_hash(self.conflicts)],
+                "hooks": [
+                    _source_hash(self.prepare),
+                    _source_hash(self.gaps),
+                    _source_hash(self.conflicts),
+                    _source_hash(self.ignored_for_critique),
+                ],
             }
         )
         object.__setattr__(self, "version", digest)

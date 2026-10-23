@@ -1,0 +1,11 @@
+requirement TLS13-0043 from RFC8446§5.2#p4s3 modal MUST type B
+# THĂM DÒ (không phải đặc tả đã duyệt): ngưỡng suy từ giới hạn TLSInnerPlaintext <= 2^14+1 (RFC 8446 §5.4; cảnh báo record_overflow: §6.2).
+# Bản ghi mã hoá có TLSCiphertext.length = N luôn chứa TLSInnerPlaintext dài N-16 (loại nội dung + đệm + dữ liệu, thẻ AEAD 16 byte),
+# nên N-16 > 16385 tức N > 16401 phải bị từ chối bằng record_overflow. Hai tham chiếu độc lập (OpenSSL, GnuTLS) và wolfSSL đã sửa
+# cùng cảnh báo từ N = 16402. Câu RFC gốc (TLSCiphertext > 2^14+256) chỉ là ngưỡng trên của cùng quy tắc.
+actor server
+state connected
+trigger receive(record) where record.length > 16401
+expect send_alert(record_overflow) then close within 2000ms
+forbid send(application_data)
+variants boundary(record.length, 16402), max(record.length), random(record.length, k=6, stratified), valid_random(record.length, k=6)

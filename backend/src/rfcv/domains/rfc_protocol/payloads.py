@@ -84,6 +84,12 @@ class T1Payload(_Frozen):
     # hay "textual" (chỉ thấy qua một dòng mã đã hiển thị, ví dụ gán con trỏ hàm, bảng xử lý).
     call_edge_kinds: tuple[Literal["index", "textual"], ...] = ()
     unexplored: tuple[str, ...] = ()
+    # Macro đã được cổng xác minh là KHÔNG bật trong bản dựng và làm khối mã liên quan bị biên dịch bỏ.
+    disabled_by: tuple[str, ...] = ()
+    # Nơi phản ứng bắt buộc LẼ RA có khi khía cạnh REACTION là MISMATCH (thiếu, bị biên dịch bỏ, nằm sai điều kiện): hàm chứa các dòng
+    # của khía cạnh đó, do cổng suy ra từ chỉ mục chứ không do agent chọn.
+    defect_symbol: str | None = None
+    defect_lines: tuple[int, int] | None = None
 
     @property
     def refutes(self) -> bool:
@@ -221,11 +227,18 @@ def _summarize_t1(e: Any, terms: frozenset[str]) -> dict[str, Any]:
                 "aspect": a.aspect,
                 "value": a.value,
                 "observed": a.observed if isinstance(a.observed, int | None) else _ref(a.observed, terms),
+                "lines": a.lines,
             }
             for a in t1.aspects
         ],
         "call_path": [VerifiedRef(s) for s in t1.call_path],
         "unexplored_count": len(t1.unexplored),
+        "disabled_by": [VerifiedRef(m) for m in t1.disabled_by],
+        "defect_location": (
+            {"symbol": VerifiedRef(t1.defect_symbol), "lines": t1.defect_lines}
+            if t1.defect_symbol and t1.defect_lines
+            else None
+        ),
     }
 
 
@@ -255,6 +268,8 @@ def _summarize_t3(e: Any, terms: frozenset[str]) -> dict[str, Any]:
         "closed": bool(t3.observed.get("closed", False)),
         "witness_positive": t3.witness.has_positive,
         "linked": bool(t3.coverage_link and t3.coverage_link.linked),
+        # Khẳng định phía hợp lệ mà mọi bản tham chiếu độc lập đều từ chối: đã bị loại khỏi kết luận (xem rules._View.waived).
+        "waived": (t3.variant_class == "control" or t3.side == "valid") and t3.witness.all_positive_fail,
     }
 
 

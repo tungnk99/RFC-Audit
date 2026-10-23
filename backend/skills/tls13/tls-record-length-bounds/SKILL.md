@@ -26,7 +26,7 @@ covers 5.2; a check after decryption on the inner plaintext covers 5.1.
   `resolve-c-macro-thresholds`; a shared constant may be above 16640 (accepts over-long TLS 1.3 records) or below it (rejects
   valid ones).
 - **Reaction**: usually NOT next to the check. The parser returns an error code (for example `LENGTH_ERROR`), and a caller maps
-  error codes to alerts in a `switch` or a helper. Follow the code with `code__find_references` to that mapping, and check it with
+  error codes to alerts in a `switch` or a helper. Follow the code with `code__grep` to that mapping, and check it with
   `check-ifdef-compiled-lines`: a mapping compiled out by a build flag means no alert at all.
 - **Close**: `REACTION` is `MATCH` only if the alert is `record_overflow` AND processing of the connection stops (the error is
   returned up, the connection is marked closed or freed). An alert followed by continued processing is not enough.

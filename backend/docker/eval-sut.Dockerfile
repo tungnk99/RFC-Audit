@@ -17,7 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY eval/work/wolfssl /src/wolfssl
 WORKDIR /src/wolfssl
-RUN git checkout --quiet "${WOLFSSL_REV}" \
+# Bản clone trên Windows có thể bị đổi CRLF (core.autocrlf): trong container Linux, git thấy mọi tệp là "đã sửa" và autogen.sh
+# không chạy được. Đặt lại cây làm việc từ kho git (LF) trước khi checkout.
+RUN git config core.autocrlf false && git reset --hard --quiet && git clean -fdxq \
+ && git checkout --quiet "${WOLFSSL_REV}" \
  && ./autogen.sh \
  && ./configure ${CONFIGURE_FLAGS} CFLAGS="${CFLAGS_EXTRA}" \
  && make -j"$(nproc)" examples/server/server \

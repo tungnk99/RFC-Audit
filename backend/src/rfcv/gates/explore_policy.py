@@ -150,6 +150,60 @@ class CodeScope:
         )
 
 
+# Cách viết thông dụng của cùng một cờ đã được phép. Chỉ ĐỔI TÊN về dạng chuẩn trước khi kiểm; không cờ mới nào được phép.
+# (`--iglob` chỉ khác `-g` ở chỗ không phân biệt hoa thường; cả hai chỉ lọc tệp, đường dẫn vẫn bị kiểm phạm vi.)
+_LONG_ALIASES: dict[str, dict[str, str]] = {
+    "rg": {
+        "--glob": "-g",
+        "--iglob": "-g",
+        "--max-count": "-m",
+        "--type": "-t",
+        "--ignore-case": "-i",
+        "--line-number": "-n",
+        "--regexp": "-e",
+    },
+    "grep": {"--max-count": "-m", "--ignore-case": "-i", "--line-number": "-n", "--regexp": "-e", "--recursive": "-r"},
+}
+_HEAD_TAIL_COUNT = re.compile(r"^-(\d+)$")
+
+
+def _normalize(name: str, args: list[str], spec: CommandSpec) -> list[str]:
+    """Đưa dạng viết thông dụng về dạng chuẩn: `head -40` → `-n 40`, `--glob=X` → `-g X`, `-m5` → `-m 5`, `-rn` → `-r -n`."""
+    aliases = _LONG_ALIASES.get(name, {})
+    out: list[str] = []
+    value_next = False
+    for a in args:
+        if value_next:  # giá trị của cờ đứng trước: giữ nguyên, kể cả khi trông giống cờ
+            out.append(a)
+            value_next = False
+            continue
+        if a.startswith("--"):
+            flag, eq, val = a.partition("=")
+            flag = aliases.get(flag, flag)
+            out.append(flag)
+            if eq:
+                out.append(val)
+            elif spec.flags.get(flag):
+                value_next = True
+            continue
+        if a.startswith("-") and len(a) > 1:
+            if name in ("head", "tail") and (m := _HEAD_TAIL_COUNT.match(a)):
+                out += ["-n", m.group(1)]
+                continue
+            letter = f"-{a[1]}"
+            if len(a) > 2 and spec.flags.get(letter) is True:  # -m5, -g*.c, -A3, -n40
+                out += [letter, a[2:]]
+                continue
+            if len(a) > 2 and all(spec.flags.get(f"-{c}") is False for c in a[1:]):  # -rn, -ni
+                out += [f"-{c}" for c in a[1:]]
+                continue
+            out.append(a)
+            value_next = spec.flags.get(a) is True
+            continue
+        out.append(a)
+    return out
+
+
 def _tokens(command: str) -> list[str]:
     lex = shlex.shlex(command, posix=True, punctuation_chars=True)
     lex.whitespace_split = True
@@ -181,6 +235,7 @@ def _validate_segment(argv: list[str], scope: CodeScope, *, first: bool) -> list
     spec = ALLOWED.get(name)
     if spec is None:
         raise CommandRejected("COMMAND_NOT_ALLOWED", name)
+    args = _normalize(name, args, spec)
     if args and args[0] in spec.subcommands:
         args = args[1:]
 
@@ -194,7 +249,9 @@ def _validate_segment(argv: list[str], scope: CodeScope, *, first: bool) -> list
             raise CommandRejected("FLAG_BLOCKED", f"{name} {flag}")
         if a.startswith("-"):
             if flag not in spec.flags:
-                raise CommandRejected("FLAG_NOT_ALLOWED", f"{name} {flag}")
+                raise CommandRejected(
+                    "FLAG_NOT_ALLOWED", f"{name} {flag} (cờ được phép: {' '.join(sorted(spec.flags))})"
+                )
             is_pattern = flag in _PATTERN_FLAGS.get(name, ())
             if is_pattern and inline_value:
                 pattern_values.add(i)

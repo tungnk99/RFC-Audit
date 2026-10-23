@@ -57,6 +57,7 @@ class ToolSession:
     shown_edges: set[tuple[str, str]] = field(default_factory=set[tuple[str, str]])
     output_check: OutputCheck | None = None
     output_rejections: int = 0
+    max_tokens: int = 0  # ngân sách token của nhiệm vụ (0 = không giới hạn); runtime dùng để nhắc agent trả kết quả
 
 
 @dataclass(frozen=True)

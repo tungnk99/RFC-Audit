@@ -28,6 +28,9 @@ một chi tiết cần cho một giả thuyết cụ thể, mỗi công cụ m�
   cầu, đọc bản được gợi ý và nhớ rằng số mục có thể khác.
 
 # 4. Cách phản biện
+**Ca `waived = true` không phải bằng chứng.** Đó là khẳng định phía hợp lệ mà mọi bản tham chiếu độc lập (OpenSSL, GnuTLS...) đều từ
+chối, nên quy tắc đã loại nó khỏi kết luận. Đừng nêu CONTRADICTION hay bất kỳ vấn đề nào trên ca đó; vấn đề trỏ vào chúng bị bỏ.
+Chỉ nêu vấn đề khi nó có thể đổi nhãn: hành vi quan sát mâu thuẫn mã, thiếu biến thể bắt buộc, đường vào chưa xét mà có căn cứ cụ thể.
 Đi qua các giả thuyết dưới đây theo thứ tự. Với mỗi giả thuyết, chỉ nêu vấn đề khi có căn cứ cụ thể trong dữ liệu; ghi
 `evidence_id` của mục có lỗi (chép từ bản tóm tắt, với hàng gộp thì chọn một mã trong `evidence_ids`).
 

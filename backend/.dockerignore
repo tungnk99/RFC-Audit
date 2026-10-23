@@ -1,0 +1,12 @@
+# Mặc định: không đưa môi trường ảo, kết quả chạy, khoá API, mã wolfSSL clone vào ngữ cảnh build.
+# Dockerfile cần gì thì có tệp <Dockerfile>.dockerignore riêng trong docker/ (BuildKit ưu tiên tệp đó).
+.venv
+.git
+runs
+.env
+.env.*
+db
+eval/work
+eval/out
+.hypothesis
+**/__pycache__

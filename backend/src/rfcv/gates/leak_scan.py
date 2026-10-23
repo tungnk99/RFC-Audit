@@ -1,7 +1,7 @@
 """Quét rò rỉ trong dữ liệu một lần chạy (QS-07, YD-51, LG-1): khoá API và nội dung tệp ngoài `code_scope`.
 
 Chạy sau mỗi lần chạy trên `trace.db`, `evidence.db`, `registry.db`, `artifacts/` và mọi tệp khác của thư mục lần chạy,
-trừ `repo/` (bản sao phạm vi mã, vốn chứa mã nguồn có chủ đích). Kết quả không bao giờ chứa giá trị khoá hay nội dung tệp:
+trừ bản sao phạm vi mã và chỉ mục dựng từ nó (`code/repo/`, `code/index.db`, hoặc `repo/` cũ), vốn chứa mã nguồn có chủ đích. Kết quả không bao giờ chứa giá trị khoá hay nội dung tệp:
 chỉ tên biến, tên tệp và số dòng.
 
 Giới hạn đã biết: tìm khớp nguyên văn. Khoá bị mã hoá lại (base64, cắt khúc) hay nội dung bị diễn đạt lại sẽ không thấy.
@@ -21,7 +21,10 @@ MIN_LINE_LEN = 40  # dòng mã ngắn hơn (dấu ngoặc, từ khoá, #include)
 MAX_LINES_PER_FILE = 200
 MAX_FILES = 2000
 MAX_FILE_BYTES = 256 * 1024 * 1024
-SKIP_TOP_LEVEL = frozenset({"repo"})
+# Bản sao phạm vi mã và chỉ mục dựng từ nó nằm trong thư mục lần chạy CÓ CHỦ ĐÍCH nên không phải dữ liệu để quét. Bố cục
+# hiện tại là `code/repo/` và `code/index.db` (xem codeindex/providers.py); `repo/` là bố cục cũ. Khi bố cục đổi mà danh
+# sách này không đổi theo, mọi dòng trùng giữa tệp ngoài phạm vi và bản sao trong phạm vi bị báo nhầm là rò rỉ.
+SKIP_PREFIXES: tuple[tuple[str, ...], ...] = (("repo",), ("code", "repo"), ("code", "index.db"))
 REPORT_NAME = "leak_scan.json"
 
 
@@ -57,7 +60,8 @@ def _run_files(run_dir: Path) -> Iterator[Path]:
     for p in sorted(run_dir.rglob("*")):
         if not p.is_file() or p.name == REPORT_NAME:
             continue
-        if p.relative_to(run_dir).parts[0] in SKIP_TOP_LEVEL:
+        parts = p.relative_to(run_dir).parts
+        if any(parts[: len(prefix)] == prefix for prefix in SKIP_PREFIXES):
             continue
         yield p
 

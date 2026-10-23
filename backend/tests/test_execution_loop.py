@@ -394,3 +394,75 @@ async def test_loop_detector_can_be_injected_for_measurement(
     verdict = await loop.investigate(inv())
     assert verdict.stop_reason is StopReason.LOOP and len(made) == 1
     assert sum(c.to_role == "code_reader" for c in runner.calls) == 1  # limit=2 chặn sớm hơn mặc định
+
+
+class CritiqueFromStore(FakeRunner):
+    """Verifier giả nêu một vấn đề trỏ vào bằng chứng do `pick` chọn từ kho."""
+
+    def __init__(self, plans: Callable[[int], PlanAction], store: EvidenceStore, pick: Callable[[Any], bool]) -> None:
+        super().__init__(plans, OUTPUTS)
+        self.store, self.pick = store, pick
+
+    async def run(self, envelope: Envelope, context: dict[str, Any], session: ToolSession) -> RoleOutcome:
+        if envelope.to_role == "verifier":
+            self.calls.append(envelope)
+            target = next(e for e in self.store.for_requirement(REQ) if self.pick(e.payload))
+            issue = {"kind": "CONTRADICTION", "evidence_id": target.evidence_id, "suggested_task": "RECHECK"}
+            return RoleOutcome(Critique.model_validate({"issues": [issue]}), 50)
+        return await super().run(envelope, context, session)
+
+
+def _waived_t3() -> EvidenceDraft:
+    return t3(
+        "at_limit:record.length=16640",
+        Outcome.FAIL,
+        variant_class="control",
+        side="valid",
+        refs=(Outcome.FAIL, Outcome.FAIL),
+        alert="record_overflow",
+    )
+
+
+def _is_waived(payload: Any) -> bool:
+    return (
+        getattr(payload, "kind", "") == "scenario_result"
+        and payload.side == "valid"
+        and payload.outcome is Outcome.FAIL
+    )
+
+
+async def test_critique_issues_on_waived_evidence_are_dropped(
+    store: EvidenceStore, trace: TraceLog, policy: PolicyStore
+) -> None:
+    """Ca phía hợp lệ mà mọi tham chiếu từ chối đã bị loại khỏi kết luận; Verifier nêu CONTRADICTION trên nó không được kéo thêm vòng."""
+    runner = CritiqueFromStore(lambda n: plan(SELECT) if n == 1 else plan(CRITIQUE), store, _is_waived)
+    handlers = {
+        TaskType.SELECT_TESTS: WriteOnce(store, lambda: [*full_passing_set(), _waived_t3()]),
+        TaskType.CRITIQUE: Noop(),
+    }
+    verdict = await make_loop(store, trace, policy, runner, handlers).investigate(inv())
+    assert (verdict.label, verdict.rule, verdict.stop_reason) == (Label.COMPLIANT, "V6", StopReason.SUFFICIENT)
+    (critique,) = payloads(trace, "critique_result")
+    assert critique["ignored_issues"] == 1 and critique["clean"] is True
+    assert sum(c.to_role == "verifier" for c in runner.calls) == 1
+
+
+async def test_follow_ups_after_critique_are_capped_and_the_unresolved_issue_is_recorded(
+    store: EvidenceStore, trace: TraceLog, policy: PolicyStore
+) -> None:
+    """Vấn đề thật không giải quyết được: đuổi theo tối đa `critique_followups` vòng rồi dừng, không tiêu hết ngân sách."""
+
+    def sequence(n: int) -> PlanAction:
+        return plan({1: SELECT, 2: CRITIQUE, 3: LOCATE}.get(n, CRITIQUE))
+
+    runner = CritiqueFromStore(sequence, store, lambda p: getattr(p, "kind", "") == "scenario_result")
+    handlers = {
+        TaskType.SELECT_TESTS: WriteOnce(store, full_passing_set),
+        TaskType.LOCATE: Noop(),
+        TaskType.CRITIQUE: Noop(),
+    }
+    verdict = await make_loop(store, trace, policy, runner, handlers, RequirementBudget(rounds=10)).investigate(inv())
+    assert (verdict.label, verdict.stop_reason) == (Label.COMPLIANT, StopReason.SUFFICIENT)
+    stop = payloads(trace, "stop")[0]
+    assert stop["critique_unresolved"] and stop["critique_unresolved"][0]["kind"] == "CONTRADICTION"
+    assert sum(c.to_role == "planner" for c in runner.calls) == 4  # không chạy tới hết 10 vòng

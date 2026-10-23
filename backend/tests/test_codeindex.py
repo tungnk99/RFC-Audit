@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import importlib.util
 import os
 import shutil
 from pathlib import Path
@@ -34,6 +35,12 @@ SRC[100] = "    ProcessHandshake,"
 SRC[101] = "};"
 SRC[119] = "int Dispatch(WOLFSSL* ssl, int t)"
 SRC[121] = "    return handlers[t](ssl);"
+
+
+@pytest.fixture
+def policy(legacy_policy: PolicyStore) -> PolicyStore:
+    """Các test trong tệp này kiểm chính công cụ cũ của Code Reader (đã thay bằng grep/glob/read/eval trong role.yaml)."""
+    return legacy_policy
 
 
 @pytest.fixture
@@ -412,3 +419,43 @@ async def test_local_executor_runs_argv_without_shell(tmp_path: Path) -> None:
     assert out.strip() == "1"
     none = await ex.run([["rg", "-n", "no_such_token", "src"]], timeout_s=10)
     assert none == ""
+
+
+@pytest.mark.skipif(importlib.util.find_spec("tree_sitter") is None, reason="cần tree-sitter")
+def test_closed_world_turns_unknown_ifdef_switches_off(tmp_path: Path) -> None:
+    """Công tắc cấu hình không có `#define` nào trong kho (HAVE_MAX_FRAGMENT) chỉ có thể do cờ build bật. Khi cờ build là cấu hình
+    đầy đủ thì khối của nó chắc chắn tắt (đo: SendAlert trong `#ifdef HAVE_MAX_FRAGMENT` vẫn được dẫn như đang chạy)."""
+    from rfcv.codeindex.builder import build_index
+    from rfcv.codeindex.sqlite_index import SqliteCodeIndex
+
+    src = (
+        "#define ALWAYS_HERE 1\n"
+        "int f(int e) {\n"
+        "    switch (e) {\n"
+        "#ifdef HAVE_MAX_FRAGMENT\n"
+        "    case 1: Alert(22); break;\n"
+        "#endif\n"
+        "#ifdef ALWAYS_HERE\n"
+        "    case 2: Other(); break;\n"
+        "#endif\n"
+        "    default: break;\n"
+        "    }\n"
+        "    return 0;\n"
+        "}\n"
+    )
+    root = tmp_path / "repo"
+    (root / "src").mkdir(parents=True)
+    (root / "src" / "a.c").write_text(src)
+    build_index(root, tmp_path / "index.db")
+    idx = SqliteCodeIndex(tmp_path / "index.db")
+    try:
+        open_world = idx.compiled_lines("src/a.c", ["-DX"])
+        assert open_world is None or 5 in open_world  # chưa rõ thì không loại
+        closed = idx.compiled_lines("src/a.c", ["-DX"], closed_world=True)
+        assert closed is not None and 5 not in closed and 8 in closed and 10 in closed
+        assert idx.macro_state("HAVE_MAX_FRAGMENT", ["-DX"], closed_world=True) is False
+        assert idx.macro_state("HAVE_MAX_FRAGMENT", ["-DX"]) is None
+        assert idx.macro_state("X", ["-DX"]) is True
+        assert idx.macro_state("ALWAYS_HERE", ["-DX"], closed_world=True) is None  # có #define trong kho: chưa kết luận
+    finally:
+        idx.close()

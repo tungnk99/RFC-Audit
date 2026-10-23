@@ -16,7 +16,7 @@ message from the network) reach further processing without passing the check?
 1. **Fix the target**: the function and line of the check (from `task.recheck_location`, an earlier claim, or your own LOCATE).
 2. **Find the entry points**: functions that receive the triggering input from outside. Start from the entry points in
    `adapter.locator_hints`, or search for the read/receive calls of the protocol layer.
-3. **Walk from each entry point downward** with `code__callees` and by reading the bodies, until you reach either the check or the
+3. **Walk from each entry point downward** with `code__grep` (calls inside a function) and by reading the bodies with `code__read`, until you reach either the check or the
    code that consumes the input (decodes, decrypts, parses, hands it upward). Record each distinct route as a chain of function names.
 4. **Watch for hidden routes**:
    - function-pointer tables and dispatch arrays (a reference of kind `fn_pointer`, or a table name);

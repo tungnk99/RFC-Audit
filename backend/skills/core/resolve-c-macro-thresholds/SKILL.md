@@ -16,7 +16,8 @@ limits from a base size plus "extra room" that depends on the build, so the name
 1. **Isolate the comparison** that rejects the input, e.g. `if (len > MAX_PAYLOAD + EXTRA_ROOM + (opt ? OPT_EXTRA : 0))`.
    Note the operator: `>` rejects values above the limit, `>=` rejects the limit itself (the limit is effectively one lower).
 2. **List every identifier** in the expression that is not a local variable.
-3. **Resolve each one** with `code__get_definition`. Expect four shapes:
+3. **Resolve each one** with `code__eval` (it looks each name up, follows nested macros and enums, picks the definition compiled
+   under the build flags and returns the number; use `code__grep` for a name it cannot resolve). Expect four shapes:
    - `#define NAME 4096` → a literal.
    - enum member `NAME = 38 + MAX_DIGEST,` → an expression; resolve its terms too.
    - definition inside `#if`/`#ifdef` with several alternatives → pick the branch the build flags select

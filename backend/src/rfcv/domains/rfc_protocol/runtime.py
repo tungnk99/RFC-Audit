@@ -87,11 +87,17 @@ class ProtocolRuntime:
         index = rt.providers.code_index
         # Kiểm tra số 5 của Schema gate: dòng dẫn phải được biên dịch theo cờ build (khi chỉ mục có nhánh #if).
         compiled: Any = getattr(index, "compiled_lines", None)
+        macro_state: Any = getattr(index, "macro_state", None)
         flags = tuple(manifest.build_flags)
         gate = SchemaGate(
             index,
             vocabulary_terms(manifest),
-            (lambda f: compiled(f, flags)) if compiled is not None else None,
+            (lambda f: compiled(f, flags, closed_world=manifest.build_config_complete))
+            if compiled is not None
+            else None,
+            (lambda m: macro_state(m, flags, closed_world=manifest.build_config_complete))
+            if macro_state is not None
+            else None,
         )
         driver = TestDriver(
             rt.providers.backend,

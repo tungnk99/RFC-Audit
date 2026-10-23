@@ -58,3 +58,39 @@ def oracle(manifest: AdapterManifest) -> CompiledOracle:
 @pytest.fixture(scope="session")
 def policy(registry: Registry) -> PolicyStore:
     return PolicyStore.load(None, registry)
+
+
+@pytest.fixture(autouse=True)
+def _no_environment_retry_delay(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Thử lại ca lỗi hạ tầng không được làm chậm bộ test."""
+    from rfcv.domains.rfc_protocol.sandbox import driver
+
+    monkeypatch.setattr(driver, "ENVIRONMENT_RETRY_DELAY_S", 0.0)
+
+
+LEGACY_CODE_TOOLS = (
+    "code.list_dir",
+    "code.file_outline",
+    "code.search_symbol",
+    "code.read_function",
+    "code.read_range",
+    "code.get_definition",
+    "code.find_references",
+    "code.callees",
+    "code.search_text",
+    "code.explore",
+)
+
+
+@pytest.fixture(scope="session")
+def legacy_policy(registry: Registry) -> PolicyStore:
+    """Chính sách mà Code Reader còn được dùng 10 công cụ cũ (đã thay bằng grep/glob/read/eval ở role.yaml). Chỉ cho test
+    của chính các công cụ cũ, đến khi chúng bị gỡ."""
+    base = PolicyStore.load(None, registry)
+    profiles = [base.profile(r) for r in base.roles]
+    profiles = [
+        p.model_copy(update={"tools": (*p.tools, *LEGACY_CODE_TOOLS)}) if p.role == "code_reader" else p
+        for p in profiles
+    ]
+    paths = {r: base.prompt_path(r) for r in base.roles} if hasattr(base, "prompt_path") else None
+    return PolicyStore(profiles, registry.schemas, registry.tools, registry.domain().required_roles, paths)

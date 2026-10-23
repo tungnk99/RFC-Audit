@@ -92,6 +92,9 @@ class LoopPolicy:
     critique_task: str | None = "CRITIQUE"
     # Nhãn tạm cần một lần phản biện sạch trước khi dừng (mặc định chỉ COMPLIANT, vì dễ sai nhất).
     critique_before: frozenset[str] = frozenset({"COMPLIANT"})
+    # Số vòng tối đa đuổi theo vấn đề phản biện nêu ra trước khi chấp nhận nhãn tạm (nêu rõ vấn đề còn ngỏ trong giải thích).
+    # Đo: bản đúng bị đuổi 5 vòng, 1,7 triệu token, rồi vẫn dừng vì hết ngân sách.
+    critique_followups: int = 2
     # Mã lý do Planner phải khai khi cố ý làm khác sổ tay; dùng để ghi trace "đi theo hay chệch sổ tay".
     deviation_code: str | None = None
 

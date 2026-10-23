@@ -46,13 +46,17 @@ def _codeindex(name: str) -> Any:
 def register_builtin(reg: Registry) -> None:
     from rfcv.domains.rfc_protocol import pack
     from rfcv.gates.code_gate import CODE_TOOL_DESCRIPTORS
+    from rfcv.gates.code_tools import CC_TOOL_DESCRIPTORS
     from rfcv.runtime.pydantic_ai import anthropic_factory, create_runner, openai_compatible_factory
 
-    for tool in CODE_TOOL_DESCRIPTORS:  # code pack dùng chung cho mọi miền đọc mã
+    for tool in (*CODE_TOOL_DESCRIPTORS, *CC_TOOL_DESCRIPTORS):  # code pack dùng chung cho mọi miền đọc mã
         reg.register_tool(tool)
     reg.register_domain(pack())
     for name, (module, cls) in BACKENDS.items():
         reg.register_backend(name, _backend(module, cls))
+    from rfcv.backends.docker_launcher import launcher_factory
+
+    reg.register_sut_launcher("docker", launcher_factory)
     reg.register_code_index("treesitter", _codeindex("treesitter_sandboxed"))
     reg.register_code_index("treesitter-local", _codeindex("treesitter_local"))
     reg.register_executor("docker", _codeindex("docker_executor"))

@@ -105,25 +105,25 @@ def test_compiled_variants(oracle: CompiledOracle) -> None:
 
 def test_not_equal_has_control_and_never_samples_the_valid_value(manifest: AdapterManifest) -> None:
     """`where f != v`: v là giá trị hợp lệ duy nhất, nên là ca đối chứng và không bao giờ được lấy mẫu phía kích hoạt."""
-    text = BASE.replace("record.length > 16640", "record.length != 8").replace(
+    text = BASE.replace("record.length > 16640", "record.length != 20").replace(
         "boundary(record.length, 16641), max(record.length), random(record.length, k=3)",
-        "boundary(record.length, 9), random(record.length, k=40, stratified)",
+        "boundary(record.length, 21), random(record.length, k=40, stratified)",
     )
     oracle = compile_oracle(parse_rbs(text), to_vocabulary(manifest))
     control = next(v for v in oracle.variants if v.variant_class == "control")
-    assert control.value == 8 and oracle.side_of("record.length", 8) == "valid"
+    assert control.value == 20 and oracle.side_of("record.length", 20) == "valid"
     rnd = next(v for v in oracle.variants if v.variant_class == "random")
-    assert 8 not in rnd.special
-    assert all(8 not in instantiate_random(rnd, seed) for seed in range(50))
+    assert 20 not in rnd.special
+    assert all(20 not in instantiate_random(rnd, seed) for seed in range(50))
 
 
 def test_equal_samples_only_the_trigger_value(manifest: AdapterManifest) -> None:
-    text = BASE.replace("record.length > 16640", "record.length == 0").replace(
+    text = BASE.replace("record.length > 16640", "record.length == 17").replace(
         "boundary(record.length, 16641), max(record.length), random(record.length, k=3)", "random(record.length, k=2)"
     )
     oracle = compile_oracle(parse_rbs(text), to_vocabulary(manifest))
     rnd = next(v for v in oracle.variants if v.variant_class == "random")
-    assert (rnd.lo, rnd.hi) == (0, 0)
+    assert (rnd.lo, rnd.hi) == (17, 17)
     assert not any(v.variant_class == "control" for v in oracle.variants)
 
 
@@ -211,12 +211,12 @@ def test_stratified_oracle_has_both_sides_and_excludes_canonical_values(manifest
     by_class = {v.variant_class: v for v in o.variants if v.variant_class in ("random", "valid_random", "probe")}
     trig, valid = by_class["random"], by_class["valid_random"]
     assert (trig.lo, trig.hi, trig.side) == (16641, 65535, "trigger")
-    assert (valid.lo, valid.hi, valid.side) == (0, 16640, "valid")
+    assert (valid.lo, valid.hi, valid.side) == (17, 16640, "valid")
     for v in (trig, valid):
         assert set(v.exclude) >= {16640, 16641, 65535}  # đối chứng, biên, max/canonical
         assert not set(v.special) & set(v.exclude)
         assert v.special == tuple(sorted(v.special))
-    assert 0 in valid.special and 1 in valid.special  # đầu mút phía hợp lệ luôn được thử
+    assert 17 in valid.special and 18 in valid.special  # đầu mút phía hợp lệ luôn được thử
     assert 32767 in trig.special or 32768 in trig.special  # biên nhị phân phía vi phạm
     assert o.random_k == trig.expected_count and o.valid_random_k == valid.expected_count
     assert o.valid_random_k > 6  # tầng cộng giá trị đặc biệt

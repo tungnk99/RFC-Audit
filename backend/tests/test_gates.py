@@ -21,6 +21,12 @@ from rfcv.gates.tool_gateway import DenyCode, ToolDenied, ToolGateway, ToolSessi
 
 
 @pytest.fixture
+def policy(legacy_policy: PolicyStore) -> PolicyStore:
+    """Các test trong tệp này kiểm chính công cụ cũ của Code Reader (đã thay bằng grep/glob/read/eval trong role.yaml)."""
+    return legacy_policy
+
+
+@pytest.fixture
 def scope(tmp_path: Path) -> CodeScope:
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "internal.c").write_text("int x;\n")
@@ -281,3 +287,38 @@ def test_textual_call_edge_accepted_when_shown(index: InMemoryCodeIndex) -> None
 def test_validate_output_rejects_extra_fields() -> None:
     model, errors = validate_output("PlanAction@1", {"action": "stop", "rationale_code": "INFEASIBLE", "label": "X"})
     assert model is None and errors
+
+
+def test_disabled_by_needs_a_macro_the_index_proves_is_off(index: InMemoryCodeIndex) -> None:
+    states = {"HAVE_MAX_FRAGMENT": False, "WOLFSSL_TLS13": True}
+    g = SchemaGate(index, {"send_alert(record_overflow)", "record_overflow"}, None, states.get)
+    off = check(g, claim(disabled_by=["HAVE_MAX_FRAGMENT"]), shown_session())
+    assert off == ()
+    assert "DISABLED_BY_NOT_VERIFIED" in check(g, claim(disabled_by=["WOLFSSL_TLS13"]), shown_session())
+    assert "DISABLED_BY_NOT_VERIFIED" in check(g, claim(disabled_by=["UNKNOWN_MACRO"]), shown_session())
+    assert "DISABLED_BY_NOT_VERIFIED" in check(gate(index), claim(disabled_by=["HAVE_MAX_FRAGMENT"]), shown_session())
+
+
+def test_defect_location_is_derived_from_the_reaction_mismatch_not_from_the_claimed_headline(
+    index: InMemoryCodeIndex,
+) -> None:
+    """Lỗi là phản ứng thiếu: nơi lỗi là hàm chứa các dòng của khía cạnh REACTION, dù T1 chọn phép so sánh làm vị trí chính."""
+    index.symbols.append(
+        SymbolInfo("src/internal.c", "DoProcessReplyEx", "function", 500, 700, "static int DoProcessReplyEx")
+    )
+    s = shown_session()
+    s.shown_lines |= {("src/internal.c", n) for n in range(600, 611)}
+    reaction = AspectClaim(
+        aspect=AspectName.REACTION, value=AspectValue.MISMATCH, observed="send_alert(record_overflow)", lines=(605, 608)
+    )
+    c = claim(aspects=[claim().aspects[0], reaction])
+    result = gate(index).check_location(c, s, run_id="r", requirement_id="TLS13-0042", msg_id="m")
+    assert result.accepted and result.draft is not None
+    payload = result.draft.payload
+    assert payload.defect_symbol == "DoProcessReplyEx" and payload.defect_lines == (605, 608)
+    assert payload.symbol == "GetRecordHeader"  # vị trí claim giữ nguyên cho liên kết độ phủ
+
+
+def test_no_defect_location_when_the_reaction_matches(index: InMemoryCodeIndex) -> None:
+    result = gate(index).check_location(claim(), shown_session(), run_id="r", requirement_id="TLS13-0042", msg_id="m")
+    assert result.draft is not None and result.draft.payload.defect_symbol is None

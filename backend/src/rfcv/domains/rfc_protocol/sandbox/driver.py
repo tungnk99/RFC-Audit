@@ -12,6 +12,7 @@ Một lần chạy một biến thể:
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -26,6 +27,9 @@ from rfcv.domains.rfc_protocol.spec.oracle_compiler import CompiledOracle, Concr
 from rfcv.evidence.artifacts import ArtifactStore
 from rfcv.evidence.models import Evidence, EvidenceDraft
 from rfcv.evidence.store import EvidenceStore
+
+ENVIRONMENT_RETRIES = 1  # số lần thử lại một ca khi hạ tầng lỗi (không áp cho NotImplementedError)
+ENVIRONMENT_RETRY_DELAY_S = 2.0
 
 
 class ScenarioRejected(ValueError):
@@ -124,16 +128,23 @@ class TestDriver:
         environment: int,
         coverage: bool,
     ) -> CaseResult:
-        try:
-            async with self._launcher.start(impl, coverage=coverage, environment=environment) as ep:
-                if not await self._backend.sanity(ep):
-                    return CaseResult(Outcome.ERROR, None, "sanity_failed")
-                trace = await self._backend.run(scenario, params, ep, seed)
-        except NotImplementedError:
-            raise  # khoảng trống cài đặt chứ không phải lỗi môi trường: phải lộ ra, không giấu thành ERROR
-        except Exception as exc:
-            # SUT không khởi động được, container sập, backend lỗi giữa chừng: lỗi môi trường, không phải FAIL của SUT.
-            return CaseResult(Outcome.ERROR, None, "environment_error", f"{type(exc).__name__}: {exc}"[:300])
+        trace: EventTrace | None = None
+        for attempt in range(ENVIRONMENT_RETRIES + 1):
+            try:
+                async with self._launcher.start(impl, coverage=coverage, environment=environment) as ep:
+                    if not await self._backend.sanity(ep):
+                        return CaseResult(Outcome.ERROR, None, "sanity_failed")
+                    trace = await self._backend.run(scenario, params, ep, seed)
+                break
+            except NotImplementedError:
+                raise  # khoảng trống cài đặt chứ không phải lỗi môi trường: phải lộ ra, không giấu thành ERROR
+            except Exception as exc:
+                # SUT không khởi động được, container sập, backend lỗi giữa chừng: lỗi môi trường, không phải FAIL của SUT.
+                # Thử lại vài lần trước khi kết luận (đo: máy ngủ làm `docker run`/`docker stop` quá hạn, ca đúng bị ERROR).
+                if attempt == ENVIRONMENT_RETRIES:
+                    return CaseResult(Outcome.ERROR, None, "environment_error", f"{type(exc).__name__}: {exc}"[:300])
+                await asyncio.sleep(ENVIRONMENT_RETRY_DELAY_S)
+        assert trace is not None
         if not trace.trigger_reached:
             return CaseResult(Outcome.ERROR, trace, "trigger_not_reached")
         if not trace.sut_alive_after:

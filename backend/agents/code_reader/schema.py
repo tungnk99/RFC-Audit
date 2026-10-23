@@ -36,4 +36,11 @@ class LocationClaim(Out):
     aspects: list[AspectClaim] = Field(default_factory=list[AspectClaim])
     call_path: list[str] = Field(default_factory=list[str])
     unexplored: list[str] = Field(default_factory=list[str])
+    disabled_by: list[str] = Field(
+        default_factory=list[str],
+        description=(
+            "Macro (công tắc cấu hình) khiến khối mã thực hiện yêu cầu bị biên dịch bỏ trong bản dựng này, ví dụ phản ứng nằm trong "
+            "`#ifdef HAVE_MAX_FRAGMENT` mà macro đó không bật. Cổng kiểm tra tất định macro thật sự không bật."
+        ),
+    )
     note: str | None = Field(default=None, description="Ghi chú tự do; mang nhãn UNTRUSTED, không tới agent đặc quyền.")

@@ -19,6 +19,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
+from rfcv.codeindex.c_repair import preproc_branches, repair_symbols
 from rfcv.codeindex.languages import LANGUAGES, LanguageSpec, Node, language_for, signature, text
 from rfcv.codeindex.languages import field as child
 
@@ -276,6 +277,13 @@ def index_file(lang: LanguageSpec, parser: Any, file: str, source: bytes, lines:
         now_in_fn = in_fn or t in lang.function_types
         for c in reversed(node.children):
             stack.append((c, inner_container, now_in_fn))
+
+    if lang.name == "c":
+        facts.symbols[:] = repair_symbols(file, lines, facts.symbols)
+        # Cấu trúc #if/#else quét theo dòng, không dựa vào cây tree-sitter (sai khi #ifdef cắt ngang câu lệnh).
+        facts.branches[:] = [
+            (file, c, i, a, e, json.dumps(cond, sort_keys=True)) for c, i, a, e, cond in preproc_branches(lines)
+        ]
 
 
 # ---------------------------------------------------------------- tệp
