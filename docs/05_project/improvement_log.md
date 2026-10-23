@@ -62,6 +62,12 @@ Mỗi cấu hình nên chạy mỗi ca **ít nhất 3 lần** vì kết quả c�
 | 13 | 2026-10-23 | #12 với RBS **sửa, thăm dò** TLS13-0043 (`record.length > 16401`) | bug | **VIOLATION V2** | 1 | 488 | 391.884 | 0% | 0/2 | 0 nạp lại |
 | 13 | 2026-10-23 | như trên | fix | NEEDS_REVIEW V7 (T1 bác bỏ ngưỡng: 16422 so với 16402) | 1 | 421 | 407.966 | 0% | 0/2 | 0 nạp lại |
 | 13 | 2026-10-23 | như trên | head | NEEDS_REVIEW V7 (như fix) | 1 | 420 | 372.664 | 0% | 0/2 | 0 nạp lại |
+| 14 | 2026-10-23 | **Mốc trước nâng cấp hiệu quả**: cờ build thật, `rfc-protocol@6`, phản biện có trần 2 vòng, RBS gốc (`run_real_matrix` out10; token = vòng điều tra, chưa gồm Report) | bug | VIOLATION V2, trúng hunk | 1 | ~520 | 274.477 | 0% | 0/2 | 0 nạp lại |
+| 14 | 2026-10-23 | như trên | fix | COMPLIANT V6 (BEHAVIORAL) | 4 | ~560 | 1.242.195 | 0% | 0/2 | 0 nạp lại |
+| 14 | 2026-10-23 | như trên | head | COMPLIANT V6 (BEHAVIORAL) | 4 | ~560 | 1.406.586 | 0% | 0/2 | 0 nạp lại |
+| 15 | 2026-10-23 | **Nâng cấp hiệu quả** (out12; token = mọi vai, gồm Report): cache nhân chứng + T3 song song, kịch bản dựng từ mẫu, Planner theo sổ tay tất định, T3 trước và định vị mã khi cần, kiểm toán COMPLIANT bằng luật, chẩn đoán T3 + gói ứng viên cho Code Reader, `rfc-protocol@8` | bug | VIOLATION V2, **trúng hunk** (`defect_hit`) | 2 | 121 | 161.099 | 0% | 0/1 | 0 nạp lại |
+| 15 | 2026-10-23 | như trên | fix | COMPLIANT V6 (BEHAVIORAL) | 1 | 39 | 34.071 | 0% | 0/0 | 0 nạp lại |
+| 15 | 2026-10-23 | như trên | head | COMPLIANT V6 (BEHAVIORAL) | 1 | 41 | 34.555 | 0% | 0/0 | 0 nạp lại |
 
 \* Lãng phí = token tiêu trong các lần chạy agent bị hỏng, chia tổng token. Mỗi ca mới chạy **một lần**, chưa đủ để nói về
 độ ổn định. Khi thêm dòng, ghi thêm thay đổi so với lần trước vào cột Cấu hình.
@@ -84,6 +90,13 @@ token (`budget_per_task.tokens`) chứ không phải số lượt. Việc 4/5 l�
 Dòng 10, 11 (chạy THẬT, chi tiết ở [real_run_report.md](../04_evaluation/real_run_report.md)): đây là lần đầu có SUT thật. Với RBS gốc cả ba phiên bản ra NEEDS_REVIEW (V1) vì
 OpenSSL và GnuTLS cùng FAIL đối chứng `at_limit=16640` (chúng cảnh báo từ 16402): đặc tả suy phía hợp lệ mà RFC không nói (CT-26). Với RBS sửa (thăm dò) nhãn đúng cả ba. Code Reader hỏng ở
 **mọi** lần chạy (hết 400k token, T1 = 0, 83-85% token lãng phí; CT-27). Mỗi cấu hình mới chạy một lần.
+
+Dòng 14, 15 (chạy THẬT, cùng ba phiên bản, RBS gốc, `scripts/run_real_matrix.py`): sau nâng cấp hiệu quả nhãn vẫn đúng cả ba (VIOLATION / COMPLIANT / COMPLIANT) nhưng
+bản đúng giảm từ 1,24-1,41 triệu token và 4 vòng xuống **34 nghìn token và 1 vòng** (chỉ còn Report; không Planner, Tester, Code Reader, Verifier), thời gian từ ~560 s xuống ~40 s
+(60/96 ca T3 lấy từ bộ nhớ đệm nhân chứng). Bản lỗi giảm từ 274k xuống 161k token và từ ~520 s xuống 121 s, và lần đầu **định vị đúng nơi lỗi**: T1 ở `DoProcessReplyEx`
+(23426-23444, `defect_lines` 23440-23441 trúng hunk của `c18833f52`), `disabled_by = HAVE_MAX_FRAGMENT`, báo cáo nêu đúng nguyên nhân gốc và hướng sửa. Điều kiện
+ngoài mục tiêu: bug còn 161k so với mục tiêu 130k; Report cho bản đúng tốn 34k (nhiều dòng T3). Rủi ro cần đo tiếp: chế độ hiệu quả bỏ T1 và phản biện LLM cho COMPLIANT đã qua kiểm toán
+(so với `--effort thorough` trên bộ lỗi tạo sẵn để biết tỉ lệ COMPLIANT sai).
 
 Dòng 12, 13 (chạy THẬT sau các sửa của CT-26/27; mỗi cấu hình một lần): Code Reader chạy được ở **cả 6** lần (trước đó 0/6), tạo T1 ở `GetRecordHeader`, 0% token lãng phí, 340-410k token mỗi lần chạy
 (riêng Code Reader khoảng 310k, mục tiêu 200k chưa đạt; tiền tố cố định khoảng 12k token mỗi lượt). Bản lỗi ra VIOLATION đúng cả với RBS gốc lẫn RBS sửa. Bản sửa và head **chưa** ra COMPLIANT: T1 chỉ đọc phép kiểm tra tiêu đề bản ghi (16422/16486)
@@ -327,7 +340,7 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 - **Hậu quả:** bản đúng không ra COMPLIANT (kết luận được 1/3 mục); mâu thuẫn hành vi/mã bị coi là kết luận thay vì là lý do điều tra tiếp.
 - **Hướng sửa:** thêm luật sổ tay: nhãn tạm V7 do T1 bác bỏ khi T3 đủ PASS thì giao `TRACE_PATHS`/`RECHECK` (lần các đường vào còn lại ghi ở `unexplored`) trước khi dừng; engine không coi V7-refuted là đủ khi còn ngân sách; sau điều tra T1 mới có thể không còn bác bỏ.
 - **Đóng khi:** fix và head ra COMPLIANT (V6) với RBS sửa trên SUT thật mà không nới V7; bug vẫn VIOLATION; ghi số vòng và token thêm.
-
+- **Kết quả (Nhật ký đo #15):** đạt, fix/head COMPLIANT 1 vòng 34k token; mâu thuẫn T1-T3 (mã nói có phản ứng, chạy thật không) xử lý trực tiếp bằng luật R3-recheck-direct. Đóng, còn đo tỉ lệ COMPLIANT sai của chế độ hiệu quả.
 ### CT-28 · P2 · Độ phủ: 0,12-0,19% mã, 1 yêu cầu, kịch bản chỉ chạm 1/5 đường kích hoạt của tlsfuzzer
 - **Bằng chứng:** ca FAIL duy nhất của fix/head (`too big ClientHello`, đệm 16168) nằm ngoài kịch bản; bản lỗi hỏng ở 4 nhóm ca của tlsfuzzer, hệ thống chỉ chạm nhóm ciphertext.
 - **Hướng sửa:** kịch bản ClientHello/Finished có đệm; đo độ phủ mã bằng gcov/lcov (LINKED); chạy T3 song song.
