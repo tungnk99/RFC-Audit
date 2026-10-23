@@ -87,6 +87,17 @@ class DockerSutLauncher:
     poll_s: float = 0.15
     _verified: set[str] = field(default_factory=set[str])
 
+    async def identity(self, impl: str) -> str | None:
+        """Định danh bất biến của ảnh chạy `impl` (id ảnh docker), để dùng làm khoá bộ nhớ đệm nhân chứng; None nếu không rõ."""
+        spec = self.specs.get(impl)
+        if spec is None:
+            return None
+        try:
+            res = await self.cli("image", "inspect", "--format", "{{.Id}}", spec.image, timeout=30.0)
+        except Exception:
+            return None
+        return res.stdout.decode("utf-8", "replace").strip() or None if res.ok else None
+
     def start(self, impl: str, *, coverage: bool, environment: int) -> AbstractAsyncContextManager[Endpoint]:
         # `coverage` bị bỏ qua có chủ đích: image chưa dựng kèm đo độ phủ (nhãn tối đa BEHAVIORAL).
         return self._session(impl, environment)

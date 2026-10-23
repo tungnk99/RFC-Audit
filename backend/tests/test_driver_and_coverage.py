@@ -259,3 +259,85 @@ async def test_a_transient_environment_error_is_retried_once(
     evs = await d.run_requirement(run_id="run-test", oracle=oracle, scenario=SCENARIO, seed=1)
     cases = [e["payload"] for e in trace.events("t3_case")]
     assert evs and cases and not any(c["reason"] == "environment_error" for c in cases[:1])
+
+
+class IdentifiedLauncher(FakeLauncher):
+    """Bộ chạy giả biết định danh ảnh (như DockerSutLauncher) để bật bộ nhớ đệm nhân chứng."""
+
+    def __init__(self, image_of: dict[str, str]) -> None:
+        super().__init__()
+        self._image_of = image_of
+
+    async def identity(self, impl: str) -> str | None:
+        return self._image_of.get(impl)
+
+
+def cached_driver(
+    store: EvidenceStore, trace: TraceLog, tmp_path: Path, cache: object, launcher: IdentifiedLauncher, **kw: object
+) -> TestDriver:
+    return TestDriver(
+        FakeBackend(),
+        launcher,
+        store,
+        ArtifactStore(tmp_path / "artifacts"),
+        trace,
+        sut_impl="sut",
+        references=["rustls", "openssl"],
+        witness_cache=cache,  # type: ignore[arg-type]
+        **kw,  # type: ignore[arg-type]
+    )
+
+
+async def test_reference_results_are_computed_once_and_reused_across_runs(
+    store: EvidenceStore, trace: TraceLog, tmp_path: Path, oracle: CompiledOracle
+) -> None:
+    from rfcv.domains.rfc_protocol.sandbox.witness_cache import WitnessCache
+
+    cache = WitnessCache(tmp_path / "cache" / "witness.sqlite")
+    images = {"rustls": "sha256:aaa", "openssl": "sha256:bbb"}
+    first_launcher = IdentifiedLauncher(images)
+    d1 = cached_driver(store, trace, tmp_path, cache, first_launcher)
+    first = await d1.run_requirement(run_id="run-1", oracle=oracle, scenario=SCENARIO, seed=7)
+    ref_starts = [s for s in first_launcher.started if s[0] in images]
+    assert ref_starts and d1.cache_hits == 0
+
+    second_launcher = IdentifiedLauncher(images)
+    d2 = cached_driver(store, trace, tmp_path, cache, second_launcher)
+    second = await d2.run_requirement(run_id="run-2", oracle=oracle, scenario=SCENARIO, seed=7)
+    assert not [s for s in second_launcher.started if s[0] in images]  # tham chiếu không chạy lại
+    assert d2.cache_hits == len(ref_starts)
+    witnesses = lambda evs: [  # noqa: E731
+        tuple((w.impl, w.outcome) for w in e.payload.witness.positive)
+        for e in evs  # type: ignore[union-attr]
+    ]
+    assert witnesses(first) == witnesses(second)  # bằng chứng giữ nguyên nhân chứng như khi chạy thật
+    hits = [e["payload"] for e in trace.events("t3_case") if e["payload"].get("cache_hit")]
+    assert hits and all(h["origin_run"] == "run-1" for h in hits)
+
+
+async def test_a_changed_reference_image_invalidates_the_cache(
+    store: EvidenceStore, trace: TraceLog, tmp_path: Path, oracle: CompiledOracle
+) -> None:
+    from rfcv.domains.rfc_protocol.sandbox.witness_cache import WitnessCache
+
+    cache = WitnessCache(tmp_path / "cache" / "witness.sqlite")
+    await cached_driver(
+        store, trace, tmp_path, cache, IdentifiedLauncher({"rustls": "a", "openssl": "b"})
+    ).run_requirement(run_id="run-1", oracle=oracle, scenario=SCENARIO, seed=7)
+    new_launcher = IdentifiedLauncher({"rustls": "a2", "openssl": "b2"})
+    d = cached_driver(store, trace, tmp_path, cache, new_launcher)
+    await d.run_requirement(run_id="run-2", oracle=oracle, scenario=SCENARIO, seed=7)
+    assert d.cache_hits == 0 and any(s[0] == "rustls" for s in new_launcher.started)
+
+
+async def test_concurrent_variants_are_recorded_in_a_fixed_order(
+    store: EvidenceStore, trace: TraceLog, tmp_path: Path, oracle: CompiledOracle
+) -> None:
+    """Chạy đồng thời không được đổi thứ tự bằng chứng (chuỗi băm phải ổn định)."""
+    serial = await cached_driver(store, trace, tmp_path, None, IdentifiedLauncher({}), concurrency=1).run_requirement(
+        run_id="run-1", oracle=oracle, scenario=SCENARIO, seed=7
+    )
+    names = [e.payload.variant for e in serial]  # type: ignore[union-attr]
+    d = cached_driver(store, trace, tmp_path, None, IdentifiedLauncher({}), concurrency=8)
+    parallel = await d.run_requirement(run_id="run-2", oracle=oracle, scenario=SCENARIO, seed=7)
+    assert [e.payload.variant for e in parallel] == names  # type: ignore[union-attr]

@@ -22,6 +22,7 @@ from rfcv.core.trace import TraceLog
 from rfcv.domains.rfc_protocol.payloads import Outcome, Producer, T3Payload, Tier, Witness, WitnessRun
 from rfcv.domains.rfc_protocol.sandbox.backend import Backend, EventTrace, SutLauncher
 from rfcv.domains.rfc_protocol.sandbox.dsl import DslSpec
+from rfcv.domains.rfc_protocol.sandbox.witness_cache import WitnessCache, cache_key
 from rfcv.domains.rfc_protocol.schemas import ScenarioProposal
 from rfcv.domains.rfc_protocol.spec.oracle_compiler import CompiledOracle, ConcreteVariant, instantiate_samples
 from rfcv.evidence.artifacts import ArtifactStore
@@ -30,6 +31,7 @@ from rfcv.evidence.store import EvidenceStore
 
 ENVIRONMENT_RETRIES = 1  # số lần thử lại một ca khi hạ tầng lỗi (không áp cho NotImplementedError)
 ENVIRONMENT_RETRY_DELAY_S = 2.0
+DEFAULT_CONCURRENCY = 4  # số container chạy đồng thời (mỗi ca một container; 1 CPU, 512 MB)
 
 
 class ScenarioRejected(ValueError):
@@ -44,6 +46,21 @@ class CaseResult:
     detail: str | None = (
         None  # lỗi môi trường: tên và thông điệp ngoại lệ (cắt ngắn); chỉ vào trace, không vào bằng chứng
     )
+
+
+@dataclass(frozen=True)
+class _VariantRun:
+    """Kết quả chạy một biến thể, chưa ghi vào kho bằng chứng."""
+
+    name: str
+    variant: ConcreteVariant
+    params: dict[str, int | str]
+    seed: int | None
+    scenario_hash: str
+    first: CaseResult
+    runs: list[CaseResult]
+    positive: tuple[WitnessRun, ...]
+    negative: tuple[WitnessRun, ...]
 
 
 class TestDriver:
@@ -62,6 +79,8 @@ class TestDriver:
         mutants: Sequence[str] = (),
         reruns_on_fail: int = 2,
         coverage: bool = True,
+        concurrency: int = DEFAULT_CONCURRENCY,
+        witness_cache: WitnessCache | None = None,
     ) -> None:
         self._backend = backend
         self._launcher = launcher
@@ -73,6 +92,10 @@ class TestDriver:
         self._mutants = tuple(mutants)
         self._reruns = reruns_on_fail
         self._coverage = coverage
+        self._gate = asyncio.Semaphore(max(1, concurrency))
+        self._witness_cache = witness_cache
+        self.cache_hits = 0
+        self._identity: dict[str, str | None] = {}
 
     @property
     def dsl(self) -> DslSpec | None:
@@ -93,15 +116,20 @@ class TestDriver:
         if not check.ok:
             raise ScenarioRejected("; ".join(check.errors))
         scenario_hash = self._artifacts.put(scenario.model_dump_json().encode())
-        out: list[Evidence] = []
-        for variant in oracle.variants:
-            for name, params, vseed in self._instances(variant, seed):
-                out.append(
-                    await self._run_variant(
-                        run_id, oracle, scenario, scenario_hash, variant, name, params, vseed, requested_by
-                    )
-                )
-        return out
+        jobs = [
+            (variant, name, params, vseed)
+            for variant in oracle.variants
+            for name, params, vseed in self._instances(variant, seed)
+        ]
+        # Chạy các biến thể ĐỒNG THỜI (có trần số container), nhưng ghi bằng chứng theo thứ tự cố định để chuỗi băm không phụ
+        # thuộc ca nào xong trước.
+        results = await asyncio.gather(
+            *(
+                self._execute_variant(run_id, oracle, scenario, scenario_hash, variant, name, params, vseed)
+                for variant, name, params, vseed in jobs
+            )
+        )
+        return [self._record_variant(run_id, oracle, r, requested_by) for r in results]
 
     @staticmethod
     def _instances(variant: ConcreteVariant, seed: int) -> list[tuple[str, dict[str, int | str], int | None]]:
@@ -183,6 +211,33 @@ class TestDriver:
             "available_variants": names[:12],
         }
 
+    async def _witness_key(
+        self,
+        impl: str,
+        scenario: ScenarioProposal,
+        oracle: CompiledOracle,
+        params: dict[str, int | str],
+        seed: int,
+    ) -> str | None:
+        """Khoá cache của một ca tham chiếu; None nếu không định danh được ảnh (không cache)."""
+        if self._witness_cache is None:
+            return None
+        if impl not in self._identity:
+            identify: Any = getattr(self._launcher, "identity", None)
+            self._identity[impl] = await identify(impl) if identify is not None else None
+        ident = self._identity[impl]
+        if ident is None:
+            return None
+        return cache_key(
+            image=ident,
+            impl=impl,
+            scenario=scenario.model_dump_json(),
+            oracle=oracle.oracle_hash,
+            params=params,
+            seed=seed,
+            backend=self._backend.name,
+        )
+
     async def _traced_case(
         self,
         run_id: str,
@@ -197,8 +252,36 @@ class TestDriver:
         environment: int,
         coverage: bool,
     ) -> CaseResult:
-        """Một ca chạy kèm một sự kiện `t3_case`: vai (SUT, chạy lại, tham chiếu, đột biến), kết quả, vì sao ERROR."""
-        result = await self._case(impl, oracle, variant, scenario, params, seed, environment, coverage)
+        """Một ca chạy kèm một sự kiện `t3_case`: vai (SUT, chạy lại, tham chiếu, đột biến), kết quả, vì sao ERROR.
+
+        Ca của bản tham chiếu được dùng lại từ bộ nhớ đệm khi cùng ảnh, kịch bản, oracle và tham số (xem witness_cache)."""
+        key = await self._witness_key(impl, scenario, oracle, params, seed) if role == "reference" else None
+        if key is not None and self._witness_cache is not None and (hit := self._witness_cache.get(key)) is not None:
+            outcome, origin = hit
+            self.cache_hits += 1
+            self._trace.append(
+                run_id,
+                "t3_case",
+                {
+                    "variant": name,
+                    "role": role,
+                    "impl": impl,
+                    "environment": environment,
+                    "outcome": outcome.value,
+                    "reason": None,
+                    "detail": None,
+                    "trigger_reached": None,
+                    "sut_alive_after": None,
+                    "cache_hit": True,
+                    "origin_run": origin,
+                },
+                requirement_id=oracle.requirement_id,
+            )
+            return CaseResult(outcome, None)
+        async with self._gate:
+            result = await self._case(impl, oracle, variant, scenario, params, seed, environment, coverage)
+        if key is not None and self._witness_cache is not None:
+            self._witness_cache.put(key, result.outcome, run_id)
         trace = result.trace
         self._trace.append(
             run_id,
@@ -226,7 +309,7 @@ class TestDriver:
             return oracle.side_of(variant.field, value)
         return variant.side
 
-    async def _run_variant(
+    async def _execute_variant(
         self,
         run_id: str,
         oracle: CompiledOracle,
@@ -236,8 +319,8 @@ class TestDriver:
         name: str,
         params: dict[str, int | str],
         seed: int | None,
-        requested_by: dict[str, str] | None,
-    ) -> Evidence:
+    ) -> _VariantRun:
+        """Chạy mọi ca của một biến thể (SUT, chạy lại khi FAIL, bản tham chiếu, bản đột biến) mà CHƯA ghi bằng chứng."""
         s = seed or 0
 
         async def case(role: str, impl: str, environment: int, coverage: bool) -> CaseResult:
@@ -250,18 +333,29 @@ class TestDriver:
         if first.outcome is Outcome.FAIL:
             for env in range(1, self._reruns + 1):
                 runs.append(await case("rerun", self._sut, env, False))
-        consistent = len({r.outcome for r in runs}) == 1
+        references = await asyncio.gather(*(case("reference", ref, 0, False) for ref in self._refs))
+        mutants = await asyncio.gather(*(case("mutant", mutant, 0, False) for mutant in self._mutants))
+        return _VariantRun(
+            name=name,
+            variant=variant,
+            params=params,
+            seed=seed,
+            scenario_hash=scenario_hash,
+            first=first,
+            runs=runs,
+            positive=tuple(
+                WitnessRun(impl=ref, outcome=r.outcome) for ref, r in zip(self._refs, references, strict=True)
+            ),
+            negative=tuple(WitnessRun(impl=m, outcome=r.outcome) for m, r in zip(self._mutants, mutants, strict=True)),
+        )
 
-        positive: list[WitnessRun] = []
-        for ref in self._refs:
-            r = await case("reference", ref, 0, False)
-            positive.append(WitnessRun(impl=ref, outcome=r.outcome))
-        negative: list[WitnessRun] = []
-        for mutant in self._mutants:
-            r = await case("mutant", mutant, 0, False)
-            negative.append(WitnessRun(impl=mutant, outcome=r.outcome))
-
-        artifacts: dict[str, str] = {"scenario": scenario_hash}
+    def _record_variant(
+        self, run_id: str, oracle: CompiledOracle, v: _VariantRun, requested_by: dict[str, str] | None
+    ) -> Evidence:
+        """Ghi bằng chứng T3 của một biến thể đã chạy xong (gọi theo thứ tự cố định để chuỗi băm ổn định)."""
+        first = v.first
+        consistent = len({r.outcome for r in v.runs}) == 1
+        artifacts: dict[str, str] = {"scenario": v.scenario_hash}
         if first.trace is not None:
             for key, blob in (("sut_log", first.trace.raw_log), ("pcap", first.trace.pcap), ("lcov", first.trace.lcov)):
                 if blob:
@@ -271,19 +365,19 @@ class TestDriver:
             observed["reason"] = first.reason
 
         payload = T3Payload(
-            scenario=scenario_hash,
+            scenario=v.scenario_hash,
             oracle=oracle.oracle_hash,
-            variant=name,
-            variant_class=variant.variant_class,
-            side=self._side(oracle, variant, params),  # type: ignore[arg-type]
-            params=params,
-            seed=seed,
+            variant=v.name,
+            variant_class=v.variant.variant_class,
+            side=self._side(oracle, v.variant, v.params),  # type: ignore[arg-type]
+            params=v.params,
+            seed=v.seed,
             trigger_reached=first.trace.trigger_reached if first.trace else False,
             outcome=first.outcome,
             observed=observed,
-            runs=len(runs),
+            runs=len(v.runs),
             consistent=consistent,
-            witness=Witness(positive=tuple(positive), negative=tuple(negative)),
+            witness=Witness(positive=v.positive, negative=v.negative),
             artifacts=artifacts,
         )
         evidence = self._store.append(
@@ -294,13 +388,13 @@ class TestDriver:
                 payload=payload,
                 produced_by=Producer.TEST_DRIVER,
                 requested_by=requested_by,
-                provenance={"backend": self._backend.name, "sut": self._sut, "params": content_hash(params)},
+                provenance={"backend": self._backend.name, "sut": self._sut, "params": content_hash(v.params)},
             )
         )
         self._trace.append(
             run_id,
             "t3",
-            {"evidence_id": evidence.evidence_id, "variant": name, "outcome": first.outcome.value},
+            {"evidence_id": evidence.evidence_id, "variant": v.name, "outcome": first.outcome.value},
             requirement_id=oracle.requirement_id,
         )
         return evidence

@@ -23,7 +23,9 @@ from rfcv.domains.rfc_protocol.adapter_view import to_vocabulary, vocabulary_ter
 from rfcv.domains.rfc_protocol.agent_tools import AgentTools
 from rfcv.domains.rfc_protocol.rfc_gate import load_rfc_documents, lookup_sentence
 from rfcv.domains.rfc_protocol.rules import RULE_SET, ProtocolRequirement
+from rfcv.domains.rfc_protocol.sandbox import witness_cache
 from rfcv.domains.rfc_protocol.sandbox.driver import TestDriver
+from rfcv.domains.rfc_protocol.sandbox.witness_cache import WitnessCache
 from rfcv.domains.rfc_protocol.schema_gate import SchemaGate
 from rfcv.domains.rfc_protocol.spec.oracle_compiler import compile_oracle
 from rfcv.domains.rfc_protocol.spec.rbs import parse_rbs
@@ -99,6 +101,12 @@ class ProtocolRuntime:
             if macro_state is not None
             else None,
         )
+        run_root = getattr(getattr(rt, "config", None), "run_dir", None)
+        cache = (
+            WitnessCache(Path(run_root) / "cache" / "witness.sqlite")
+            if witness_cache.enabled() and run_root is not None and hasattr(rt.providers.sut_launcher, "identity")
+            else None
+        )
         driver = TestDriver(
             rt.providers.backend,
             rt.providers.sut_launcher,
@@ -107,6 +115,7 @@ class ProtocolRuntime:
             rt.trace,
             sut_impl=manifest.sut.repo.rstrip("/").rsplit("/", 1)[-1],
             references=[ref.split("@", 1)[0] for ref in manifest.references],
+            witness_cache=cache,
         )
         self._driver = driver
         location, scenario = LocationHandler(rt, gate), ScenarioHandler(rt, driver)
