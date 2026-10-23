@@ -75,6 +75,9 @@ class RuntimeConfig:
     executor: str | None = None  # tên trong registry `rfcv.executors`
     sut_launcher: str | None = None  # tên trong registry `rfcv.sut_launchers`
     enable_skills: bool = True
+    scripted_plans: bool = (
+        True  # luật sổ tay tất định thì hub tự lập kế hoạch, không gọi Planner LLM (xem PlaybookRule.deterministic)
+    )
     explain: bool = False  # sau mỗi kết luận, Report agent viết giải thích và Output gate kiểm (thêm khoảng 4% token)
     budget: RequirementBudget | None = None
     image_digests: Mapping[str, str] = field(default_factory=dict[str, str])
@@ -294,6 +297,7 @@ def build_runtime(
                 gateway.register(spec)
         handlers: Mapping[str, Any] = pack.runtime.handlers(rt) if pack.runtime else {}
         rt.loop = ExecutionLoop(
+            scripted_plans=config.scripted_plans,
             run_id=run_id,
             runner=runner,
             policy=policy,

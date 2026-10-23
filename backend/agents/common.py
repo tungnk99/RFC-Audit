@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from rfcv.domains.rfc_protocol.payloads import AspectName
 
 ORACLE_KEY = "oracle"  # khoá trong `Investigation.domain_state` giữ oracle đã biên dịch
+RBS_KEY = "rbs"  # khoá trong `Investigation.domain_state` giữ RBS đã duyệt (để dựng kịch bản từ mẫu)
 
 
 class Out(BaseModel):

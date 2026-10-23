@@ -43,6 +43,7 @@ def _rules() -> list[PlaybookRule]:
                 INITIAL[rtype].value,
                 priority=10,
                 note="Chạy kiểm thử và tìm mã song song vì hai việc độc lập.",
+                deterministic=True,
             )
         )
     rules.append(
@@ -53,6 +54,7 @@ def _rules() -> list[PlaybookRule]:
             R.INITIAL_TYPE_D.value,
             priority=10,
             note="Loại D không chạy kiểm thử: bằng chứng tĩnh.",
+            deterministic=True,
         )
     )
     # Nhãn tạm COMPLIANT là kết luận dễ sai nhất: luôn phản biện một lần trước khi dừng.
@@ -63,6 +65,7 @@ def _rules() -> list[PlaybookRule]:
             (Suggest(T.CRITIQUE.value),),
             R.CRITIQUE_BEFORE_COMPLIANT.value,
             priority=20,
+            deterministic=True,
         )
     )
     # Mọi vấn đề phản biện đã được xử lý xong: phản biện lại thay vì giao lặp lại cùng nhiệm vụ.
@@ -73,6 +76,7 @@ def _rules() -> list[PlaybookRule]:
             (Suggest(T.CRITIQUE.value),),
             R.CRITIQUE_BEFORE_COMPLIANT.value,
             priority=21,
+            deterministic=True,
         )
     )
     rules.append(
@@ -143,6 +147,7 @@ def _rules() -> list[PlaybookRule]:
             (Suggest(T.SELECT_TESTS.value, bind={"missing_variants": "missing.variants"}),),
             R.FILL_MISSING_VARIANT.value,
             priority=60,
+            deterministic=True,
         )
     )
     for rtype in ("A", "B", "C", "D"):
@@ -153,6 +158,7 @@ def _rules() -> list[PlaybookRule]:
                 (_locate(rtype),),
                 R.FILL_MISSING_VARIANT.value,
                 priority=70,
+                deterministic=True,
             )
         )
     rules.append(
@@ -162,6 +168,7 @@ def _rules() -> list[PlaybookRule]:
             (Suggest(T.STATIC_QUERY.value),),
             R.FILL_MISSING_VARIANT.value,
             priority=80,
+            deterministic=True,
         )
     )
     return rules

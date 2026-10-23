@@ -466,3 +466,58 @@ async def test_follow_ups_after_critique_are_capped_and_the_unresolved_issue_is_
     stop = payloads(trace, "stop")[0]
     assert stop["critique_unresolved"] and stop["critique_unresolved"][0]["kind"] == "CONTRADICTION"
     assert sum(c.to_role == "planner" for c in runner.calls) == 4  # không chạy tới hết 10 vòng
+
+
+async def test_a_scripted_plan_replaces_the_planner_llm_when_the_playbook_rule_is_deterministic(
+    store: EvidenceStore, trace: TraceLog, policy: PolicyStore
+) -> None:
+    """Vòng 1 của loại B luôn là R1 (kiểm thử + định vị song song): hub tự lập, không gọi Planner; sau đó R2 giao phản biện."""
+    runner = FakeRunner(lambda n: plan(CRITIQUE), OUTPUTS)  # nếu Planner LLM bị gọi, kế hoạch này sẽ sai ở vòng 1
+    handlers = {
+        TaskType.SELECT_TESTS: WriteOnce(store, full_passing_set),
+        TaskType.LOCATE: Noop(),
+        TaskType.CRITIQUE: Noop(),
+    }
+    loop = ExecutionLoop(
+        run_id="run-test",
+        runner=runner,
+        policy=policy,
+        store=store,
+        trace=trace,
+        handlers=handlers,
+        scripted_plans=True,
+    )
+    verdict = await loop.investigate(inv())
+    assert (verdict.label, verdict.rule) == (Label.COMPLIANT, "V6")
+    assert "planner" not in [c.to_role for c in runner.calls]
+    sources = [p.get("source") for p in payloads(trace, "plan")]
+    assert sources and all(s == "playbook" for s in sources)
+
+
+async def test_a_failed_task_hands_the_decision_back_to_the_planner_llm(
+    store: EvidenceStore, trace: TraceLog, policy: PolicyStore
+) -> None:
+    class Flaky(FakeRunner):
+        async def run(self, envelope: Envelope, context: dict[str, Any], session: ToolSession) -> RoleOutcome:
+            if envelope.to_role == "code_reader":
+                self.calls.append(envelope)
+                return RoleOutcome(None, 10, "UsageLimitExceeded")
+            return await super().run(envelope, context, session)
+
+    runner = Flaky(lambda n: plan(CRITIQUE), OUTPUTS)
+    handlers = {
+        TaskType.SELECT_TESTS: WriteOnce(store, full_passing_set),
+        TaskType.LOCATE: Noop(),
+        TaskType.CRITIQUE: Noop(),
+    }
+    loop = ExecutionLoop(
+        run_id="run-test",
+        runner=runner,
+        policy=policy,
+        store=store,
+        trace=trace,
+        handlers=handlers,
+        scripted_plans=True,
+    )
+    await loop.investigate(inv())
+    assert "planner" in [c.to_role for c in runner.calls]  # sau lỗi tác vụ, cần phán đoán chứ không chỉ làm theo luật

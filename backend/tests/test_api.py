@@ -346,7 +346,7 @@ def test_stats_and_run_actions_over_a_finished_run(served: tuple[TestClient, Run
 
     status, stats = call(conn, "GET", "/api/stats?days=7")
     assert status == 200 and stats["totals"]["runs"] == 1 and stats["verdicts"] == {"VIOLATION": 1}
-    assert stats["totals"]["evidence"] > 0 and {r["role"] for r in stats["roles"]} >= {"planner", "tester"}
+    assert stats["totals"]["evidence"] > 0 and {r["role"] for r in stats["roles"]} >= {"code_reader"}
     assert sum(d["runs"] for d in stats["daily"]) == 1
 
     listed = call(conn, "GET", "/api/runs?digest=true")[1]["runs"]

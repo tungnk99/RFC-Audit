@@ -55,6 +55,7 @@ class Situation:
 @dataclass(frozen=True)
 class Advice:
     rule_id: str
+    deterministic: bool
     stop: bool
     tasks: tuple[TaskSpec, ...]
     rationale_code: str
@@ -179,7 +180,7 @@ def advise(
         if not matches(rule.when, sit):
             continue
         if rule.stop:
-            return Advice(rule.id, True, (), rule.rationale_code, sit.signature())
+            return Advice(rule.id, rule.deterministic, True, (), rule.rationale_code, sit.signature())
         built: list[TaskSpec] = []
         for s in rule.suggest:
             definition = tasks.get(s.task_type)
@@ -189,7 +190,9 @@ def advise(
             if task is not None:
                 built.append(task)
         if built:
-            return Advice(rule.id, False, tuple(built[:MAX_TASKS]), rule.rationale_code, sit.signature())
+            return Advice(
+                rule.id, rule.deterministic, False, tuple(built[:MAX_TASKS]), rule.rationale_code, sit.signature()
+            )
     return None
 
 

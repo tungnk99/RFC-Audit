@@ -12,7 +12,7 @@ from typing import Any
 
 from agents.code_indexer.handler import ComponentMapHandler
 from agents.code_reader.handler import LocationHandler
-from agents.common import ORACLE_KEY, TaskType
+from agents.common import ORACLE_KEY, RBS_KEY, TaskType
 from agents.locator.service import Locator, requirement_keywords
 from agents.tester.handler import ScenarioHandler
 from agents.verifier.handler import NoopHandler
@@ -118,7 +118,9 @@ class ProtocolRuntime:
             witness_cache=cache,
         )
         self._driver = driver
-        location, scenario = LocationHandler(rt, gate), ScenarioHandler(rt, driver)
+        adapter_dir = getattr(getattr(rt, "config", None), "adapter_dir", None)
+        location = LocationHandler(rt, gate)
+        scenario = ScenarioHandler(rt, driver, Path(adapter_dir) / "templates" if adapter_dir is not None else None)
         run_id = getattr(rt, "run_id", None) or ""
         return {
             TaskType.LOCATE.value: location,
@@ -176,7 +178,7 @@ class ProtocolRuntime:
                 requirement=requirement,
                 context=context,
                 vocabulary_terms=terms,
-                domain_state={ORACLE_KEY: oracle},
+                domain_state={ORACLE_KEY: oracle, RBS_KEY: rbs},
             )
             self._investigations[requirement.requirement_id] = inv
             out.append(inv)

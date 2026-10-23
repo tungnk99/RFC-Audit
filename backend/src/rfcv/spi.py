@@ -144,6 +144,9 @@ class PlaybookRule:
     stop: bool = False
     priority: int = 100  # nhỏ hơn khớp trước
     note: str = ""  # câu giải thích ngắn, in vào lời nhắc
+    # Quy tắc không cần phán đoán: hub dựng kế hoạch thẳng từ nó, không gọi Planner LLM (đo: 16k token vòng 1, 43–48k các vòng sau,
+    # trong khi kế hoạch luôn trùng lời khuyên của sổ tay). Chỉ áp dụng khi tình huống sạch: không lỗi tác vụ, không mâu thuẫn.
+    deterministic: bool = False
 
 
 @dataclass(frozen=True)

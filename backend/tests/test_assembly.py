@@ -103,7 +103,7 @@ def make_providers(runner: ScriptedRunner, **overrides: Any) -> Providers:
 
 async def test_k3_runs_end_to_end_to_violation(tmp_path: Path) -> None:
     runner = ScriptedRunner()
-    rt = build_runtime(make_config(tmp_path), make_providers(runner))
+    rt = build_runtime(make_config(tmp_path, scripted_plans=False), make_providers(runner))
     runner.gateway = rt.gateway
     try:
         verdicts = await rt.run_all(ADAPTER_DIR / "examples")
@@ -120,7 +120,9 @@ async def test_k3_runs_end_to_end_to_violation(tmp_path: Path) -> None:
     assert v.rules_version == rt.rules.version
     assert "scenario_result" in kinds and "location" in kinds
     assert chain_ok and stored == "VIOLATION"
-    assert runner.calls[0] == "planner" and "tester" in runner.calls and "code_reader" in runner.calls
+    # Kịch bản dựng từ mẫu adapter (RBS khớp), không gọi Tester LLM
+    assert runner.calls[0] == "planner" and "code_reader" in runner.calls and "tester" not in runner.calls
+    assert list(rt.trace.events("synthesized"))
 
 
 def test_run_manifest_records_every_input_digest(tmp_path: Path) -> None:

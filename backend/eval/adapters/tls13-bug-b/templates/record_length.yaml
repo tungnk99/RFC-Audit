@@ -21,5 +21,14 @@ cases:
   - variant: just_above_limit_plaintext
     limit: 16384
     case: "too big ClientHello msg, with 16168 bytes of padding"
+# Kịch bản dựng sẵn (DSL) cho yêu cầu loại B "nhận bản ghi dài hơn L ⇒ cảnh báo": hub dùng thẳng khi RBS khớp `match`, không cần
+# gọi Tester LLM. `until` và `within_ms` được thay bằng phản ứng và thời hạn trong RBS.
+match: {requirement_types: [B], trigger: receive, trigger_arg: record, expect: send_alert, field_prefix: "record."}
+bindings: {record.length: from_variant}
+steps:
+  - {op: connect, args: {}}
+  - {op: complete_handshake, args: {cipher: TLS_AES_128_GCM_SHA256, version: TLS1.3}}
+  - {op: send_raw_record, args: {content_type: application_data, encrypted: true, body: zeros, length: "$record.length"}}
+  - {op: expect, args: {until: "send_alert(record_overflow)", within_ms: 2000}}
 oracle: {pass: "alert == record_overflow and closed", fail: "otherwise",
          error: "sanity_failed or handshake_incomplete_before_trigger"}

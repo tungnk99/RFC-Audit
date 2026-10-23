@@ -140,8 +140,10 @@ class ExecutionLoop:
         rules: RuleSet | None = None,
         loop_detector: Callable[[], LoopDetector] | None = None,
         progress_of: Callable[[SufficiencyReport, int], Hashable] | None = None,
+        scripted_plans: bool = False,
     ) -> None:
         reg = current_registry()
+        self._scripted_plans = scripted_plans
         self.run_id = run_id
         self._runner = runner
         self._policy = policy
@@ -382,6 +384,16 @@ class ExecutionLoop:
         }
         if critique is not None:
             available["critique.latest"] = Labeled(critique.model_dump(mode="json"), TrustLabel.DERIVED)
+        scripted = self._scripted_plan(available, history)
+        if scripted is not None:
+            self._log(
+                "plan",
+                {**scripted.model_dump(mode="json"), "source": "playbook"},
+                req.requirement_id,
+                round=tracker.rounds,
+            )
+            self._log_plan_context(available, scripted, req.requirement_id, round=tracker.rounds)
+            return scripted
         outcome, _ = await self._run_role(
             self._loop.planner_role, inv, {"evidence_count": evidence_count}, available, tracker
         )
@@ -390,6 +402,22 @@ class ExecutionLoop:
         self._log("plan", outcome.output.model_dump(mode="json"), req.requirement_id, round=tracker.rounds)
         self._log_plan_context(available, outcome.output, req.requirement_id, round=tracker.rounds)
         return outcome.output
+
+    def _scripted_plan(self, available: Mapping[str, Labeled[Any]], history: list[dict[str, Any]]) -> PlanAction | None:
+        """Kế hoạch dựng thẳng từ sổ tay khi luật khớp là luật tất định và tình huống sạch; None: cần Planner LLM phán đoán.
+
+        Sạch nghĩa là: không nhiệm vụ nào trước đó hỏng, không mâu thuẫn. Mọi trường hợp khác (hỏng, mâu thuẫn, phản biện nêu
+        vấn đề) vẫn do Planner quyết định, vì đó là lúc cần phán đoán chứ không phải làm theo luật."""
+        if not self._scripted_plans or any(h.get("failure") for h in history):
+            return None
+        try:
+            sit = situation_from_context(self._ctx.build(self._loop.planner_role, available), self._loop.critique_task)
+            advice = advise(sit, current_registry().playbook, self._tasks, frozenset(self._handlers))
+        except (KeyError, TypeError, ValueError):
+            return None
+        if advice is None or advice.stop or not advice.deterministic or sit.conflicts or not advice.tasks:
+            return None
+        return PlanAction(action="dispatch", tasks=list(advice.tasks), rationale_code=advice.rationale_code)
 
     def _log_plan_context(
         self, available: Mapping[str, Labeled[Any]], plan: PlanAction, requirement_id: str, *, round: int
@@ -473,6 +501,22 @@ class ExecutionLoop:
             new = await handler.handle(inv, task, None, session, env.msg_id)
             self._log_task_result(inv, task, new, round=tracker.rounds, msg_id=env.msg_id)
             return None, new
+
+        synth: Any = getattr(handler, "synthesize", None)
+        if synth is not None and (made := synth(inv, task)) is not None:
+            # Hình dạng yêu cầu khớp một mẫu của adapter: dựng kịch bản bằng luật, không gọi LLM (tiết kiệm token và bỏ phương sai).
+            env = self._envelope(inv, role, body, tracker)
+            session = ToolSession(self.run_id, role, inv.requirement.requirement_id, max_tool_calls=0)
+            self._trace_envelope(env)
+            self._log(
+                "synthesized",
+                {"task_type": task.task_type, "example_id": getattr(made, "example_id", None), "msg_id": env.msg_id},
+                inv.requirement.requirement_id,
+                round=tracker.rounds,
+            )
+            new = await handler.handle(inv, task, made, session, env.msg_id)
+            self._log_task_result(inv, task, new, round=tracker.rounds, msg_id=env.msg_id)
+            return RoleOutcome(made, 0), new
 
         available = {
             **inv.context,
