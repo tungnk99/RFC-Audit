@@ -1,0 +1,83 @@
+# Bộ lỗi tạo sẵn cho TLS13-0042. Nhãn `expected` chốt theo ngữ nghĩa của phép sửa TRƯỚC khi chạy hệ thống (scripts/eval_make_mutants.py).
+# Ba mục lỗi/sửa thật (bug, fix, head) ở eval/adapters/tls13-{bug,fix,head}.
+items:
+- id: M1
+  adapter: eval/adapters/tls13-M1
+  code_root: runs/real/src/wolfssl-M1
+  commit: 7996c1901201a49e2949c51a05d5ae02a7051661
+  operator: WRONG_ALERT
+  requirement: TLS13-0042
+  expected: VIOLATION
+  subtle: false
+  fix_location: {file: src/internal.c, lines: [[26216, 26216]]}
+  why: "Bản ghi dài hơn ngưỡng của kiểm tra tiêu đề (>16486) bị cảnh báo decode_error thay vì record_overflow."
+- id: M2
+  adapter: eval/adapters/tls13-M2
+  code_root: runs/real/src/wolfssl-M2
+  commit: 3ffbe13c38294117c2af262f0a93352dd644d132
+  operator: DEL_ALERT
+  requirement: TLS13-0042
+  expected: VIOLATION
+  subtle: false
+  fix_location: {file: src/internal.c, lines: [[26215, 26215]]}
+  why: "Bỏ lời gọi gửi record_overflow ở nhánh LENGTH_ERROR: bản ghi quá dài bị từ chối nhưng không có cảnh báo (cùng kiểu lỗi thật của c18833f52)."
+- id: M3
+  adapter: eval/adapters/tls13-M3
+  code_root: runs/real/src/wolfssl-M3
+  commit: 165dac0c60b4847481ae7259bcfe9e5fc1390b00
+  operator: IFDEF_TRAP
+  requirement: TLS13-0042
+  expected: VIOLATION
+  subtle: false
+  fix_location: {file: src/internal.c, lines: [[26216, 26216], [26218, 26218]]}
+  why: "Lời gọi gửi record_overflow bị bọc trong #ifdef của một macro không bao giờ bật (bẫy F1: đọc lướt tưởng đúng)."
+- id: M4
+  adapter: eval/adapters/tls13-M4
+  code_root: runs/real/src/wolfssl-M4
+  commit: 1171566dcd8fb16c3392d812cc6befdff9677e29
+  operator: WRONG_ALERT_NARROW
+  requirement: TLS13-0042
+  expected: VIOLATION
+  subtle: true
+  fix_location: {file: src/internal.c, lines: [[26290, 26290]]}
+  why: "Chỉ đường kiểm tra sau giải mã (độ dài 16402–16486) gửi decode_error; trên 16486 vẫn đúng. Tinh vi: kiểm thử ở biên 16641 không thấy."
+- id: M5
+  adapter: eval/adapters/tls13-M5
+  code_root: runs/real/src/wolfssl-M5
+  commit: 6a032f329394a7cb5d6ede29f0ce65891f293470
+  operator: DEL_ALERT_BOTH
+  requirement: TLS13-0042
+  expected: VIOLATION
+  subtle: false
+  fix_location: {file: src/internal.c, lines: [[26215, 26215], [26288, 26288]]}
+  why: "Bỏ record_overflow ở cả hai đường kiểm tra: không bản ghi quá dài nào được cảnh báo."
+- id: M6
+  adapter: eval/adapters/tls13-M6
+  code_root: runs/real/src/wolfssl-M6
+  commit: e94251262f92820d93dd5d93300e78bc1938a160
+  operator: EQUIVALENT
+  requirement: TLS13-0042
+  expected: COMPLIANT
+  subtle: false
+  fix_location: {file: src/internal.c, lines: [[26288, 26288], [26290, 26290]]}
+  why: "Đổi thứ tự dòng ghi nhật ký và dòng gửi cảnh báo ở đường sau giải mã: hành vi quan sát được không đổi."
+- id: M7
+  adapter: eval/adapters/tls13-M7
+  code_root: runs/real/src/wolfssl-M7
+  commit: 8d64274a1dce398c0d5973163eb576f3c630c35d
+  operator: UNRELATED
+  requirement: TLS13-0042
+  expected: COMPLIANT
+  subtle: false
+  fix_location: {file: src/internal.c, lines: [[26212, 26212]]}
+  why: "Sửa cảnh báo của một yêu cầu khác (VERSION_ERROR gửi illegal_parameter thay vì protocol_version): không liên quan tới độ dài bản ghi."
+- id: M8
+  adapter: eval/adapters/tls13-M8
+  code_root: runs/real/src/wolfssl-M8
+  commit: c894eeb6c9896a90e298c76a4386cb4f3bb4533f
+  operator: THRESHOLD_MASKED
+  requirement: TLS13-0042
+  expected: COMPLIANT
+  subtle: false
+  fix_location: {file: src/internal.c, lines: [[13893, 13893]]}
+  why: "Nâng ngưỡng kiểm tra tiêu đề thêm 1000 byte: đường kiểm tra sau giải mã vẫn gửi record_overflow nên hành vi quan sát được không đổi (cần kiểm lại bằng tlsfuzzer)."
