@@ -1,0 +1,16 @@
+# ClientHello không có nhóm chung với máy chủ (RFC 8446 §4.1.1, §4.2.7: không thoả được ⇒ handshake_failure / insufficient_security).
+id: tls13.client_hello.groups
+requirement_types: [B]
+rfc_refs: ["RFC8446§4.1.1", "RFC8446§4.2.7"]
+checks_behavior: "receive(client_hello, supported_groups không giao) → send_alert(code); close"
+variant_class: groups
+runner: tlsfuzzer
+runner_version: {tlsfuzzer: "git:<sha>", tlslite-ng: "git:<sha>"}
+cases: []
+match: {requirement_types: [B], trigger: receive, trigger_arg: client_hello, expect: send_alert, field: client_hello.groups}
+bindings: {client_hello.groups: from_variant}
+steps:
+  - {op: connect, args: {}}
+  - {op: send_msg, args: {type: client_hello, key_share: valid, groups: "$client_hello.groups"}}
+  - {op: expect, args: {until: "send_alert(handshake_failure)", within_ms: 2000}}
+oracle: {pass: "alert == expected and closed", fail: "otherwise", error: "sanity_failed"}

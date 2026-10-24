@@ -149,3 +149,15 @@ def test_tlsfuzzer_client_hello_variants() -> None:
     assert not tls.validate(scenario({"op": "connect"}, bad, EXPECT)).ok
     req = type(tls).request(scenario({"op": "connect"}, hello, EXPECT), {}, 4433)  # type: ignore[attr-defined]
     assert req["client_hello"] == {"key_share": "empty_entry", "groups": "overlap"}
+
+
+def test_openssl_as_sut_replaces_the_debian_reference_and_adds_wolfssl_reference() -> None:
+    from rfcv.backends.docker_launcher import default_specs
+
+    commit = "a" * 40
+    specs = default_specs(commit, None, "openssl")
+    assert specs["openssl"].image == f"rfcv/sut-openssl:{commit[:12]}" and specs["openssl"].expect_rev == commit
+    assert specs["openssl"].command[0] == "/sut/openssl"
+    assert specs["wolfssl"].image == "rfcv/sut-wolfssl:head" and specs["wolfssl"].expect_rev is None
+    default = default_specs(commit)  # SUT là wolfSSL: OpenSSL là bản tham chiếu Debian
+    assert default["openssl"].image == "rfcv/ref-openssl:latest" and default["wolfssl"].expect_rev == commit

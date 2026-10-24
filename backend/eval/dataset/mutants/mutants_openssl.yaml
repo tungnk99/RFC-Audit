@@ -1,0 +1,271 @@
+# Bộ lỗi tự sinh trên OpenSSL thật (thẻ openssl-3.6.5), họ U/G/R (scripts/eval_make_mutants_openssl.py).
+items:
+- id: OU1
+  family: U
+  adapter: eval/adapters/tls13-OU1
+  code_root: runs/real/src/openssl-OU1
+  commit: 545770cfe03e15dc0b212e13529aa3b8f9ea100c
+  operator: WRONG_ALERT
+  requirement: TLS13-0101
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    files:
+      ssl/record/rec_layer_s3.c:
+      - - 855
+        - 855
+  why: Trong ssl3_read_bytes, khi chưa chọn phiên bản và gặp bản ghi lạ, máy chủ gửi illegal_parameter thay vì unexpected_message.
+  observed:
+    type_99: illegal_parameter
+    disjoint: handshake_failure
+    len16700: record_overflow
+- id: OU2
+  family: U
+  adapter: eval/adapters/tls13-OU2
+  code_root: runs/real/src/openssl-OU2
+  commit: 4abd5edb0035dcd20a291410c2bbde69733ee35a
+  operator: WRONG_ALERT
+  requirement: TLS13-0101
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    files:
+      ssl/record/rec_layer_s3.c:
+      - - 855
+        - 855
+  why: Trong ssl3_read_bytes, khi chưa chọn phiên bản và gặp bản ghi lạ, máy chủ gửi decode_error thay vì unexpected_message.
+  observed:
+    type_99: decode_error
+    disjoint: handshake_failure
+    len16700: record_overflow
+- id: OU3
+  family: U
+  adapter: eval/adapters/tls13-OU3
+  code_root: runs/real/src/openssl-OU3
+  commit: f61f0864a58cffe61d698e2e874ee0fa4e1b154e
+  operator: WRONG_ALERT
+  requirement: TLS13-0101
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    files:
+      ssl/record/rec_layer_s3.c:
+      - - 855
+        - 855
+  why: Trong ssl3_read_bytes, khi chưa chọn phiên bản và gặp bản ghi lạ, máy chủ gửi handshake_failure thay vì unexpected_message.
+  observed:
+    type_99: handshake_failure
+    disjoint: handshake_failure
+    len16700: record_overflow
+- id: OU4
+  family: U
+  adapter: eval/adapters/tls13-OU4
+  code_root: runs/real/src/openssl-OU4
+  commit: 4210991cb48c9d889ba098c9ded4f8cb025d6e60
+  operator: DEL_ALERT
+  requirement: TLS13-0101
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    files:
+      ssl/record/rec_layer_s3.c:
+      - - 855
+        - 855
+  why: Bỏ lệnh gửi cảnh báo ở nhánh chưa chọn phiên bản của ssl3_read_bytes (chỉ còn `return -1`).
+  observed:
+    type_99: None
+    disjoint: handshake_failure
+    len16700: record_overflow
+- id: OG1
+  family: G
+  adapter: eval/adapters/tls13-OG1
+  code_root: runs/real/src/openssl-OG1
+  commit: 155da19a320b5a2be6697ece41b4e8dac76c4076
+  operator: WRONG_ALERT
+  requirement: TLS13-0103
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    files:
+      ssl/statem/extensions.c:
+      - - 1415
+        - 1415
+  why: 'Không có nhóm chung: gửi illegal_parameter thay vì handshake_failure.'
+  observed:
+    type_99: unexpected_message
+    disjoint: illegal_parameter
+    len16700: record_overflow
+- id: OG2
+  family: G
+  adapter: eval/adapters/tls13-OG2
+  code_root: runs/real/src/openssl-OG2
+  commit: 784927b87425ce168f26974118d61c323712ac87
+  operator: WRONG_ALERT_OTHER
+  requirement: TLS13-0103
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    files:
+      ssl/statem/extensions.c:
+      - - 1415
+        - 1415
+  why: 'Không có nhóm chung: gửi internal_error thay vì handshake_failure.'
+  observed:
+    type_99: unexpected_message
+    disjoint: internal_error
+    len16700: record_overflow
+- id: OG3
+  family: G
+  adapter: eval/adapters/tls13-OG3
+  code_root: runs/real/src/openssl-OG3
+  commit: 2e96f4c4d60f5d2c83a26a1674818e17267c86d9
+  operator: ALLOWED_ALTERNATIVE
+  requirement: TLS13-0103
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    files:
+      ssl/statem/extensions.c:
+      - - 1415
+        - 1415
+  why: 'Không có nhóm chung: gửi insufficient_security, RFC 8446 §4.1.1 cho phép (RBS có accept_alternatives).'
+  observed:
+    type_99: unexpected_message
+    disjoint: insufficient_security
+    len16700: record_overflow
+- id: OG4
+  family: G
+  adapter: eval/adapters/tls13-OG4
+  code_root: runs/real/src/openssl-OG4
+  commit: a45bc46c75e2b2f8c1c7e757316e4ada31dec302
+  operator: SWAP_BRANCHES
+  requirement: TLS13-0103
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    files:
+      ssl/statem/extensions.c:
+      - - 1415
+        - 1415
+  why: 'Đảo hai nhánh của biểu thức điều kiện (sent ? handshake_failure : missing_extension): khi máy khách có gửi key_share thì báo missing_extension.'
+  observed:
+    type_99: unexpected_message
+    disjoint: missing_extension
+    len16700: record_overflow
+- id: OR1
+  family: R
+  adapter: eval/adapters/tls13-OR1
+  code_root: runs/real/src/openssl-OR1
+  commit: 75d32f0a51546785b5037324e3b3bd6f0957947f
+  operator: WRONG_ALERT
+  requirement: TLS13-0042
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    files:
+      ssl/record/methods/tls13_meth.c:
+      - - 273
+        - 273
+  why: Tiêu đề bản ghi TLS 1.3 dài hơn 16640 gửi decode_error thay vì record_overflow.
+  observed:
+    type_99: unexpected_message
+    disjoint: handshake_failure
+    len16700: decode_error
+- id: OR2
+  family: R
+  adapter: eval/adapters/tls13-OR2
+  code_root: runs/real/src/openssl-OR2
+  commit: 2fc4bc0c7744ead4ee5e37cb778c27b7d8096501
+  operator: UNRELATED_SENTENCE
+  requirement: TLS13-0042
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    files:
+      ssl/record/methods/tls13_meth.c:
+      - - 302
+        - 302
+  why: 'Chỉ đường kiểm tra sau giải mã (nội dung > 16384, câu RFC khác với câu về TLSCiphertext > 16640) gửi illegal_parameter: ngoài phạm vi yêu cầu đang kiểm.'
+  observed:
+    type_99: unexpected_message
+    disjoint: handshake_failure
+    len16700: record_overflow
+  excluded: 'đường sau giải mã: vi phạm câu RFC khác câu mà RBS TLS13-0042 kiểm'
+- id: OR3
+  family: R
+  adapter: eval/adapters/tls13-OR3
+  code_root: runs/real/src/openssl-OR3
+  commit: 42a1dee72f421e57b21141b0e1dceef4e3d46925
+  operator: WRONG_ALERT_FULL
+  requirement: TLS13-0042
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    files:
+      ssl/record/methods/tls13_meth.c:
+      - - 273
+        - 273
+      - - 302
+        - 302
+  why: Cả hai đường kiểm tra độ dài của TLS 1.3 gửi illegal_parameter.
+  observed:
+    type_99: unexpected_message
+    disjoint: handshake_failure
+    len16700: illegal_parameter
+- id: OX1
+  family: G
+  adapter: eval/adapters/tls13-OX1
+  code_root: runs/real/src/openssl-OX1
+  commit: e30293d8921bca5756b66c4951f3b53a948b0387
+  operator: UNRELATED
+  requirement: TLS13-0103
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    files:
+      ssl/statem/statem_srvr.c:
+      - - 1952
+        - 1952
+  why: 'Sửa cảnh báo của COOKIE_MISMATCH (handshake_failure ⇒ illegal_parameter): không liên quan tới nhóm chung.'
+  observed:
+    type_99: unexpected_message
+    disjoint: handshake_failure
+    len16700: record_overflow
+- id: OX2
+  family: R
+  adapter: eval/adapters/tls13-OX2
+  code_root: runs/real/src/openssl-OX2
+  commit: f5c1d3081d46f28ea6ed8554aab4a9a00efa503a
+  operator: UNRELATED
+  requirement: TLS13-0042
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    files:
+      ssl/record/methods/tls13_meth.c:
+      - - 268
+        - 268
+  why: 'Sửa cảnh báo của phiên bản bản ghi sai (decode_error ⇒ illegal_parameter): không liên quan tới độ dài.'
+  observed:
+    type_99: unexpected_message
+    disjoint: handshake_failure
+    len16700: record_overflow
+- id: OX3
+  family: U
+  adapter: eval/adapters/tls13-OX3
+  code_root: runs/real/src/openssl-OX3
+  commit: 99634c6165d6d69c35bd4de8a5bdd2858160daaf
+  operator: UNRELATED
+  requirement: TLS13-0101
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    files:
+      ssl/record/methods/tls13_meth.c:
+      - - 273
+        - 273
+  why: 'Sửa cảnh báo của lỗi độ dài tiêu đề (record_overflow ⇒ decode_error) ở đường tiêu đề TLS 1.3 chung: không liên quan tới loại bản ghi.'
+  observed:
+    type_99: unexpected_message
+    disjoint: handshake_failure
+    len16700: decode_error

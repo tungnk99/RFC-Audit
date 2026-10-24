@@ -1,0 +1,4 @@
+# Bản RFC trong inputs/rfc là TXT, còn định danh câu trong RBS viết tay đánh số theo RFCXML nên không trùng.
+# Mỗi dòng: định danh trong RBS -> định danh của CÙNG câu trong bản TXT (đã đối chiếu nguyên văn bằng tay).
+# Có RFCXML v3 chính thức thì không cần tệp này.
+"RFC8446§5.2#p4s3": "RFC8446§5.2#p9s3"   # An endpoint that receives a record that exceeds this length MUST terminate the connection with a "record_overflow" alert.

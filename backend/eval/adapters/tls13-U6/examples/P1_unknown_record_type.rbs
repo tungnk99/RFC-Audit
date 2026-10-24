@@ -1,0 +1,7 @@
+requirement TLS13-0101 from RFC8446§5#p4s2 modal MUST type B
+# Bản ghi có loại không được định nghĩa (byte 0, 99, 255), gửi rõ ngay sau khi nối: máy chủ phải kết thúc kết nối bằng unexpected_message.
+actor server
+state initial
+trigger receive(record)
+expect send_alert(unexpected_message) then close within 2000ms
+variants case(record.content_type, type_99), case(record.content_type, type_0), case(record.content_type, type_255)

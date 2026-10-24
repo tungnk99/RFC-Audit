@@ -22,6 +22,7 @@ items:
   fix_location: {file: src/internal.c, lines: [[26215, 26215]]}
   why: "Bỏ lời gọi gửi record_overflow ở nhánh LENGTH_ERROR: bản ghi quá dài bị từ chối nhưng không có cảnh báo (cùng kiểu lỗi thật của c18833f52)."
 - id: M3
+  excluded: "thêm #ifdef với macro giả"
   adapter: eval/adapters/tls13-M3
   code_root: runs/real/src/wolfssl-M3
   commit: 165dac0c60b4847481ae7259bcfe9e5fc1390b00
@@ -32,6 +33,7 @@ items:
   fix_location: {file: src/internal.c, lines: [[26216, 26216], [26218, 26218]]}
   why: "Lời gọi gửi record_overflow bị bọc trong #ifdef của một macro không bao giờ bật (bẫy F1: đọc lướt tưởng đúng)."
 - id: M4
+  excluded: "đường sau giải mã: vi phạm câu RFC khác câu mà RBS TLS13-0042 kiểm (kết quả cũ: COMPLIANT sai)"
   adapter: eval/adapters/tls13-M4
   code_root: runs/real/src/wolfssl-M4
   commit: 1171566dcd8fb16c3392d812cc6befdff9677e29

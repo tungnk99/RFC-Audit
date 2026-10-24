@@ -1,0 +1,480 @@
+# Bộ lỗi tự sinh đa họ yêu cầu (U/G/R). Nhãn `expected` chốt theo ngữ nghĩa phép sửa TRƯỚC khi chạy (scripts/eval_make_mutants_multi.py).
+items:
+- id: U1
+  family: U
+  adapter: eval/adapters/tls13-U1
+  code_root: runs/real/src/wolfssl-U1
+  commit: 882f049b5a7cbb981b349674e2a797ee8510c8a9
+  operator: WRONG_ALERT
+  requirement: TLS13-0101
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26220
+      - 26220
+  why: Loại bản ghi không định nghĩa bị cảnh báo illegal_parameter thay vì unexpected_message.
+- id: U2
+  family: U
+  adapter: eval/adapters/tls13-U2
+  code_root: runs/real/src/wolfssl-U2
+  commit: 3cfe6559a03bca655fa4d5cce60bef861f592891
+  operator: DEL_ALERT
+  requirement: TLS13-0101
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26219
+      - 26219
+  why: 'Bỏ lời gọi gửi unexpected_message: bản ghi loại lạ bị từ chối lặng lẽ, không cảnh báo.'
+- id: U3
+  family: U
+  adapter: eval/adapters/tls13-U3
+  code_root: runs/real/src/wolfssl-U3
+  commit: a9fbe28d4272f647feb137124830e86fb531486b
+  operator: IFDEF_TRAP
+  requirement: TLS13-0101
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26220
+      - 26220
+    - - 26222
+      - 26222
+  why: 'Lời gọi gửi unexpected_message bị bọc trong #ifdef của macro không bao giờ bật (bẫy đọc lướt).'
+  excluded: 'thêm #ifdef với macro giả'
+- id: U4
+  family: U
+  adapter: eval/adapters/tls13-U4
+  code_root: runs/real/src/wolfssl-U4
+  commit: 5b71676ba9d3f70fe2ba705b9b36b16ffac8d9fe
+  operator: WRONG_ALERT_OTHER
+  requirement: TLS13-0101
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26220
+      - 26220
+  why: Loại bản ghi lạ bị cảnh báo decode_error thay vì unexpected_message.
+- id: U5
+  family: U
+  adapter: eval/adapters/tls13-U5
+  code_root: runs/real/src/wolfssl-U5
+  commit: 7c2171bacd877cb9be679389f716d1c1a963f66d
+  operator: WRONG_ALERT_NARROW
+  requirement: TLS13-0101
+  expected: VIOLATION
+  subtle: true
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26220
+      - 26221
+  why: 'Chỉ loại bản ghi 77 (ngoài các giá trị 0, 99, 255 mà RBS thử) mất cảnh báo; các loại còn lại vẫn đúng. Tinh vi: phụ thuộc độ phủ biến thể của oracle.'
+  excluded: thêm điều kiện if tự viết
+- id: U6
+  family: U
+  adapter: eval/adapters/tls13-U6
+  code_root: runs/real/src/wolfssl-U6
+  commit: 7685a578c739da6f2a4aadad97dc6fda117bf8fd
+  operator: EQUIVALENT
+  requirement: TLS13-0101
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26220
+      - 26223
+  why: 'Đưa mã cảnh báo qua biến cục bộ: hành vi quan sát được không đổi.'
+  excluded: thêm biến cục bộ
+- id: U7
+  family: U
+  adapter: eval/adapters/tls13-U7
+  code_root: runs/real/src/wolfssl-U7
+  commit: b00588b5bf0c0fb27c0c766017737a00e50077e3
+  operator: UNRELATED
+  requirement: TLS13-0101
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26216
+      - 26216
+  why: 'Sửa cảnh báo của lỗi độ dài bản ghi (record_overflow ⇒ decode_error): không liên quan tới loại bản ghi.'
+- id: U8
+  family: U
+  adapter: eval/adapters/tls13-U8
+  code_root: runs/real/src/wolfssl-U8
+  commit: 55008dd11495c906fe2421077bbe9f11120ee1a2
+  operator: UNRELATED
+  requirement: TLS13-0101
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26212
+      - 26212
+  why: 'Sửa cảnh báo của VERSION_ERROR phía khách: không liên quan tới loại bản ghi.'
+- id: G1
+  family: G
+  adapter: eval/adapters/tls13-G1
+  code_root: runs/real/src/wolfssl-G1
+  commit: a00e01fdb35be226d49441c4aa59660244c6ff2e
+  operator: WRONG_ALERT
+  requirement: TLS13-0103
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 39772
+      - 39773
+    - - 39776
+      - 39776
+  why: KEY_SHARE_ERROR (không có nhóm chung) được ánh xạ sang illegal_parameter thay vì handshake_failure.
+- id: G2
+  family: G
+  adapter: eval/adapters/tls13-G2
+  code_root: runs/real/src/wolfssl-G2
+  commit: 365784dbf385e11b69d99fa0c6b09d40722f687a
+  operator: WRONG_ALERT_OTHER
+  requirement: TLS13-0103
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 39772
+      - 39773
+    - - 39776
+      - 39776
+  why: KEY_SHARE_ERROR được ánh xạ sang internal_error.
+- id: G3
+  family: G
+  adapter: eval/adapters/tls13-G3
+  code_root: runs/real/src/wolfssl-G3
+  commit: 0b2d40a585fee4fbe5c0ee48c473e3a1bd045df6
+  operator: WRONG_ALERT_OTHER
+  requirement: TLS13-0103
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 39772
+      - 39773
+    - - 39776
+      - 39776
+  why: KEY_SHARE_ERROR được ánh xạ sang decode_error.
+- id: G4
+  family: G
+  adapter: eval/adapters/tls13-G4
+  code_root: runs/real/src/wolfssl-G4
+  commit: ce982450f927a31b0b9cc5290f37d1bd721ca667
+  operator: ALLOWED_ALTERNATIVE
+  requirement: TLS13-0103
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 39772
+      - 39773
+    - - 39776
+      - 39776
+  why: 'KEY_SHARE_ERROR được ánh xạ sang insufficient_security: RFC 8446 §4.1.1 cho phép (RBS có accept_alternatives).'
+- id: G5
+  family: G
+  adapter: eval/adapters/tls13-G5
+  code_root: runs/real/src/wolfssl-G5
+  commit: b40059c687192975527214c2077d2161605d7fc7
+  operator: EQUIVALENT
+  requirement: TLS13-0103
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 39774
+      - 39774
+    - - 39777
+      - 39777
+  why: 'Đổi thứ tự nhãn case trong cùng nhóm handshake_failure: hành vi không đổi.'
+- id: G6
+  family: G
+  adapter: eval/adapters/tls13-G6
+  code_root: runs/real/src/wolfssl-G6
+  commit: b08e83e3a27fa79b342c3f827218cd580456033d
+  operator: UNRELATED
+  requirement: TLS13-0103
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 39771
+      - 39771
+  why: 'Sửa cảnh báo của BAD_BINDER (decrypt_error ⇒ illegal_parameter): không liên quan tới nhóm chung.'
+- id: G7
+  family: G
+  adapter: eval/adapters/tls13-G7
+  code_root: runs/real/src/wolfssl-G7
+  commit: 1674977380a160edb8b5bb43a293f7555824f27f
+  operator: UNRELATED
+  requirement: TLS13-0103
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 39773
+      - 39773
+  why: 'Sửa cảnh báo của INCOMPLETE_DATA (missing_extension ⇒ decode_error): không liên quan tới nhóm chung.'
+- id: R9
+  family: R
+  adapter: eval/adapters/tls13-R9
+  code_root: runs/real/src/wolfssl-R9
+  commit: b1ad898c06e05d9f9e798523cc6a31e5195d44ad
+  operator: WRONG_ALERT_FULL
+  requirement: TLS13-0042
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26216
+      - 26216
+    - - 26290
+      - 26290
+  why: Cả hai đường kiểm tra độ dài gửi illegal_parameter thay vì record_overflow.
+- id: R10
+  family: R
+  adapter: eval/adapters/tls13-R10
+  code_root: runs/real/src/wolfssl-R10
+  commit: 7edf454d845af793c8d3f36539c690ef57bc0589
+  operator: WRONG_ALERT_HEADER_ONLY
+  requirement: TLS13-0042
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26216
+      - 26216
+  why: Chỉ đường kiểm tra tiêu đề (độ dài > 16486) gửi internal_error; đường sau giải mã vẫn đúng.
+- id: R11
+  family: R
+  adapter: eval/adapters/tls13-R11
+  code_root: runs/real/src/wolfssl-R11
+  commit: ac84a4eccddd7af78adbf3df75e1d62cc608eee5
+  operator: EQUIVALENT
+  requirement: TLS13-0042
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26290
+      - 26290
+  why: 'Đưa mã cảnh báo qua biến cục bộ ở đường sau giải mã: hành vi không đổi.'
+  excluded: thêm biến cục bộ
+- id: R12
+  family: R
+  adapter: eval/adapters/tls13-R12
+  code_root: runs/real/src/wolfssl-R12
+  commit: 06c8e3fecfe9672e39dd19ae46fc15c0d1d20bd2
+  operator: UNRELATED
+  requirement: TLS13-0042
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26220
+      - 26220
+  why: 'Sửa cảnh báo của loại bản ghi lạ (unexpected_message ⇒ illegal_parameter): không liên quan tới độ dài.'
+- id: U13
+  family: U
+  adapter: eval/adapters/tls13-U13
+  code_root: runs/real/src/wolfssl-U13
+  commit: f51e03dea57e388efdedb0733703884f9d596df7
+  operator: UNRELATED
+  requirement: TLS13-0101
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26290
+      - 26290
+  why: 'Sửa cảnh báo của đường độ dài sau giải mã (record_overflow ⇒ decode_error): không liên quan tới loại bản ghi.'
+- id: U14
+  family: U
+  adapter: eval/adapters/tls13-U14
+  code_root: runs/real/src/wolfssl-U14
+  commit: 8ae210da4d3d6be881560049efacc648b4581b2c
+  operator: WRONG_ALERT_OTHER
+  requirement: TLS13-0101
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26220
+      - 26220
+  why: Loại bản ghi lạ bị cảnh báo handshake_failure thay vì unexpected_message.
+- id: G8
+  family: G
+  adapter: eval/adapters/tls13-G8
+  code_root: runs/real/src/wolfssl-G8
+  commit: 98abf85910c3fc8897e8894c7778e968a7317eff
+  operator: WRONG_ALERT_OTHER
+  requirement: TLS13-0103
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 39772
+      - 39773
+    - - 39776
+      - 39776
+  why: KEY_SHARE_ERROR được ánh xạ sang protocol_version.
+- id: G9
+  family: G
+  adapter: eval/adapters/tls13-G9
+  code_root: runs/real/src/wolfssl-G9
+  commit: 0fb57f30bd5cdf633c524a87c4323a2247ab021b
+  operator: WRONG_ALERT_OTHER
+  requirement: TLS13-0103
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 39772
+      - 39773
+    - - 39776
+      - 39776
+  why: KEY_SHARE_ERROR được ánh xạ sang unexpected_message.
+- id: G11
+  family: G
+  adapter: eval/adapters/tls13-G11
+  code_root: runs/real/src/wolfssl-G11
+  commit: 821c4072434eeb34f28d977baf19e0d377b03919
+  operator: UNRELATED
+  requirement: TLS13-0103
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 39775
+      - 39775
+  why: 'Sửa cảnh báo của MATCH_SUITE_ERROR (handshake_failure ⇒ illegal_parameter): lỗi cipher suite, không phải nhóm chung.'
+- id: G12
+  family: G
+  adapter: eval/adapters/tls13-G12
+  code_root: runs/real/src/wolfssl-G12
+  commit: 223fe09dd7484652f6a48770e6bd6e406a303d25
+  operator: WRONG_ALERT_OTHER
+  requirement: TLS13-0103
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 39772
+      - 39773
+    - - 39776
+      - 39776
+  why: KEY_SHARE_ERROR được ánh xạ sang bad_certificate.
+- id: R13
+  family: R
+  adapter: eval/adapters/tls13-R13
+  code_root: runs/real/src/wolfssl-R13
+  commit: 0d0fa3e04f3c3d836170b55d2706764218618e9a
+  operator: WRONG_ALERT_POSTDECRYPT
+  requirement: TLS13-0042
+  expected: VIOLATION
+  subtle: true
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26290
+      - 26290
+  why: 'Chỉ đường kiểm tra sau giải mã (16402–16486) gửi internal_error; trên 16486 vẫn đúng. Tinh vi: cùng kiểu M4 với mã cảnh báo khác.'
+  excluded: 'đường sau giải mã: vi phạm câu RFC khác câu mà RBS TLS13-0042 kiểm'
+- id: R14
+  family: R
+  adapter: eval/adapters/tls13-R14
+  code_root: runs/real/src/wolfssl-R14
+  commit: 416b023cd74e7e02cedd5864b07df2994bc8c0c6
+  operator: WRONG_ALERT_FULL
+  requirement: TLS13-0042
+  expected: VIOLATION
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26216
+      - 26216
+    - - 26290
+      - 26290
+  why: Cả hai đường kiểm tra độ dài gửi decode_error thay vì record_overflow.
+- id: R15
+  family: R
+  adapter: eval/adapters/tls13-R15
+  code_root: runs/real/src/wolfssl-R15
+  commit: 4c784441a74a45308118419cf14dfe55f650d3c8
+  operator: DEL_ALERT_POSTDECRYPT
+  requirement: TLS13-0042
+  expected: VIOLATION
+  subtle: true
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26289
+      - 26289
+  why: 'Chỉ đường kiểm tra sau giải mã bỏ cảnh báo record_overflow. Tinh vi: bản ghi quá dài rõ ràng vẫn được cảnh báo.'
+  excluded: 'đường sau giải mã: vi phạm câu RFC khác câu mà RBS TLS13-0042 kiểm'
+- id: R16
+  family: R
+  adapter: eval/adapters/tls13-R16
+  code_root: runs/real/src/wolfssl-R16
+  commit: 1a48f54ea87d7993ba2c04d3cf429eca6b09e0a4
+  operator: EQUIVALENT
+  requirement: TLS13-0042
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 26289
+      - 26289
+  why: 'Đổi nội dung thông điệp nhật ký ở đường sau giải mã: hành vi quan sát được không đổi.'
+- id: R17
+  family: R
+  adapter: eval/adapters/tls13-R17
+  code_root: runs/real/src/wolfssl-R17
+  commit: 6b9ae86a0fdab01715c680ae7b9e552559407ed1
+  operator: UNRELATED
+  requirement: TLS13-0042
+  expected: COMPLIANT
+  subtle: false
+  fix_location:
+    file: src/internal.c
+    lines:
+    - - 39771
+      - 39771
+  why: 'Sửa cảnh báo của BAD_BINDER (decrypt_error ⇒ illegal_parameter): không liên quan tới độ dài.'

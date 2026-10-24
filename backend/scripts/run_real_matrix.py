@@ -30,7 +30,11 @@ import eval_locate_score
 from rfcv.eval.metrics import wilson_interval
 
 BACKEND = Path(__file__).resolve().parent.parent
-MUTANTS = BACKEND / "eval" / "dataset" / "mutants" / "mutants.yaml"
+MUTANT_FILES = {
+    "0042": BACKEND / "eval" / "dataset" / "mutants" / "mutants.yaml",
+    "multi": BACKEND / "eval" / "dataset" / "mutants" / "mutants_multi.yaml",
+    "openssl": BACKEND / "eval" / "dataset" / "mutants" / "mutants_openssl.yaml",
+}
 FIX_COMMIT = "c18833f52"
 
 
@@ -41,6 +45,7 @@ class Item:
     code_root: str
     expected: str
     truth: dict[str, list[tuple[int, int]]] | None  # nơi sửa (nhãn chuẩn định vị) cho mục VIOLATION
+    family: str = "R"  # họ yêu cầu: R (độ dài bản ghi), U (loại bản ghi lạ), G (không có nhóm chung)
 
 
 def real_items(suffix: str) -> list[Item]:
@@ -52,15 +57,36 @@ def real_items(suffix: str) -> list[Item]:
     ]
 
 
-def mutant_items() -> list[Item]:
-    if not MUTANTS.is_file():
-        return []
+# Cặp lỗi thật đã chốt nhãn (cha = VIOLATION, bản vá = COMPLIANT): (họ, sha ngắn của bản vá, 12 ký tự đầu của cha, 12 ký tự đầu của bản vá)
+REAL_PAIRS = (
+    ("P1", "U", "4b30475a4", "24f0f95f5f2b", "4b30475a4934"),
+    ("P3", "G", "d3abc288e", "9e0d3894d285", "d3abc288e68c"),
+)
+
+
+def pair_items() -> list[Item]:
     out: list[Item] = []
-    data: dict[str, Any] = yaml.safe_load(MUTANTS.read_text(encoding="utf-8"))
-    for m in data["items"]:
-        loc = m["fix_location"]
-        truth = {loc["file"]: [(int(a), int(b)) for a, b in loc["lines"]]} if m["expected"] == "VIOLATION" else None
-        out.append(Item(m["id"], m["adapter"], m["code_root"], m["expected"], truth))
+    for name, fam, fix, parent12, fix12 in REAL_PAIRS:
+        hunks = eval_locate_score.hunks(BACKEND / "eval" / "work" / "wolfssl", fix)
+        out.append(Item(f"{name}-parent", f"eval/adapters/tls13-{parent12}", f"runs/real/src/wolfssl-{parent12}", "VIOLATION", hunks, fam))
+        out.append(Item(f"{name}-fix", f"eval/adapters/tls13-{fix12}", f"runs/real/src/wolfssl-{fix12}", "COMPLIANT", None, fam))
+    return out
+
+
+def mutant_items(sets: tuple[str, ...] = ("0042", "multi", "openssl")) -> list[Item]:
+    out: list[Item] = []
+    for name in sets:
+        path = MUTANT_FILES[name]
+        if not path.is_file():
+            continue
+        data: dict[str, Any] = yaml.safe_load(path.read_text(encoding="utf-8"))
+        for m in data["items"]:
+            if m.get("excluded"):  # mutant có thêm mã mới: không thuộc bộ đánh giá
+                continue
+            loc = m["fix_location"]
+            files = loc["files"] if "files" in loc else {loc["file"]: loc["lines"]}
+            truth = {f: [(int(a), int(b)) for a, b in spans] for f, spans in files.items()} if m["expected"] == "VIOLATION" else None
+            out.append(Item(m["id"], m["adapter"], m["code_root"], m["expected"], truth, m.get("family", "R")))
     return out
 
 
@@ -69,7 +95,7 @@ def run_one(item: Item, out: Path, effort: str) -> dict[str, object]:
         "uv", "run", "--env-file", ".env", "rfcv", "run",
         "--adapter", item.adapter, "--code-root", item.code_root,
         "--code-index", "treesitter", "--executor", "docker", "--sut-launcher", "docker",
-        "--models", "config/models.yaml", "--run-dir", str(out), "--effort", effort,
+        "--models", "config/models.yaml", "--run-dir", str(out), "--effort", effort, "--rfc-dir", "inputs/rfc",
     ]  # fmt: skip
     proc = subprocess.run(
         cmd, cwd=BACKEND, capture_output=True, text=True, encoding="utf-8", env={**os.environ, "PYTHONUTF8": "1"}
@@ -81,6 +107,7 @@ def run_one(item: Item, out: Path, effort: str) -> dict[str, object]:
     except ValueError:
         return {
             "item": item.id,
+            "family": item.family,
             "expected": item.expected,
             "label": "ERROR",
             "correct": False,
@@ -90,6 +117,7 @@ def run_one(item: Item, out: Path, effort: str) -> dict[str, object]:
     run_dir = out / result["run_id"]
     row: dict[str, object] = {
         "item": item.id,
+        "family": item.family,
         "run_id": result["run_id"],
         "expected": item.expected,
         "label": verdict["label"],
@@ -141,8 +169,15 @@ def summarize(rows: list[dict[str, object]]) -> str:
         lo, hi = wilson_interval(k, n)
         return f"{k}/{n} = {k / n:.0%} (Wilson 95%: {lo:.0%}-{hi:.0%})"
 
+    by_family: list[str] = []
+    for fam in sorted({str(r.get("family", "R")) for r in rows}):
+        sub = [r for r in rows if str(r.get("family", "R")) == fam]
+        ok = sum(1 for r in sub if r.get("correct"))
+        by_family.append(f"  họ {fam}: đúng {ok}/{len(sub)}")
     return "\n".join(
         [
+            "Theo họ yêu cầu:",
+            *by_family,
             f"Số mục: {len(rows)} (VIOLATION chuẩn {len(pos)}, COMPLIANT chuẩn {len(neg)})",
             f"COMPLIANT sai (bỏ sót lỗi): {ci(false_compliant, len(pos))}",
             f"VIOLATION sai (báo nhầm):   {ci(false_violation, len(neg))}",
@@ -161,10 +196,21 @@ def main() -> int:
     ap.add_argument("--suffix", default="", help='"" (RBS gốc) hoặc "-b" (RBS tinh chỉnh) cho bug/fix/head')
     ap.add_argument("--items", nargs="*", default=None, help="id mục; mặc định tất cả")
     ap.add_argument("--effort", default="efficient", choices=["efficient", "thorough"])
+    ap.add_argument(
+        "--set", default="all", choices=["all", "0042", "multi", "openssl", "pairs"],
+        help="all: bug/fix/head + mutant TLS13-0042 + mutant đa họ; 0042: bộ cũ; multi: chỉ mutant đa họ (U/G/R9+)",
+    )  # fmt: skip
     args = ap.parse_args()
     out = BACKEND / args.out
     out.mkdir(parents=True, exist_ok=True)
-    items = [*real_items(args.suffix), *mutant_items()]
+    if args.set in ("multi", "openssl"):
+        items = mutant_items((args.set,))
+    elif args.set == "pairs":
+        items = pair_items()
+    elif args.set == "0042":
+        items = [*real_items(args.suffix), *mutant_items(("0042",))]
+    else:
+        items = [*real_items(args.suffix), *pair_items(), *mutant_items()]
     if args.items:
         by_id = {i.id: i for i in items}
         picked: list[Item] = []

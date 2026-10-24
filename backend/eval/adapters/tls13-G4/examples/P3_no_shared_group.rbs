@@ -1,0 +1,8 @@
+requirement TLS13-0103 from RFC8446§4.1.1#p6 modal MUST type B
+# ClientHello có supported_groups không giao với máy chủ: không thể thoả thuận ⇒ handshake_failure (hoặc insufficient_security).
+actor server
+state initial
+trigger receive(client_hello)
+expect send_alert(handshake_failure) then close within 2000ms
+accept_alternatives send_alert(insufficient_security)
+variants case(client_hello.groups, disjoint), valid_case(client_hello.groups, overlap)

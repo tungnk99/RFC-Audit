@@ -1,0 +1,17 @@
+# Bản ghi có loại không được định nghĩa, gửi rõ ngay sau khi nối (RFC 8446 §5: loại bản ghi không nhận ra phải bị coi là thông điệp bất ngờ).
+id: tls13.record.unknown_type
+requirement_types: [B]
+rfc_refs: ["RFC8446§5"]
+checks_behavior: "receive(record, content_type không định nghĩa) → send_alert(unexpected_message); close"
+variant_class: content_type
+runner: tlsfuzzer
+runner_version: {tlsfuzzer: "git:<sha>", tlslite-ng: "git:<sha>"}
+cases: []
+match: {requirement_types: [B], trigger: receive, trigger_arg: record, expect: send_alert, field: record.content_type}
+bindings: {record.content_type: from_variant}
+steps:
+  - {op: connect, args: {}}
+  - {op: send_raw_record, args: {content_type: "$record.content_type", encrypted: false, body: zeros, length: 1}}
+  - {op: expect, args: {until: "send_alert(unexpected_message)", within_ms: 2000}}
+oracle: {pass: "alert == unexpected_message and closed", fail: "otherwise",
+         error: "sanity_failed"}

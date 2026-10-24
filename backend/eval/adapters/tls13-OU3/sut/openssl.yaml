@@ -1,0 +1,19 @@
+# Công thức dựng SUT OpenSSL từ git (docker/eval-openssl.Dockerfile). Image dựng một lần cho mỗi commit.
+implementation: openssl
+repo: https://github.com/openssl/openssl
+build:
+  steps:
+    - ./Configure no-shared no-tests no-docs no-afalgeng
+    - make build_programs
+  cflags: []
+  coverage_cflags: ["-fprofile-instr-generate", "-fcoverage-mapping"]
+roles:
+  server:
+    cmd: "/sut/openssl s_server -accept {port} -cert /ref/cert.pem -key /ref/key.pem -tls1_3 -www"
+    certs: /ref/
+lifecycle:
+  per_case_process: false
+  ready_check: {kind: listen_socket, port: "{port}", timeout_s: 5}
+  sanity_case: "tlsfuzzer:sanity"
+  stop_signal: SIGTERM
+resources: {cpus: 1, memory: 512m, pids: 128, timeout_s: 60}

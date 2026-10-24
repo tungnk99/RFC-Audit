@@ -55,14 +55,33 @@ GNUTLS_COMMAND = (
 )  # fmt: skip
 
 
-def default_specs(sut_commit: str | None = None, sut_image: str | None = None) -> dict[str, ServerSpec]:
-    """Bảng cài đặt → server. Image wolfSSL gắn thẻ theo 12 ký tự đầu của commit (xem eval/README.md)."""
-    image = sut_image or (f"rfcv/sut-wolfssl:{sut_commit[:12]}" if sut_commit else "rfcv/sut-wolfssl:head")
-    return {
-        "wolfssl": ServerSpec(image, WOLFSSL_COMMAND, "/sut", "/sut/.rev", sut_commit),
+OPENSSL_SUT_COMMAND = (
+    "/sut/openssl", "s_server", "-accept", str(PORT), "-cert", "/ref/cert.pem", "-key", "/ref/key.pem", "-tls1_3", "-www",
+)  # fmt: skip
+
+
+def default_specs(
+    sut_commit: str | None = None, sut_image: str | None = None, sut_impl: str = "wolfssl"
+) -> dict[str, ServerSpec]:
+    """Bảng cài đặt → server. Image SUT gắn thẻ theo 12 ký tự đầu của commit (xem eval/README.md).
+
+    `sut_impl="openssl"`: SUT là OpenSSL dựng từ git (`rfcv/sut-openssl:<sha12>`), khi đó `openssl` trong bảng là SUT chứ không phải
+    bản tham chiếu Debian, và wolfSSL ở HEAD thay chỗ làm bản tham chiếu độc lập thứ hai cùng GnuTLS."""
+    specs = {
+        "wolfssl": ServerSpec(
+            sut_image or (f"rfcv/sut-wolfssl:{sut_commit[:12]}" if sut_commit else "rfcv/sut-wolfssl:head"),
+            WOLFSSL_COMMAND, "/sut", "/sut/.rev", sut_commit,
+        ),
         "openssl": ServerSpec("rfcv/ref-openssl:latest", OPENSSL_COMMAND),
         "gnutls": ServerSpec("rfcv/ref-gnutls:latest", GNUTLS_COMMAND),
-    }
+    }  # fmt: skip
+    if sut_impl == "openssl":
+        specs["openssl"] = ServerSpec(
+            sut_image or (f"rfcv/sut-openssl:{sut_commit[:12]}" if sut_commit else "rfcv/sut-openssl:head"),
+            OPENSSL_SUT_COMMAND, "/sut", "/sut/.rev", sut_commit,
+        )  # fmt: skip
+        specs["wolfssl"] = ServerSpec("rfcv/sut-wolfssl:head", WOLFSSL_COMMAND, "/sut", "/sut/.rev", None)
+    return specs
 
 
 def hardening(environment: int) -> list[str]:
@@ -157,8 +176,10 @@ def launcher_factory(manifest: Any, config: Any) -> DockerSutLauncher:
     """Nhà máy đăng ký ở `rfcv.builtin`: commit lấy từ adapter (`sut.commit`), image có thể ghi đè bằng biến môi trường."""
     import os
 
-    commit = getattr(getattr(manifest, "sut", None), "commit", None)
-    return DockerSutLauncher(default_specs(commit, os.environ.get("RFCV_SUT_IMAGE")))
+    sut = getattr(manifest, "sut", None)
+    commit = getattr(sut, "commit", None)
+    impl = str(getattr(sut, "repo", "")).rstrip("/").rsplit("/", 1)[-1] or "wolfssl"
+    return DockerSutLauncher(default_specs(commit, os.environ.get("RFCV_SUT_IMAGE"), impl))
 
 
 __all__ = ["DockerError", "DockerSutLauncher", "LauncherError", "ServerSpec", "default_specs", "launcher_factory"]
