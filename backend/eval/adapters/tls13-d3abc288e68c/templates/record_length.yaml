@@ -23,7 +23,7 @@ cases:
     case: "too big ClientHello msg, with 16168 bytes of padding"
 # Kịch bản dựng sẵn (DSL) cho yêu cầu loại B "nhận bản ghi dài hơn L ⇒ cảnh báo": hub dùng thẳng khi RBS khớp `match`, không cần
 # gọi Tester LLM. `until` và `within_ms` được thay bằng phản ứng và thời hạn trong RBS.
-match: {requirement_types: [B], trigger: receive, trigger_arg: record, expect: send_alert, field_prefix: "record."}
+match: {requirement_types: [B], trigger: receive, trigger_arg: record, expect: send_alert, field: record.length}
 bindings: {record.length: from_variant}
 steps:
   - {op: connect, args: {}}

@@ -1,0 +1,7 @@
+requirement TLS13-0102 from RFC8446§6#p5 modal MUST type B
+# ClientHello có key_share biến dạng (entry khoá rỗng, hoặc phần mở rộng không có dữ liệu): thông điệp biến dạng ⇒ decode_error.
+actor server
+state initial
+trigger receive(client_hello)
+expect send_alert(decode_error) then close within 2000ms
+variants case(client_hello.key_share, empty_entry), case(client_hello.key_share, empty_extension), valid_case(client_hello.key_share, valid)

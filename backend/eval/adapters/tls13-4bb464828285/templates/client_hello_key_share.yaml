@@ -1,0 +1,16 @@
+# ClientHello có key_share biến dạng, gửi rõ ngay sau khi nối (RFC 8446 §4.2.8, §6: thông điệp biến dạng ⇒ decode_error).
+id: tls13.client_hello.key_share
+requirement_types: [B]
+rfc_refs: ["RFC8446§4.2.8", "RFC8446§6"]
+checks_behavior: "receive(client_hello, key_share biến dạng) → send_alert(code); close"
+variant_class: key_share
+runner: tlsfuzzer
+runner_version: {tlsfuzzer: "git:<sha>", tlslite-ng: "git:<sha>"}
+cases: []
+match: {requirement_types: [B], trigger: receive, trigger_arg: client_hello, expect: send_alert, field: client_hello.key_share}
+bindings: {client_hello.key_share: from_variant}
+steps:
+  - {op: connect, args: {}}
+  - {op: send_msg, args: {type: client_hello, key_share: "$client_hello.key_share", groups: overlap}}
+  - {op: expect, args: {until: "send_alert(decode_error)", within_ms: 2000}}
+oracle: {pass: "alert == expected and closed", fail: "otherwise", error: "sanity_failed"}

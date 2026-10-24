@@ -341,3 +341,24 @@ async def test_concurrent_variants_are_recorded_in_a_fixed_order(
     d = cached_driver(store, trace, tmp_path, None, IdentifiedLauncher({}), concurrency=8)
     parallel = await d.run_requirement(run_id="run-2", oracle=oracle, scenario=SCENARIO, seed=7)
     assert [e.payload.variant for e in parallel] == names  # type: ignore[union-attr]
+
+
+def test_side_comes_from_the_variant_when_the_rbs_has_no_where() -> None:
+    from rfcv.adapters.manifest import load_manifest
+    from rfcv.domains.rfc_protocol.adapter_view import to_vocabulary
+    from rfcv.domains.rfc_protocol.sandbox.driver import TestDriver
+    from rfcv.domains.rfc_protocol.spec.oracle_compiler import compile_oracle
+    from rfcv.domains.rfc_protocol.spec.rbs import parse_rbs
+
+    text = """requirement TLS13-0103 from RFC8446§4.1.1#p6 modal MUST type B
+actor server
+state initial
+trigger receive(client_hello)
+expect send_alert(handshake_failure) then close within 2000ms
+variants case(client_hello.groups, disjoint), valid_case(client_hello.groups, overlap)
+"""
+    from conftest import ADAPTER_DIR
+
+    oracle = compile_oracle(parse_rbs(text), to_vocabulary(load_manifest(ADAPTER_DIR)))
+    sides = {v.name: TestDriver._side(oracle, v, {v.field: v.value}) for v in oracle.variants}
+    assert sides == {"case:client_hello.groups=disjoint": "trigger", "valid_case:client_hello.groups=overlap": "valid"}

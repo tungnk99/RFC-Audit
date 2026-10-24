@@ -16,6 +16,7 @@ vocabulary:
   events:
     - receive(record)
     - receive(handshake_msg)
+    - receive(client_hello)
     - send_alert(code)
     - send(content_type)
     - close
@@ -35,6 +36,7 @@ vocabulary:
     - internal_error
     - missing_extension
     - unsupported_extension
+    - insufficient_security
   content_types: [change_cipher_spec, alert, handshake, application_data]
 
 field_domains:
@@ -42,6 +44,9 @@ field_domains:
   handshake.length: {min: 0, max: 16777215}     # uint24
   # Trường phân loại: loại bản ghi không được định nghĩa (byte 0, 99, 255), gửi rõ ngay sau khi nối (RFC 8446 §5)
   record.content_type: {values: [type_0, type_99, type_255]}
+  # ClientHello có biến đổi (RFC 8446 §4.2.8, §4.2.7): key_share và nhóm hỗ trợ
+  client_hello.key_share: {values: [valid, empty_entry, empty_extension]}
+  client_hello.groups: {values: [overlap, disjoint]}
 
 consistency_rules:
   - {if_expect_contains: send_alert, then_type: B}

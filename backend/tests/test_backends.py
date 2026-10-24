@@ -138,3 +138,14 @@ def test_tlsfuzzer_plain_record_before_handshake() -> None:
     assert not tls.validate(scenario({"op": "complete_handshake"}, plain, EXPECT)).ok
     enc = {"op": "send_raw_record", "args": {"content_type": "alert", "encrypted": True, "length": 20}}
     assert not tls.validate(scenario({"op": "complete_handshake"}, enc, EXPECT)).ok
+
+
+def test_tlsfuzzer_client_hello_variants() -> None:
+    tls = backend("tlsfuzzer")
+    hello = {"op": "send_msg", "args": {"type": "client_hello", "key_share": "empty_entry", "groups": "overlap"}}
+    assert tls.validate(scenario({"op": "connect"}, hello, EXPECT)).ok
+    assert not tls.validate(scenario({"op": "complete_handshake"}, hello, EXPECT)).ok
+    bad = {"op": "send_msg", "args": {"type": "client_hello", "groups": "nonsense"}}
+    assert not tls.validate(scenario({"op": "connect"}, bad, EXPECT)).ok
+    req = type(tls).request(scenario({"op": "connect"}, hello, EXPECT), {}, 4433)  # type: ignore[attr-defined]
+    assert req["client_hello"] == {"key_share": "empty_entry", "groups": "overlap"}

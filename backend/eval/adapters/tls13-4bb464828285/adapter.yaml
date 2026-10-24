@@ -16,6 +16,7 @@ vocabulary:
   events:
     - receive(record)
     - receive(handshake_msg)
+    - receive(client_hello)
     - send_alert(code)
     - send(content_type)
     - close
@@ -35,11 +36,17 @@ vocabulary:
     - internal_error
     - missing_extension
     - unsupported_extension
+    - insufficient_security
   content_types: [change_cipher_spec, alert, handshake, application_data]
 
 field_domains:
   record.length: {min: 17, max: 65535, canonical: [16641, 65535]}           # uint16 (TLSCiphertext.length, TLSPlaintext.length)
   handshake.length: {min: 0, max: 16777215}     # uint24
+  # Trường phân loại: loại bản ghi không được định nghĩa (byte 0, 99, 255), gửi rõ ngay sau khi nối (RFC 8446 §5)
+  record.content_type: {values: [type_0, type_99, type_255]}
+  # ClientHello có biến đổi (RFC 8446 §4.2.8, §4.2.7): key_share và nhóm hỗ trợ
+  client_hello.key_share: {values: [valid, empty_entry, empty_extension]}
+  client_hello.groups: {values: [overlap, disjoint]}
 
 consistency_rules:
   - {if_expect_contains: send_alert, then_type: B}
@@ -56,14 +63,15 @@ locator_hints:
     paths: ["src/internal.c"]
 
 # Cờ build là đầu vào cố định, dùng chung cho Test driver và Code gate (tài liệu khả thi, mục 6).
+build_flags: ["--enable-tls13", "--disable-shared", "--enable-static", "-DECC_MIN_KEY_SZ=224", "-DECC_SHAMIR", "-DECC_TIMING_RESISTANT", "-DERROR_QUEUE_PER_THREAD", "-DGCM_TABLE_4BIT", "-DHAVE_AESGCM", "-DHAVE_CHACHA", "-DHAVE_C___ATOMIC", "-DHAVE_DH", "-DHAVE_DH_DEFAULT_PARAMS", "-DHAVE_ECC", "-DHAVE_ENCRYPT_THEN_MAC", "-DHAVE_EXTENDED_MASTER", "-DHAVE_FFDHE_2048", "-DHAVE_GETPID", "-DHAVE_HASHDRBG", "-DHAVE_HKDF", "-DHAVE_LIMITS_H", "-DHAVE_POLY1305", "-DHAVE_SERVER_RENEGOTIATION_INFO", "-DHAVE_SNI", "-DHAVE_SUPPORTED_CURVES", "-DHAVE_SYS_TIME_H", "-DHAVE_SYS_UN_H", "-DHAVE_THREAD_LS", "-DHAVE_TLS_EXTENSIONS", "-DHAVE_WC_INTROSPECTION", "-DHAVE___UINT128_T", "-DNO_DES3", "-DNO_DES3_TLS_SUITES", "-DNO_DO178", "-DNO_DSA", "-DNO_MD4", "-DNO_MD5", "-DNO_OLD_TLS", "-DNO_PSK", "-DNO_RC4", "-DNO_SESSION_CACHE_REF", "-DTFM_TIMING_RESISTANT", "-DWC_NO_ASYNC_THREADING", "-DWC_RNG_AUTOFORK", "-DWC_RSA_BLINDING", "-DWC_RSA_PSS", "-DWOLFSSL_ARMASM_NO_HW_CRYPTO", "-DWOLFSSL_ASN_PRINT", "-DWOLFSSL_ASN_TEMPLATE", "-DWOLFSSL_BASE64_ENCODE", "-DWOLFSSL_DRBG_SHA512", "-DWOLFSSL_HAVE_ASSERT_H", "-DWOLFSSL_HAVE_ATOMIC_H", "-DWOLFSSL_HAVE_MLKEM", "-DWOLFSSL_PQC_HYBRIDS", "-DWOLFSSL_PSS_LONG_SALT", "-DWOLFSSL_SHA224", "-DWOLFSSL_SHA3", "-DWOLFSSL_SHA384", "-DWOLFSSL_SHA512", "-DWOLFSSL_SHAKE128", "-DWOLFSSL_SHAKE256", "-DWOLFSSL_SP_MATH_ALL", "-DWOLFSSL_SP_X86_64", "-DWOLFSSL_SYS_CA_CERTS", "-DWOLFSSL_TEST_STATIC_BUILD", "-DWOLFSSL_TLS13", "-DWOLFSSL_TLS13_MIDDLEBOX_COMPAT", "-DWOLFSSL_TLS_NO_MLKEM_STANDALONE", "-DWOLFSSL_USE_ALIGN", "-DWOLFSSL_X86_64_BUILD"]
+build_config_complete: true
 
 sut:
   repo: https://github.com/wolfSSL/wolfssl
-  commit: 4bb464828285eb2ca2f4e1c9975074ff64ea82e1   # Code gate từ chối chạy khi --code-root không ở đúng commit (ràng buộc C3)
+  commit: 4bb464828285eb2ca2f4e1c9975074ff64ea82e1
   recipe: sut/wolfssl.yaml
   start: {role: server, port: 4433}
 
-# Vòng chạy thật dùng OpenSSL + GnuTLS (gói Debian) thay cho rustls của thiết kế gốc; xem docker/eval-ref.Dockerfile.
 references: ["openssl", "gnutls"]
 
 code_scope:
@@ -71,9 +79,3 @@ code_scope:
   exclude: ["tests/**", "**/*.pem", "**/*.key", "certs/**"]
 
 examples: examples/*.yaml
-
-# Cấu hình biên dịch THẬT của bản dựng (scripts/extract_build_flags.py, từ wolfssl/options.h)
-
-# Cấu hình biên dịch THẬT của bản dựng (scripts/extract_build_flags.py, từ wolfssl/options.h)
-build_flags: ["--enable-tls13", "--disable-shared", "--enable-static", "-DECC_MIN_KEY_SZ=224", "-DECC_SHAMIR", "-DECC_TIMING_RESISTANT", "-DERROR_QUEUE_PER_THREAD", "-DGCM_TABLE_4BIT", "-DHAVE_AESGCM", "-DHAVE_CHACHA", "-DHAVE_C___ATOMIC", "-DHAVE_DH", "-DHAVE_DH_DEFAULT_PARAMS", "-DHAVE_ECC", "-DHAVE_ENCRYPT_THEN_MAC", "-DHAVE_EXTENDED_MASTER", "-DHAVE_FFDHE_2048", "-DHAVE_GETPID", "-DHAVE_HASHDRBG", "-DHAVE_HKDF", "-DHAVE_LIMITS_H", "-DHAVE_POLY1305", "-DHAVE_SERVER_RENEGOTIATION_INFO", "-DHAVE_SNI", "-DHAVE_SUPPORTED_CURVES", "-DHAVE_SYS_TIME_H", "-DHAVE_SYS_UN_H", "-DHAVE_THREAD_LS", "-DHAVE_TLS_EXTENSIONS", "-DHAVE_WC_INTROSPECTION", "-DHAVE___UINT128_T", "-DNO_DES3", "-DNO_DES3_TLS_SUITES", "-DNO_DO178", "-DNO_DSA", "-DNO_MD4", "-DNO_MD5", "-DNO_OLD_TLS", "-DNO_PSK", "-DNO_RC4", "-DNO_SESSION_CACHE_REF", "-DTFM_TIMING_RESISTANT", "-DWC_NO_ASYNC_THREADING", "-DWC_RNG_AUTOFORK", "-DWC_RSA_BLINDING", "-DWC_RSA_PSS", "-DWOLFSSL_ARMASM_NO_HW_CRYPTO", "-DWOLFSSL_ASN_PRINT", "-DWOLFSSL_ASN_TEMPLATE", "-DWOLFSSL_BASE64_ENCODE", "-DWOLFSSL_DRBG_SHA512", "-DWOLFSSL_HAVE_ASSERT_H", "-DWOLFSSL_HAVE_ATOMIC_H", "-DWOLFSSL_HAVE_MLKEM", "-DWOLFSSL_PQC_HYBRIDS", "-DWOLFSSL_PSS_LONG_SALT", "-DWOLFSSL_SHA224", "-DWOLFSSL_SHA3", "-DWOLFSSL_SHA384", "-DWOLFSSL_SHA512", "-DWOLFSSL_SHAKE128", "-DWOLFSSL_SHAKE256", "-DWOLFSSL_SP_MATH_ALL", "-DWOLFSSL_SP_X86_64", "-DWOLFSSL_SYS_CA_CERTS", "-DWOLFSSL_TEST_STATIC_BUILD", "-DWOLFSSL_TLS13", "-DWOLFSSL_TLS13_MIDDLEBOX_COMPAT", "-DWOLFSSL_TLS_NO_MLKEM_STANDALONE", "-DWOLFSSL_USE_ALIGN", "-DWOLFSSL_X86_64_BUILD"]
-build_config_complete: true

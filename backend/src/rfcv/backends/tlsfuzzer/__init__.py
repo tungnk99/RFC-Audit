@@ -23,12 +23,14 @@ from rfcv.domains.rfc_protocol.sandbox.dsl import DslSpec
 from rfcv.domains.rfc_protocol.schemas import ScenarioProposal
 from rfcv.domains.rfc_protocol.spec.oracle_compiler import ObservedEvent
 
+KEY_SHARES = ("valid", "empty_entry", "empty_extension")  # key_share hợp lệ / một entry khoá rỗng / phần mở rộng không có dữ liệu
+GROUPS = ("overlap", "disjoint")  # supported_groups có / không có nhóm chung với máy chủ
 UNKNOWN_TYPES = ("type_0", "type_99", "type_255")  # loại bản ghi không được định nghĩa (byte 0, 99, 255)
 DSL = DslSpec(
     ops={
         "connect": frozenset(),
         "complete_handshake": frozenset({"version", "cipher"}),
-        "send_msg": frozenset({"type", "fields"}),
+        "send_msg": frozenset({"type", "key_share", "groups"}),
         "send_raw_record": frozenset({"content_type", "type", "length", "body", "encrypted"}),
         "mutate": frozenset({"field", "op", "value"}),
         "reorder": frozenset({"msgs"}),
@@ -39,9 +41,17 @@ DSL = DslSpec(
         "body": BODIES,
         "op": MUTATIONS,
         "content_type": frozenset({"change_cipher_spec", "alert", "handshake", "application_data", *UNKNOWN_TYPES}),
+        "type": frozenset({"client_hello"}),
+        "key_share": frozenset(KEY_SHARES),
+        "groups": frozenset(GROUPS),
     },
     notes={
         "complete_handshake": "bắt tay TLS đầy đủ; sau bước này trạng thái là connected",
+        "send_msg": (
+            "type=client_hello: một ClientHello TLS 1.3 gửi ngay sau connect (không dùng cùng complete_handshake); key_share, groups "
+            "(một entry có nhóm nhưng khoá rỗng)|empty_extension (phần mở rộng key_share không có dữ liệu); groups=overlap|disjoint "
+            "(không có nhóm chung với máy chủ)"
+        ),
         "send_raw_record": (
             "một bản ghi TLS thô. encrypted=true: bản ghi đã bảo vệ (TLSCiphertext) sau bắt tay, độ dài = length. encrypted=false: bản ghi "
             "rõ gửi NGAY sau connect (trước bắt tay), loại content_type (type_0, type_99, type_255 là loại không được định nghĩa), "
@@ -51,7 +61,7 @@ DSL = DslSpec(
 )
 
 # Tập con DSL mà runner hiện thực thi được. Ngoài tập này, validate() từ chối để Test agent biết và đổi kịch bản.
-SUPPORTED = {"connect", "complete_handshake", "send_raw_record", "expect"}
+SUPPORTED = {"connect", "complete_handshake", "send_raw_record", "send_msg", "expect"}
 RUNNER_SOURCE = Path(__file__).with_name("runner.py")
 PYTHON_IN_IMAGE = "/opt/venv/bin/python3"
 RESULT_PREFIX = "RFCV_RESULT "
@@ -90,10 +100,13 @@ class TlsfuzzerBackend(DslBackend):
                     errors.append("send_raw_record: thiếu đối số length")
         handshakes = sum(step.op == "complete_handshake" for step in scenario.steps)
         plain = [s for s in scenario.steps if s.op == "send_raw_record" and s.args.get("encrypted", True) is not True]
-        if plain and handshakes:
-            errors.append("bản ghi rõ (encrypted=false) được gửi trước bắt tay: không kết hợp với complete_handshake")
-        if sum(step.op == "send_raw_record" for step in scenario.steps) != 1:
-            errors.append("kịch bản phải có đúng một bước send_raw_record")
+        if (plain or any(s.op == "send_msg" for s in scenario.steps)) and handshakes:
+            errors.append("bản ghi rõ / ClientHello được gửi trước bắt tay: không kết hợp với complete_handshake")
+        if sum(step.op in ("send_raw_record", "send_msg") for step in scenario.steps) != 1:
+            errors.append("kịch bản phải có đúng một bước kích hoạt (send_raw_record hoặc send_msg client_hello)")
+        for step in scenario.steps:
+            if step.op == "send_msg" and step.args.get("type") != "client_hello":
+                errors.append("send_msg: chỉ hỗ trợ type=client_hello")
         return ValidationResult(base.ok and not errors, tuple(errors))
 
     # ---- chạy -----------------------------------------------------------------------------------------------
@@ -135,6 +148,11 @@ class TlsfuzzerBackend(DslBackend):
                 req["length"] = int(args["length"])
                 req["encrypted"] = args.get("encrypted", True) is True
                 req["content_type"] = str(args.get("content_type", "application_data"))
+            elif step.op == "send_msg":
+                req["client_hello"] = {
+                    "key_share": str(args.get("key_share", "valid")),
+                    "groups": str(args.get("groups", "overlap")),
+                }
             elif step.op == "expect":
                 req["within_ms"] = int(args.get("within_ms", args.get("timeout_ms", DEFAULT_WITHIN_MS)))
         return req

@@ -69,10 +69,8 @@ CIPHERS = {
 }
 
 
-def handshake(host: str, port: int, cipher: int) -> Any:
-    """Cây hội thoại bắt tay TLS 1.3, dừng ngay sau Finished của client (giống ca `sanity` của tlsfuzzer)."""
-    groups = [GroupName.secp256r1]
-    ext: dict[int, Any] = {
+def handshake_extensions(groups: list[int]) -> dict[int, Any]:
+    return {
         ExtensionType.key_share: ClientKeyShareExtension().create([key_share_gen(g) for g in groups]),
         ExtensionType.supported_versions: SupportedVersionsExtension().create([TLS_1_3_DRAFT, (3, 3)]),
         ExtensionType.supported_groups: SupportedGroupsExtension().create(groups),
@@ -81,6 +79,11 @@ def handshake(host: str, port: int, cipher: int) -> Any:
         ),
         ExtensionType.signature_algorithms_cert: SignatureAlgorithmsCertExtension().create(RSA_SIG_ALL),
     }
+
+
+def handshake(host: str, port: int, cipher: int) -> Any:
+    """Cây hội thoại bắt tay TLS 1.3, dừng ngay sau Finished của client (giống ca `sanity` của tlsfuzzer)."""
+    ext = handshake_extensions([GroupName.secp256r1])
     conversation = Connect(host, port)
     node = conversation
     node = node.add_child(SetMaxRecordSize(2**16 - 1))
@@ -203,10 +206,53 @@ def run_plain_record(req: dict[str, Any]) -> dict[str, Any]:
     return {**base, "trigger_reached": True, "send_error": send_error, **observe(state, t0, within_ms)}
 
 
+UNSHARED_GROUP = 0x7A7A  # nhóm không được máy chủ nào hỗ trợ
+
+
+def client_hello_extensions(spec: dict[str, Any]) -> dict[int, Any]:
+    """Phần mở rộng của ClientHello hợp lệ (như `handshake`), rồi biến đổi key_share / supported_groups theo `spec`."""
+    from tlslite.extensions import KeyShareEntry, TLSExtension
+
+    group = GroupName.secp256r1
+    ext = handshake_extensions([group])
+    if spec.get("groups") == "disjoint":
+        ext[ExtensionType.supported_groups] = SupportedGroupsExtension().create([UNSHARED_GROUP])
+        ext[ExtensionType.key_share] = ClientKeyShareExtension().create([])
+    if spec.get("key_share") == "empty_entry":
+        ext[ExtensionType.key_share] = ClientKeyShareExtension().create([KeyShareEntry().create(group, bytearray(), None)])
+    elif spec.get("key_share") == "empty_extension":
+        ext[ExtensionType.key_share] = TLSExtension(extType=ExtensionType.key_share).create(bytearray())
+    return ext
+
+
+def run_client_hello(req: dict[str, Any]) -> dict[str, Any]:
+    """Một ClientHello (có biến đổi) ngay sau khi nối, rồi quan sát phản ứng của SUT."""
+    within_ms = int(req.get("within_ms", 2000))
+    base: dict[str, Any] = {"trigger_reached": False, "reason": "", "send_error": False}
+    cipher = CIPHERS.get(req.get("cipher", ""), CipherSuite.TLS_AES_128_GCM_SHA256)
+    conversation = Connect("127.0.0.1", int(req["port"]))
+    node = conversation.add_child(SetMaxRecordSize(2**16 - 1))
+    t0 = time.monotonic()
+    node.add_child(
+        ClientHelloGenerator(
+            [cipher, CipherSuite.TLS_EMPTY_RENEGOTIATION_INFO_SCSV], extensions=client_hello_extensions(req["client_hello"])
+        )
+    )
+    runner = Runner(conversation)
+    try:
+        runner.run()
+    except Exception as exc:  # noqa: BLE001
+        return {**base, "reason": f"send_failed: {type(exc).__name__}: {exc}"[:200]}
+    # sau ServerHello hợp lệ, phần còn lại của bắt tay đi trong bản ghi mã hoá có loại application_data: không phải dữ liệu ứng dụng
+    return {**base, "trigger_reached": True, **observe(runner.state, t0, within_ms), "app_data": False}
+
+
 def main() -> None:
     req = json.loads(sys.argv[1])
     if req["mode"] == "sanity":
         result = run_sanity(req)
+    elif "client_hello" in req:
+        result = run_client_hello(req)
     elif req.get("encrypted", True) is False:
         result = run_plain_record(req)
     else:
