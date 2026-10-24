@@ -23,6 +23,7 @@ from rfcv.domains.rfc_protocol.sandbox.dsl import DslSpec
 from rfcv.domains.rfc_protocol.schemas import ScenarioProposal
 from rfcv.domains.rfc_protocol.spec.oracle_compiler import ObservedEvent
 
+UNKNOWN_TYPES = ("type_0", "type_99", "type_255")  # loại bản ghi không được định nghĩa (byte 0, 99, 255)
 DSL = DslSpec(
     ops={
         "connect": frozenset(),
@@ -37,11 +38,15 @@ DSL = DslSpec(
     values={
         "body": BODIES,
         "op": MUTATIONS,
-        "content_type": frozenset({"change_cipher_spec", "alert", "handshake", "application_data"}),
+        "content_type": frozenset({"change_cipher_spec", "alert", "handshake", "application_data", *UNKNOWN_TYPES}),
     },
     notes={
         "complete_handshake": "bắt tay TLS đầy đủ; sau bước này trạng thái là connected",
-        "send_raw_record": "một bản ghi TLS thô; encrypted=true để gửi bản ghi đã bảo vệ (TLSCiphertext) sau bắt tay",
+        "send_raw_record": (
+            "một bản ghi TLS thô. encrypted=true: bản ghi đã bảo vệ (TLSCiphertext) sau bắt tay, độ dài = length. encrypted=false: bản ghi "
+            "rõ gửi NGAY sau connect (trước bắt tay), loại content_type (type_0, type_99, type_255 là loại không được định nghĩa), "
+            "length byte nội dung"
+        ),
     },
 )
 
@@ -77,12 +82,16 @@ class TlsfuzzerBackend(DslBackend):
             if step.op not in SUPPORTED:
                 errors.append(f"backend chưa hỗ trợ bước '{step.op}' (hỗ trợ: {', '.join(sorted(SUPPORTED))})")
             if step.op == "send_raw_record":
-                if step.args.get("encrypted", True) is not True:
-                    errors.append("send_raw_record: chỉ hỗ trợ bản ghi đã mã hoá (encrypted=true) sau bắt tay")
-                if step.args.get("content_type", "application_data") != "application_data":
-                    errors.append("send_raw_record: chỉ hỗ trợ content_type=application_data")
+                encrypted = step.args.get("encrypted", True) is True
+                ctype = str(step.args.get("content_type", "application_data"))
+                if encrypted and ctype != "application_data":
+                    errors.append("send_raw_record: bản ghi đã mã hoá chỉ hỗ trợ content_type=application_data")
                 if "length" not in step.args:
-                    errors.append("send_raw_record: thiếu đối số length (độ dài TLSCiphertext)")
+                    errors.append("send_raw_record: thiếu đối số length")
+        handshakes = sum(step.op == "complete_handshake" for step in scenario.steps)
+        plain = [s for s in scenario.steps if s.op == "send_raw_record" and s.args.get("encrypted", True) is not True]
+        if plain and handshakes:
+            errors.append("bản ghi rõ (encrypted=false) được gửi trước bắt tay: không kết hợp với complete_handshake")
         if sum(step.op == "send_raw_record" for step in scenario.steps) != 1:
             errors.append("kịch bản phải có đúng một bước send_raw_record")
         return ValidationResult(base.ok and not errors, tuple(errors))
@@ -124,6 +133,8 @@ class TlsfuzzerBackend(DslBackend):
                 req["cipher"] = str(args["cipher"])
             elif step.op == "send_raw_record":
                 req["length"] = int(args["length"])
+                req["encrypted"] = args.get("encrypted", True) is True
+                req["content_type"] = str(args.get("content_type", "application_data"))
             elif step.op == "expect":
                 req["within_ms"] = int(args.get("within_ms", args.get("timeout_ms", DEFAULT_WITHIN_MS)))
         return req

@@ -165,9 +165,52 @@ def run_trigger(req: dict[str, Any]) -> dict[str, Any]:
     return {**base, "trigger_reached": True, "send_error": send_error, **observe(state, t0, within_ms)}
 
 
+PLAIN_TYPES = {
+    "change_cipher_spec": 20,
+    "alert": 21,
+    "handshake": 22,
+    "application_data": 23,
+    "type_0": 0,
+    "type_99": 99,
+    "type_255": 255,
+}
+
+
+def run_plain_record(req: dict[str, Any]) -> dict[str, Any]:
+    """Một bản ghi RÕ có loại cho trước, gửi ngay sau khi nối (trước bắt tay), rồi quan sát phản ứng của SUT."""
+    within_ms = int(req.get("within_ms", 2000))
+    base: dict[str, Any] = {"trigger_reached": False, "reason": "", "send_error": False}
+    ctype = PLAIN_TYPES.get(str(req.get("content_type")))
+    if ctype is None:
+        return {**base, "reason": "unknown_content_type_name"}
+    from tlsfuzzer.messages import RawMessageGenerator
+
+    conversation = Connect("127.0.0.1", int(req["port"]))
+    runner = Runner(conversation)
+    try:
+        runner.run()
+    except Exception as exc:  # noqa: BLE001
+        return {**base, "reason": f"connect_failed: {type(exc).__name__}: {exc}"[:200]}
+    state = runner.state
+    generator = RawMessageGenerator(ctype, bytearray(max(0, int(req["length"]))))
+    message = generator.generate(state)
+    t0 = time.monotonic()
+    send_error = False
+    try:
+        state.msg_sock.sendMessageBlocking(message)
+    except (TLSAbruptCloseError, OSError):
+        send_error = True
+    return {**base, "trigger_reached": True, "send_error": send_error, **observe(state, t0, within_ms)}
+
+
 def main() -> None:
     req = json.loads(sys.argv[1])
-    result = run_sanity(req) if req["mode"] == "sanity" else run_trigger(req)
+    if req["mode"] == "sanity":
+        result = run_sanity(req)
+    elif req.get("encrypted", True) is False:
+        result = run_plain_record(req)
+    else:
+        result = run_trigger(req)
     print("RFCV_RESULT " + json.dumps(result), flush=True)
 
 

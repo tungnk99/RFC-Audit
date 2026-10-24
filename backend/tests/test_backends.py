@@ -128,3 +128,13 @@ async def test_run_and_sanity_are_not_implemented_yet() -> None:
         await b.sanity(None)  # type: ignore[arg-type]
     with pytest.raises(NotImplementedError):
         await b.run(GOOD["dnspython"], {}, None, 1)  # type: ignore[arg-type]
+
+
+def test_tlsfuzzer_plain_record_before_handshake() -> None:
+    tls = backend("tlsfuzzer")
+    plain = {"op": "send_raw_record", "args": {"content_type": "type_99", "encrypted": False, "length": 1}}
+    assert tls.validate(scenario({"op": "connect"}, plain, EXPECT)).ok
+    # bản ghi rõ đi trước bắt tay: không kết hợp với complete_handshake; bản ghi mã hoá chỉ là application_data
+    assert not tls.validate(scenario({"op": "complete_handshake"}, plain, EXPECT)).ok
+    enc = {"op": "send_raw_record", "args": {"content_type": "alert", "encrypted": True, "length": 20}}
+    assert not tls.validate(scenario({"op": "complete_handshake"}, enc, EXPECT)).ok

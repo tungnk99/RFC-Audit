@@ -1,0 +1,10 @@
+# Lỗi lịch sử dùng cho kiểm tra "phân biệt được" của Adapter checker (tài liệu adapter, mục 12).
+# Commit ở đây KHÔNG được tính vào tập đánh giá chính.
+- id: wolfssl-record-overflow-2026
+  impl: wolfssl
+  buggy: "c18833f52^"
+  fixed: "c18833f52"
+  expect_fail:
+    - tls13.record.length_overflow:just_above_limit_ciphertext
+    - tls13.record.length_overflow:max_allowed_by_encoding_ciphertext
+  expect_pass_on_fixed: same

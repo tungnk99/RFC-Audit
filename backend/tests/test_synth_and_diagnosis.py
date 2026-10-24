@@ -121,3 +121,21 @@ async def test_enrich_gives_the_code_reader_a_diagnosis_and_a_candidate_pack(sto
     assert "SendAlert(ssl, alert_fatal, record_overflow)" in candidates and "defined(HAVE_MAX_FRAGMENT)" in candidates
     assert ("src/internal.c", 7) in shown
     assert next(iter(trace.events("enriched")))["payload"]["signature"] == "reaction_absent"
+
+
+def test_synthesis_picks_the_template_by_primary_field() -> None:
+    text = (ADAPTER / "examples" / "TLS13-0042.rbs").read_text(encoding="utf-8")
+    unknown = """requirement TLS13-0101 from RFC8446§5#p4s2 modal MUST type B
+actor server
+state initial
+trigger receive(record)
+expect send_alert(unexpected_message) then close within 2000ms
+variants case(record.content_type, type_99)
+"""
+    scenario = synthesize(parse_rbs(unknown), ADAPTER / "templates")
+    assert scenario is not None and scenario.steps[1].op == "send_raw_record"
+    assert scenario.steps[1].args["encrypted"] is False
+    assert scenario.bindings == {"record.content_type": "from_variant"}
+    assert [s.op for s in scenario.steps][1] != "complete_handshake"
+    length = synthesize(parse_rbs(text), ADAPTER / "templates")
+    assert length is not None and length.example_id == "tls13.record.length_overflow"

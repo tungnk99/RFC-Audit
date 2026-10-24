@@ -35,7 +35,8 @@ class Condition(BaseModel):
 class VariantSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    kind: Literal["boundary", "max", "min", "random", "valid_random", "probe"]
+    # case/valid_case: một giá trị rời rạc của trường phân loại (không có thứ tự): `case` ở phía kích hoạt, `valid_case` ở phía hợp lệ.
+    kind: Literal["boundary", "max", "min", "random", "valid_random", "probe", "case", "valid_case"]
     field: str
     value: int | str | None = None
     k: int | None = None
@@ -124,6 +125,12 @@ class _ToModel(Transformer[Token, RBS]):
 
     def v_valid_random(self, field: Token, k: Token) -> VariantSpec:
         return VariantSpec(kind="valid_random", field=str(field), k=int(k), stratified=True)
+
+    def v_case(self, field: Token, value: int | str) -> VariantSpec:
+        return VariantSpec(kind="case", field=str(field), value=value)
+
+    def v_valid_case(self, field: Token, value: int | str) -> VariantSpec:
+        return VariantSpec(kind="valid_case", field=str(field), value=value)
 
     def v_probe(self, field: Token, budget: Token) -> VariantSpec:
         return VariantSpec(kind="probe", field=str(field), budget=int(budget))

@@ -15,8 +15,11 @@ _SIG = re.compile(r"^([a-z_][a-z0-9_]*)(?:\(([a-z0-9_, ]*)\))?$")
 class FieldDomain(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    min: int
-    max: int
+    min: int = 0
+    max: int = 0
+    # Trường phân loại (không có thứ tự): tập giá trị tượng trưng, ví dụ record.content_type: [type_0, type_99]. Backend ánh xạ tên
+    # sang giá trị thật. Có `values` thì dùng `case`/`valid_case` thay vì boundary/random.
+    values: tuple[str, ...] = ()
     # Giá trị mà bộ kiểm thử thông dụng hay dùng (ví dụ 16641, 65535). Mã nhận ra kiểm thử nhắm vào chúng, nên biến thể
     # lấy mẫu bị loại các giá trị này để không "mớm" cho mã gian lận (A7).
     canonical: tuple[int, ...] = ()
@@ -100,12 +103,28 @@ def check(rbs: RBS, vocab: Vocabulary) -> list[str]:
     for c in rbs.accept_alternatives:
         errors += _check_call(c, sigs, vocab, "accept_alternatives")
 
+    if rbs.where is not None and isinstance(rbs.where.value, str):
+        wd = vocab.field_domains.get(rbs.where.field)
+        if wd is not None and wd.values and rbs.where.value not in wd.values:
+            errors.append(f"where: '{rbs.where.value}' không thuộc các giá trị {list(wd.values)} của {rbs.where.field}")
     fields = [v.field for v in rbs.variants] + ([rbs.where.field] if rbs.where else [])
     for f in fields:
         if vocab.field_domains and f not in vocab.field_domains:
             errors.append(f"field: '{f}' không có miền giá trị trong adapter")
     for v in rbs.variants:
-        if v.kind == "boundary" and isinstance(v.value, int) and v.field in vocab.field_domains:
+        dom0 = vocab.field_domains.get(v.field)
+        if v.kind in ("case", "valid_case"):
+            if dom0 is None or not dom0.values:
+                errors.append(f"variant: {v.kind}({v.field}) cần trường phân loại có `values` trong adapter")
+            elif str(v.value) not in dom0.values:
+                errors.append(f"variant: '{v.value}' không thuộc các giá trị {list(dom0.values)} của {v.field}")
+            continue
+        if (
+            v.kind == "boundary"
+            and isinstance(v.value, int)
+            and v.field in vocab.field_domains
+            and not (dom0 and dom0.values)
+        ):
             dom = vocab.field_domains[v.field]
             if not dom.min <= v.value <= dom.max:
                 errors.append(f"variant: {v.value} nằm ngoài miền [{dom.min}, {dom.max}] của {v.field}")

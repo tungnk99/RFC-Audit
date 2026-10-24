@@ -19,9 +19,12 @@ from rfcv.domains.rfc_protocol.spec.rbs import RBS
 
 
 def _shape_matches(match: dict[str, Any], rbs: RBS) -> bool:
-    """`match`: requirement_types, trigger (tên sự kiện), trigger_arg (đối số đầu của sự kiện), expect (tên lời gọi đầu), field_prefix (tiền tố trường `where`)."""
-    if rbs.where is None or not rbs.expect:
-        return False  # kịch bản dựng theo trường của `where` và phản ứng đầu của `expect`
+    """`match`: requirement_types, trigger (tên sự kiện), trigger_arg (đối số đầu), expect (tên lời gọi đầu), field (trường kích hoạt), field_prefix."""
+    field = primary_field(rbs)
+    if field is None or not rbs.expect:
+        return False  # kịch bản dựng theo trường kích hoạt (`where`, hoặc trường của biến thể) và phản ứng đầu của `expect`
+    if (exact := match.get("field")) and field != exact:
+        return False
     if (types := match.get("requirement_types")) and rbs.rtype not in types:
         return False
     if (trigger := match.get("trigger")) and rbs.trigger.name != trigger:
@@ -30,7 +33,14 @@ def _shape_matches(match: dict[str, Any], rbs: RBS) -> bool:
         return False
     if (expect := match.get("expect")) and rbs.expect[0].name != expect:
         return False
-    return not ((prefix := match.get("field_prefix")) and not rbs.where.field.startswith(prefix))
+    return not ((prefix := match.get("field_prefix")) and not field.startswith(prefix))
+
+
+def primary_field(rbs: RBS) -> str | None:
+    """Trường kích hoạt của yêu cầu: trường của `where`, hoặc trường của biến thể đầu tiên nếu RBS không có `where`."""
+    if rbs.where is not None:
+        return rbs.where.field
+    return rbs.variants[0].field if rbs.variants else None
 
 
 def synthesize(rbs: RBS, templates_dir: Path | None) -> ScenarioProposal | None:
@@ -42,7 +52,8 @@ def synthesize(rbs: RBS, templates_dir: Path | None) -> ScenarioProposal | None:
         steps, match = data.get("steps"), data.get("match")
         if not steps or not isinstance(match, dict) or not _shape_matches(cast("dict[str, Any]", match), rbs):
             continue
-        assert rbs.where is not None
+        field = primary_field(rbs)
+        assert field is not None
         steps = copy.deepcopy(steps)
         for step in cast("list[dict[str, Any]]", steps):
             if step.get("op") == "expect":
@@ -55,7 +66,7 @@ def synthesize(rbs: RBS, templates_dir: Path | None) -> ScenarioProposal | None:
                 "requirement_id": rbs.requirement_id,
                 "reach_state": rbs.state,
                 "steps": steps,
-                "bindings": data.get("bindings") or {rbs.where.field: "from_variant"},
+                "bindings": data.get("bindings") or {field: "from_variant"},
                 "example_id": data.get("id"),
             }
         )

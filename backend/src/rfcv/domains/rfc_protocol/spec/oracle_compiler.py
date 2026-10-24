@@ -93,11 +93,14 @@ class CompiledOracle(BaseModel):
         """Số T3 PASS cần có ở phía hợp lệ từ biến thể lấy mẫu."""
         return sum(v.expected_count for v in self.variants if v.variant_class == "valid_random")
 
-    def side_of(self, field: str, value: int) -> Literal["trigger", "valid"]:
+    def side_of(self, field: str, value: int | str) -> Literal["trigger", "valid"]:
         """Giá trị này thuộc phía kích hoạt (phải có phản ứng) hay phía hợp lệ (không được có phản ứng)?"""
         cond = self.where
-        if cond is None or cond.field != field or not isinstance(cond.value, int):
+        if cond is None or cond.field != field:
             return "trigger"
+        if isinstance(cond.value, str) or isinstance(value, str):  # trường phân loại: chỉ có == và !=
+            eq = str(value) == str(cond.value)
+            return "trigger" if (eq if cond.op == "==" else not eq if cond.op == "!=" else True) else "valid"
         holds = {
             ">": value > cond.value,
             ">=": value >= cond.value,
@@ -232,6 +235,17 @@ def compile_oracle(rbs: RBS, vocab: Vocabulary) -> CompiledOracle:
                         variant_class="required",
                         field=spec.field,
                         value=value,
+                    )
+                )
+            case "case" | "valid_case":
+                valid = spec.kind == "valid_case"
+                variants.append(
+                    ConcreteVariant(
+                        name=f"{'valid_case' if valid else 'case'}:{spec.field}={spec.value}",
+                        variant_class="control" if valid else "required",
+                        field=spec.field,
+                        value=spec.value,
+                        side="valid" if valid else "trigger",
                     )
                 )
             case "random" | "valid_random" | "probe":

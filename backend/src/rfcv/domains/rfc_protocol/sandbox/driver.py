@@ -305,7 +305,7 @@ class TestDriver:
     def _side(oracle: CompiledOracle, variant: ConcreteVariant, params: dict[str, int | str]) -> str:
         """Phía của lần chạy: suy từ giá trị cụ thể và `where` của oracle (biến thể probe nằm cả hai phía)."""
         value = params.get(variant.field)
-        if isinstance(value, int):
+        if isinstance(value, int | str):
             return oracle.side_of(variant.field, value)
         return variant.side
 

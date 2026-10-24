@@ -27,6 +27,8 @@ variant: "boundary" "(" FIELD "," value ")"       -> v_boundary
        | "random" "(" FIELD "," "k" "=" INT "," "stratified" ")"  -> v_random_stratified
        | "valid_random" "(" FIELD "," "k" "=" INT ")"             -> v_valid_random
        | "probe" "(" FIELD "," "budget" "=" INT ")"               -> v_probe
+       | "case" "(" FIELD "," value ")"                           -> v_case
+       | "valid_case" "(" FIELD "," value ")"                     -> v_valid_case
 
 value: INT | NAME
 

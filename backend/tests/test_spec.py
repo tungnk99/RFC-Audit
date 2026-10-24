@@ -274,3 +274,37 @@ def test_hash_prng_is_stable_across_versions() -> None:
         hash_randint(0, 65535, "stratum", 7, "random:record.length", i) for i in range(3)
     ]
     assert hash_randint(0, 65535, "golden", 1) == 53583
+
+
+CATEGORICAL = """requirement TLS13-0101 from RFC8446§5#p4s2 modal MUST type B
+actor server
+state initial
+trigger receive(record)
+expect send_alert(unexpected_message) then close within 2000ms
+variants case(record.content_type, type_99), valid_case(record.content_type, type_0)
+"""
+
+
+def test_categorical_variants_parse_check_and_compile(manifest: AdapterManifest) -> None:
+    rbs = parse_rbs(CATEGORICAL)
+    assert [(v.kind, v.value) for v in rbs.variants] == [("case", "type_99"), ("valid_case", "type_0")]
+    vocab = to_vocabulary(manifest)
+    assert check(rbs, vocab) == []
+    oracle = compile_oracle(rbs, vocab)
+    classes = {v.name: (v.variant_class, v.side) for v in oracle.variants}
+    assert classes["case:record.content_type=type_99"] == ("required", "trigger")
+    assert classes["valid_case:record.content_type=type_0"] == ("control", "valid")
+
+
+def test_categorical_value_must_belong_to_the_field_domain(manifest: AdapterManifest) -> None:
+    errors = check(parse_rbs(CATEGORICAL.replace("type_99", "type_7")), to_vocabulary(manifest))
+    assert any("type_7" in e for e in errors)
+    errors = check(parse_rbs(BASE.replace("boundary(record.length, 16641)", "case(record.length, 5)")), to_vocabulary(manifest))
+    assert any("trường phân loại" in e for e in errors)
+
+
+def test_side_of_handles_symbolic_values(manifest: AdapterManifest) -> None:
+    text = CATEGORICAL.replace("trigger receive(record)", "trigger receive(record) where record.content_type != type_0")
+    oracle = compile_oracle(parse_rbs(text), to_vocabulary(manifest))
+    assert oracle.side_of("record.content_type", "type_99") == "trigger"
+    assert oracle.side_of("record.content_type", "type_0") == "valid"
