@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from rfcv.adapters.manifest import AdapterManifest, load_manifest
+from rfcv.core.audit_fleet import FleetConfig, run_audit_fleet
 from rfcv.core.budget import RequirementBudget
 from rfcv.core.execution_loop import ExecutionLoop
 from rfcv.core.llm_gateway import LLMGateway, ModelsConfig
@@ -84,6 +85,8 @@ class RuntimeConfig:
     # Trước vòng điều tra, agent dịch câu RFC thành RBS (mù với bản người viết) rồi đối chiếu; chỉ quan sát, không đổi RBS dùng cho kết luận.
     spec_analysis: bool = False
     explain: bool = False  # sau mỗi kết luận, Report agent viết giải thích và Output gate kiểm (thêm khoảng 4% token)
+    max_concurrency: int = 1  # >1: chạy Map-Reduce Audit Fleet song song nhiều yêu cầu RFC cô lập
+    parallel_hypotheses: int = 1  # >1: hỗ trợ chạy Best-of-K cho Code Reader trên ca khó
     budget: RequirementBudget | None = None
     image_digests: Mapping[str, str] = field(default_factory=dict[str, str])
 
@@ -130,26 +133,56 @@ class Runtime:
             exclude=exclude,
         )
 
-    async def run_all(self, source: Path) -> list[VerdictRecord]:
-        """Điều tra lần lượt từng yêu cầu miền nạp được từ `source`, ghi vòng đời vào Requirement registry."""
+    async def run_all(self, source: Path, *, max_concurrency: int | None = None) -> list[VerdictRecord]:
+        """Điều tra các yêu cầu miền nạp được từ `source`, ghi vòng đời vào Requirement registry.
+        Khi `max_concurrency > 1`, chạy qua `run_audit_fleet` (Map-Reduce song song, giữ đúng thứ tự đầu vào)."""
         if self.loop is None or self.pack.runtime is None:
             raise RuntimeError("miền không khai báo phần chạy")
-        verdicts: list[VerdictRecord] = []
+        loop = self.loop
+        pack_rt = self.pack.runtime
+        concurrency = max_concurrency if max_concurrency is not None else self.config.max_concurrency
+
+        async def _run_one(inv: Any) -> tuple[VerdictRecord, int]:
+            rid = inv.requirement.requirement_id
+            self.requirements.add(rid, {"rtype": inv.requirement.rtype, "modal": inv.requirement.modal}, "loader")
+            self.requirements.transition(rid, State.SPECIFIED, "oracle_compiler")
+            self.requirements.transition(rid, State.INVESTIGATING, "execution_loop")
+            analyze = getattr(pack_rt, "analyze_spec", None)
+            if self.config.spec_analysis and analyze is not None:
+                await analyze(self, inv)
+            verdict = await loop.investigate(inv)
+            if self.config.explain:
+                await loop.explain(inv, verdict)  # không đổi nhãn; giải thích không qua Output gate thì bị bỏ
+            self.requirements.transition(rid, State.DECIDED, "verdict_engine")
+            return verdict, 0
+
         with use_registry(self.registry):
-            for inv in self.pack.runtime.investigations(self, source):
-                rid = inv.requirement.requirement_id
-                self.requirements.add(rid, {"rtype": inv.requirement.rtype, "modal": inv.requirement.modal}, "loader")
-                self.requirements.transition(rid, State.SPECIFIED, "oracle_compiler")
-                self.requirements.transition(rid, State.INVESTIGATING, "execution_loop")
-                analyze = getattr(self.pack.runtime, "analyze_spec", None)
-                if self.config.spec_analysis and analyze is not None:
-                    await analyze(self, inv)
-                verdict = await self.loop.investigate(inv)
-                if self.config.explain:
-                    await self.loop.explain(inv, verdict)  # không đổi nhãn; giải thích không qua Output gate thì bị bỏ
-                self.requirements.transition(rid, State.DECIDED, "verdict_engine")
+            invs = list(pack_rt.investigations(self, source))
+            if concurrency > 1 and len(invs) > 1:
+                by_id = {inv.requirement.requirement_id: inv for inv in invs}
+                report = await run_audit_fleet(
+                    [inv.requirement.requirement_id for inv in invs],
+                    lambda rid: _run_one(by_id[rid]),
+                    FleetConfig(max_concurrency=concurrency, fail_fast=False),
+                )
+                self.trace.append(
+                    self.run_id,
+                    "fleet_summary",
+                    {
+                        "max_concurrency": concurrency,
+                        "total": report.total,
+                        "succeeded": report.succeeded,
+                        "failed": report.failed,
+                        "by_label": report.by_label,
+                        "wall_s": report.wall_s,
+                    },
+                )
+                return [item.verdict for item in report.items if item.verdict is not None]
+            verdicts: list[VerdictRecord] = []
+            for inv in invs:
+                verdict, _ = await _run_one(inv)
                 verdicts.append(verdict)
-        return verdicts
+            return verdicts
 
 
 def _resolve_rules(reg: Registry, pack: DomainPack, manifest: AdapterManifest) -> RuleSet:
@@ -310,6 +343,7 @@ def build_runtime(
         rt.loop = ExecutionLoop(
             scripted_plans=config.scripted_plans,
             audit_skips_critique=config.effort == "efficient",
+            extra_shared_context=getattr(pack.runtime, "shared_context", None),
             run_id=run_id,
             runner=runner,
             policy=policy,

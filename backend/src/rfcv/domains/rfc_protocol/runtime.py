@@ -7,14 +7,15 @@ from __future__ import annotations
 
 import os
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
 from agents.code_indexer.handler import ComponentMapHandler
 from agents.code_reader.handler import LocationHandler
+from agents.code_reader.schema import LocationClaim
 from agents.common import ORACLE_KEY, RBS_KEY, TaskType
 from agents.locator.service import Locator, requirement_keywords
 from agents.rfc_analyst.handler import evaluate_proposal
@@ -26,6 +27,15 @@ from rfcv.core.execution_loop import Investigation
 from rfcv.core.ifc import Labeled, TrustLabel
 from rfcv.domains.rfc_protocol.adapter_view import to_vocabulary, vocabulary_terms
 from rfcv.domains.rfc_protocol.agent_tools import AgentTools
+from rfcv.domains.rfc_protocol.divergence_audit import extract_divergence_points
+from rfcv.domains.rfc_protocol.multi_hypothesis import (
+    HypothesisSpec,
+    TournamentResult,
+    build_hypotheses,
+    evaluate_claim_with_gate,
+    run_best_of_k,
+)
+from rfcv.domains.rfc_protocol.rbs_precheck import PrecheckResult, ReferenceObservation, sanity_precheck_rbs
 from rfcv.domains.rfc_protocol.rfc_gate import load_rfc_documents, lookup_sentence
 from rfcv.domains.rfc_protocol.rules import RULE_SET, ProtocolRequirement
 from rfcv.domains.rfc_protocol.sandbox import witness_cache
@@ -34,7 +44,9 @@ from rfcv.domains.rfc_protocol.sandbox.witness_cache import WitnessCache
 from rfcv.domains.rfc_protocol.schema_gate import SchemaGate
 from rfcv.domains.rfc_protocol.spec.oracle_compiler import compile_oracle
 from rfcv.domains.rfc_protocol.spec.rbs import parse_rbs
-from rfcv.gates.tool_gateway import ToolSpec
+from rfcv.evidence.models import Evidence
+from rfcv.evidence.verdict_engine import SufficiencyReport
+from rfcv.gates.tool_gateway import ToolSession, ToolSpec
 
 SPEC_TASK = "RFC_TO_RBS"  # kiểu việc của bước phân tích đặc tả (không qua Planner nên không nằm trong TaskType)
 SPEC_STREAM = "rfc_analyst.a"  # luồng dịch thứ nhất; luồng .b cần mô hình khác họ (BL-16)
@@ -279,4 +291,88 @@ class ProtocolRuntime:
         result = evaluate_proposal(proposal, approved, docs, to_vocabulary(rt.manifest), aliased_to=alias)
         result["failure"] = outcome.failure if outcome is not None else "NO_ROLE"
         result["target_sentence_id"] = ctx.sentence_id
+        ref_obs = inv.domain_state.get("reference_observations")
+        if isinstance(ref_obs, Sequence) and ref_obs:
+            precheck = self.precheck_spec(rt, inv, cast("Sequence[ReferenceObservation]", ref_obs))
+            result["precheck_status"] = precheck.status.value
+            result["precheck_reason"] = precheck.reason_code
         loop.log_event("rfc_proposal", result, rid)
+
+    def shared_context(
+        self, _report: SufficiencyReport, evidence: Sequence[Evidence], inv: Investigation
+    ) -> dict[str, Labeled[Any]]:
+        """Trích điểm rẽ nhánh lập luận (`divergence.points`, an toàn IFC) cấp cho Verifier ở mỗi vòng."""
+        rfc_item = inv.context.get("rfc.sentence")
+        rfc_sentence = str(rfc_item.value) if rfc_item is not None and isinstance(rfc_item.value, str) else None
+        t1_items = [e for e in evidence if str(e.tier) == "T1"]
+        t3_items = [e for e in evidence if str(e.tier) == "T3"]
+        return {"divergence.points": extract_divergence_points(rfc_sentence, t1_items, t3_items)}
+
+    def precheck_spec(
+        self, rt: Any, inv: Investigation, observations: Sequence[ReferenceObservation]
+    ) -> PrecheckResult:
+        """Kiểm định ngược RBS với các bản tham chiếu độc lập (OpenSSL/GnuTLS) để chặn sớm CT-26."""
+        rid = inv.requirement.requirement_id
+        res = sanity_precheck_rbs(rid, observations)
+        if rt.loop is not None:
+            rt.loop.log_event(
+                "rbs_precheck",
+                {
+                    "status": res.status.value,
+                    "reason_code": res.reason_code,
+                    "failed_refs": list(res.failed_refs),
+                    "details": list(res.details),
+                },
+                rid,
+            )
+        return res
+
+    async def locate_best_of_k(
+        self,
+        rt: Any,
+        inv: Investigation,
+        base_params: Mapping[str, Any],
+        run_one: Callable[[HypothesisSpec, ToolSession], Awaitable[LocationClaim | None]],
+        *,
+        k: int | None = None,
+    ) -> TournamentResult:
+        """Chạy song song K nhánh giả thuyết cho Code Reader, kiểm qua SchemaGate và chọn ứng viên T1 tốt nhất."""
+        count = k if k is not None else int(getattr(rt.config, "parallel_hypotheses", 1))
+        hypotheses = build_hypotheses(base_params, k=max(1, count))
+        rid = inv.requirement.requirement_id
+        manifest = rt.manifest
+        index = rt.providers.code_index
+        compiled: Any = getattr(index, "compiled_lines", None)
+        macro_state: Any = getattr(index, "macro_state", None)
+        flags = tuple(manifest.build_flags)
+        gate = SchemaGate(
+            index,
+            vocabulary_terms(manifest),
+            (lambda f: compiled(f, flags, closed_world=manifest.build_config_complete))
+            if compiled is not None
+            else None,
+            (lambda m: macro_state(m, flags, closed_world=manifest.build_config_complete))
+            if macro_state is not None
+            else None,
+        )
+        rbs = inv.domain_state.get(RBS_KEY)
+        expected_threshold = int(rbs.where.value) if rbs is not None and rbs.where is not None else None
+        max_tools = rt.policy.profile("code_reader").budget_per_task.tool_calls
+
+        async def _branch(hyp: HypothesisSpec) -> tuple[LocationClaim | None, Sequence[str]]:
+            session = ToolSession(rt.run_id, "code_reader", rid, max_tools)
+            claim = await run_one(hyp, session)
+            return evaluate_claim_with_gate(
+                claim,
+                gate,
+                session,
+                run_id=rt.run_id,
+                requirement_id=rid,
+                threshold=expected_threshold,
+            )
+
+        tournament = await run_best_of_k(hypotheses, _branch)
+        rt.trace.append(
+            rt.run_id, "best_of_k_tournament", tournament.to_telemetry(), role="code_reader", requirement_id=rid
+        )
+        return tournament

@@ -141,6 +141,10 @@ class ExecutionLoop:
         rules: RuleSet | None = None,
         loop_detector: Callable[[], LoopDetector] | None = None,
         progress_of: Callable[[SufficiencyReport, int], Hashable] | None = None,
+        extra_shared_context: Callable[
+            [SufficiencyReport, Sequence[Evidence], Investigation], Mapping[str, Labeled[Any]]
+        ]
+        | None = None,
         scripted_plans: bool = False,
         audit_skips_critique: bool = False,
     ) -> None:
@@ -162,6 +166,7 @@ class ExecutionLoop:
         self._rules = rules if rules is not None else reg.default_rule_set()
         self._new_loop_detector = loop_detector or LoopDetector
         self._progress_of: Callable[[SufficiencyReport, int], Hashable] = progress_of or _evidence_count
+        self._extra_shared_context = extra_shared_context
         self.reflexion = ReflexionMemory()
 
     async def investigate(self, inv: Investigation) -> VerdictRecord:
@@ -532,9 +537,8 @@ class ExecutionLoop:
             round=round,
         )
 
-    @staticmethod
     def _shared_context(
-        report: SufficiencyReport, evidence: Sequence[Evidence], inv: Investigation
+        self, report: SufficiencyReport, evidence: Sequence[Evidence], inv: Investigation
     ) -> dict[str, Labeled[Any]]:
         """Trạng thái điều tra hub cấp; mỗi vai trò chỉ nhận trường nó khai báo trong role.yaml.
 
@@ -546,11 +550,14 @@ class ExecutionLoop:
         cited = {i for c in report.conflicts for i in c.evidence_ids}
         if report.provisional is not None:
             cited |= set(report.provisional.evidence_ids)
-        return {
+        out: dict[str, Labeled[Any]] = {
             "evidence.summary": summarize_evidence(evidence, inv.vocabulary_terms, cited),
             "verdict.sufficiency": Labeled(report_json(report, inv.feasible), TrustLabel.DERIVED),
             "verdict.missing": Labeled(missing_json(report, inv.feasible), TrustLabel.DERIVED),
         }
+        if self._extra_shared_context is not None:
+            out.update(self._extra_shared_context(report, evidence, inv))
+        return out
 
     def _task_valid(self, task: TaskSpec, requirement_id: str, round: int) -> bool:
         definition = self._tasks.get(task.task_type)

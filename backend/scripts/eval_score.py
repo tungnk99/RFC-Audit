@@ -66,6 +66,7 @@ def _run_ci_gates() -> dict[str, Any]:
         "tests/test_best_of_k.py",
         "tests/test_divergence_verifier.py",
         "tests/test_fleet_reflexion.py",
+        "tests/test_stage2_wiring.py",
         "tests/test_agent_runtime.py",
         "tests/test_skills.py",
         "tests/test_summary_fold.py",

@@ -36,6 +36,7 @@ HUB_FIELDS = {
     "code.candidates",  # Code Reader: gói ứng viên mã do handler chuẩn bị bằng luật
     "critique.unresolved",  # như trên: vấn đề phản biện còn ngỏ khi hết số vòng đuổi theo
     "evidence.cited",
+    "divergence.points",  # Verifier: điểm rẽ nhánh lập luận do miền trích xuất an toàn IFC
 }
 
 # Khoảng trống năng lực đã biết: vai trò khai báo nhưng chưa có nguồn cung cấp.

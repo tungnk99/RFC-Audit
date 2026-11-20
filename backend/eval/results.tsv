@@ -1,2 +1,7 @@
 timestamp	branch	commit	dirty	label	ci_pass	pytest_passed	ruff_ok	pyright_ok	import_linter_ok	sim_total	verdict_acc	false_compliant	adversarial_safe	duration_s
 2026-11-20T17:12:57Z	feat/nextgen-agent-research	660e5e6	1	stage3-hardened	1	262	1	1	1	44	0.4773	16	1	50.94
+2026-11-20T17:24:46Z	feat/nextgen-agent-research	f99855f	1	stage3-wired-all	0	41	1	0	1	44	0.4773	16	1	35.38
+2026-11-20T17:26:19Z	feat/nextgen-agent-research	f99855f	1	stage3-wired-all	0	41	1	0	1	44	0.4773	16	1	33.06
+2026-11-20T17:28:18Z	feat/nextgen-agent-research	f99855f	1	stage3-wired-all	0	263	1	1	1	44	0.4773	16	1	43.94
+2026-11-20T17:30:30Z	feat/nextgen-agent-research	f99855f	1	stage3-wired-all	0	265	1	1	1	44	0.4773	16	1	42.44
+2026-11-20T17:34:16Z	feat/nextgen-agent-research	f99855f	1	stage3-wired-all	1	266	1	1	1	44	0.4773	16	1	47.55
