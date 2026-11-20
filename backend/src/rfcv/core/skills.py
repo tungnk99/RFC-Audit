@@ -207,6 +207,20 @@ class SkillRegistry:
             raise FileNotFoundError(relpath)
         return target.read_text(encoding="utf-8")
 
+    def render_static(self, names: Iterable[str]) -> str:
+        """Nhúng tĩnh phần thân của các skill đã chọn thành khối hướng dẫn TRUSTED (không cần meta-tool `load_capability`)."""
+        sections: list[str] = []
+        for name in names:
+            info = self.skills.get(name)
+            if info is None:
+                continue
+            raw = (info.path / "SKILL.md").read_text(encoding="utf-8")
+            m = _FRONTMATTER.match(raw)
+            body = (m.group(2) if m else raw).strip()
+            if body:
+                sections.append(f"## Skill: {info.name}\n{body}")
+        return "\n\n".join(sections)
+
 
 def default_registry(
     skills_root: Path,

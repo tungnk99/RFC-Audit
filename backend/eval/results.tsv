@@ -1,0 +1,2 @@
+timestamp	branch	commit	label	ci_pass	pytest_passed	ruff_ok	pyright_ok	import_linter_ok	verdict_acc	false_compliant	adversarial_safe	duration_s
+2026-11-20T09:25:36Z	feat/nextgen-agent-research	b433e9d	stage1-unified-aci	1	223	1	1	1	1.0000	0	1	25.09

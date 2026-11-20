@@ -17,7 +17,7 @@ from __future__ import annotations
 import os
 from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
-from typing import Any, Self
+from typing import Any, Literal, Self
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -27,6 +27,7 @@ from rfcv.plugins import current_registry
 
 ModelHandle = Any  # đối tượng mờ do nhà cung cấp tạo; chỉ runtime agent biết dùng
 ProviderFactory = Callable[["ModelSpec", str], ModelHandle]
+OutputMode = Literal["tool", "native", "prompted"]
 
 
 # SDK của nhà cung cấp đòi khoá không rỗng; máy chủ cục bộ bỏ qua giá trị này.
@@ -43,6 +44,10 @@ class ModelSpec(BaseModel):
     api_key_env: str | None = None
     base_url: str | None = None
     settings: dict[str, Any] = Field(default_factory=dict)
+    # Cách ép đầu ra có cấu trúc: `tool` (mặc định PydanticAI), `native` (JSON Schema của provider), `prompted` (cho endpoint không hỗ trợ tool_choice).
+    output_mode: OutputMode = "tool"
+    # Nhúng thẳng skill đã chọn vào system instructions thay vì bắt model tự gọi meta-tool `load_capability` (triệt tiêu CT-01).
+    static_skills: bool = True
 
 
 class ModelsConfig(BaseModel):
@@ -133,6 +138,16 @@ class LLMGateway:
         if key in self._overrides or key.split(".", 1)[0] in self._overrides:
             return None
         return dict(self._spec(key).settings) or None
+
+    def output_mode_for(self, key: str) -> OutputMode:
+        if key in self._overrides or key.split(".", 1)[0] in self._overrides:
+            return "tool"
+        return self._spec(key).output_mode
+
+    def static_skills_for(self, key: str) -> bool:
+        if key in self._overrides or key.split(".", 1)[0] in self._overrides:
+            return False
+        return self._spec(key).static_skills
 
     def _build(self, spec: ModelSpec) -> ModelHandle:
         factory = self._factories().get(spec.provider)

@@ -28,11 +28,24 @@ models:
     model: DeepSeek-V4-Flash
     base_url: https://mkp-api.fptcloud.com/v1
     api_key_env: FPT_API_KEY
+    output_mode: tool
+    static_skills: true
     settings: {temperature: 0, extra_body: {thinking: {type: disabled}}}
 
-# Hiện mọi agent dùng chung fpt-deepseek-flash (FPT, tiết kiệm chi phí); deepseek-flash vẫn khai báo để đổi lại. Khi có thêm mô hình thì khai báo ở `models` rồi đổi dòng tương ứng.
-# Hai chỗ thiết kế muốn KHÁC họ mô hình để lỗi ít tương quan: rfc_analyst.b (luồng dịch thứ hai, M2) và verifier
-# (phản biện độc lập). Dùng chung một mô hình thì độc lập đó chưa có; ghi lại khi đánh giá.
+  # Họ mô hình thứ hai (Zhipu GLM) cho phản biện độc lập (`verifier`, `rfc_analyst.b`) nhằm đóng CT-07.
+  # Hỗ trợ cả BigModel API (https://open.bigmodel.cn/api/paas/v4) hoặc bất kỳ endpoint OpenAI-compatible nào.
+  # Nếu endpoint GLM không hỗ trợ `tool_choice` khi bật/tắt thinking, đổi `output_mode: native` hoặc `prompted`.
+  glm-flash:
+    provider: openai_compatible
+    model: glm-4.5-flash
+    base_url: https://open.bigmodel.cn/api/paas/v4
+    api_key_env: GLM_API_KEY
+    output_mode: tool
+    static_skills: true
+    settings: {temperature: 0, extra_body: {thinking: {type: disabled}}}
+
+# Hiện mọi agent mặc định dùng fpt-deepseek-flash (chỉ cần FPT_API_KEY).
+# Để bật đa họ độc lập (đóng CT-07), đặt GLM_API_KEY và đổi `verifier` + `rfc_analyst.b` sang `glm-flash`.
 agents:
   rfc_analyst.a: fpt-deepseek-flash
   rfc_analyst.b: fpt-deepseek-flash

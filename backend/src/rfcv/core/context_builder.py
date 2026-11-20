@@ -72,7 +72,11 @@ class ContextBuilder:
 
 
 def summarize_evidence(
-    evidence: Sequence[Evidence], vocabulary_terms: Iterable[str], keep: Collection[str] = ()
+    evidence: Sequence[Evidence],
+    vocabulary_terms: Iterable[str],
+    keep: Collection[str] = (),
+    *,
+    max_folded_items: int | None = None,
 ) -> Labeled[list[dict[str, Any]]]:
     """Bản tóm tắt bằng chứng cho agent đặc quyền: chỉ giá trị miền hữu hạn hoặc đã đối chiếu.
 
@@ -82,6 +86,7 @@ def summarize_evidence(
 
     Hàng "thường" của loại có khai báo `is_routine` được gộp (xem `EvidenceKind.fold_fields`) để bản tóm tắt không
     tăng tuyến tính theo số biến thể thử. Bằng chứng trong `keep` (được nhãn tạm hay xung đột trích dẫn) không bị gộp.
+    Khi đặt `max_folded_items`, mỗi nhóm gộp chỉ giữ tối đa chừng đó mã đại diện (dùng cho Report để tránh phình token).
     """
     kinds = current_registry().kinds
     terms = frozenset(vocabulary_terms)
@@ -109,18 +114,21 @@ def summarize_evidence(
         elif key not in emitted:
             emitted.add(key)
             members = groups[key]
-            out.append(row if len(members) == 1 else _fold(members, kind.fold_fields))
+            out.append(row if len(members) == 1 else _fold(members, kind.fold_fields, max_folded_items))
     return Labeled(out, TrustLabel.UNTRUSTED)
 
 
-def _fold(members: Sequence[dict[str, Any]], fold_fields: Sequence[str]) -> dict[str, Any]:
+def _fold(
+    members: Sequence[dict[str, Any]], fold_fields: Sequence[str], max_items: int | None = None
+) -> dict[str, Any]:
     """Một hàng thay cho nhiều hàng giống nhau trừ `fold_fields`: giữ phần chung, thêm `count`, `evidence_ids` và danh
     sách giá trị của từng trường gộp (vẫn trích dẫn được từng bằng chứng)."""
     first = members[0]
+    sample = members[:max_items] if max_items is not None else members
     folded = {k: v for k, v in first.items() if k != "evidence_id" and k not in fold_fields}
     folded["count"] = len(members)
-    folded["evidence_ids"] = [m["evidence_id"] for m in members]
+    folded["evidence_ids"] = [m["evidence_id"] for m in sample]
     for name in fold_fields:
         if name in first:
-            folded[name] = [m[name] for m in members]
+            folded[name] = [m[name] for m in sample]
     return folded

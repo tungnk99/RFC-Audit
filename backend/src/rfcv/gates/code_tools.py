@@ -391,8 +391,24 @@ def build_cc_tools(
         if last < start:
             total = line_count(file)
             return _result(f"tool=read {file}", f"(ngoài cuối tệp{f'; tệp có {total} dòng' if total else ''})")
+        compiled_of: Any = getattr(index, "compiled_lines", None)
+        disabled_seen = 0
+        if compiled_of is not None:
+            compiled: set[int] | None = compiled_of(file, tuple(build_flags), closed_world=closed_world)
+            if compiled is not None:
+                annotated: list[str] = []
+                for idx_offset, raw_line in enumerate(body.splitlines()):
+                    lineno = start + idx_offset
+                    if lineno not in compiled:
+                        disabled_seen += 1
+                        prefix, sep, rest = raw_line.partition(" ")
+                        annotated.append(f"{prefix} [DISABLED]{sep}{rest}" if sep else f"{raw_line} [DISABLED]")
+                    else:
+                        annotated.append(raw_line)
+                body = "\n".join(annotated)
         total = line_count(file)
-        head = f"tool=read {file} lines {start}–{last}" + (f" of {total}" if total else "")
+        disabled_note = f" ({disabled_seen} dòng [DISABLED] bị tắt bởi cờ build)" if disabled_seen else ""
+        head = f"tool=read {file} lines {start}–{last}" + (f" of {total}" if total else "") + disabled_note
         more = ""
         nxt = last + 1 - base + 1
         if last < min(end, limit_end):

@@ -15,7 +15,7 @@ docs/
   04_evaluation/   thiết kế đánh giá và kết quả thực nghiệm
   05_project/      quản lý dự án: backlog, sổ theo dõi cải thiện, checklist deliverable
   assets/figures/  sơ đồ SVG dùng trong các tài liệu
-  archive/html/    bản HTML gốc của các tài liệu thiết kế, để đối chiếu
+  archive/         bản HTML gốc và lưu trữ hướng tiếp cận giai đoạn trước
 ```
 
 Các thư mục đánh số theo thứ tự nên đọc. Tên file bằng tiếng Anh (`snake_case`), nội dung bằng tiếng Việt.
@@ -37,6 +37,7 @@ Nên đọc theo thứ tự này. Cột cuối là phần mã tương ứng.
 | 3 | [Khả năng khám phá mã nguồn của agent](02_design/code_exploration_design.md) | Code gate, Locator, Code Indexer, Code Reader, bộ công cụ đọc mã | [code_gate.py](../backend/src/rfcv/gates/code_gate.py), [codeindex/](../backend/src/rfcv/codeindex/), [agents/code_reader/](../backend/agents/code_reader/), [agents/locator/](../backend/agents/locator/), [agents/code_indexer/](../backend/agents/code_indexer/) |
 | 4 | [Hướng dẫn và phối hợp các agent](02_design/agent_coordination_design.md) | Vòng điều tra, Planner, Verifier, báo cáo độ đủ, điều kiện dừng | [execution_loop.py](../backend/src/rfcv/core/execution_loop.py), [verdict_engine.py](../backend/src/rfcv/evidence/verdict_engine.py), [agents/planner/](../backend/agents/planner/) |
 | 5 | [Protocol adapter và kiểm thử thực tế (T3)](02_design/adapter_and_testing_design.md) | Adapter, mẫu kịch bản, Test driver, SUT, oracle | [adapters/](../backend/adapters/), [sandbox/](../backend/src/rfcv/domains/rfc_protocol/sandbox/), [backends/](../backend/src/rfcv/backends/) |
+| 6 | [Tiến hoá AI Agent & quy trình nghiên cứu thế hệ mới](02_design/agentic_research_evolution_design.md) | Meta-research (AlphaEvolve/autoresearch/Co-Scientist) & cơ chế agent mới bên trong `rfcv` | [runtime/](../backend/src/rfcv/runtime/), [gates/](../backend/src/rfcv/gates/), [core/](../backend/src/rfcv/core/) |
 
 ## Đánh giá
 

@@ -13,12 +13,22 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
 from collections.abc import Sequence
 from typing import Any, cast
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
-from pydantic_ai import Agent, ModelRetry, RunContext, Tool, UsageLimits, capture_run_messages
+from pydantic_ai import (
+    Agent,
+    ModelRetry,
+    NativeOutput,
+    PromptedOutput,
+    RunContext,
+    Tool,
+    UsageLimits,
+    capture_run_messages,
+)
 from pydantic_ai.capabilities import ProcessHistory
 from pydantic_ai.exceptions import ModelAPIError, UnexpectedModelBehavior, UsageLimitExceeded
 from pydantic_ai.messages import (
@@ -37,7 +47,7 @@ from pydantic_ai.settings import ModelSettings
 
 from rfcv.core.context_builder import ContextBuilder
 from rfcv.core.envelope import Envelope
-from rfcv.core.llm_gateway import LLMGateway
+from rfcv.core.llm_gateway import LLMGateway, OutputMode
 from rfcv.core.policy import PolicyStore
 from rfcv.core.prompts import role_prompt
 from rfcv.core.runner import RoleOutcome
@@ -49,14 +59,16 @@ from rfcv.runtime.pydantic_ai.skills import skills_capability
 
 LOAD_TOOL = "load_capability"  # tên công cụ nạp skill của harness; chỉ nơi này được biết
 KEEP_TOOL_RESULTS = (
-    4  # số kết quả công cụ gần nhất giữ nguyên văn; cũ hơn bị lược (đo: mỗi lượt gửi lại toàn bộ lịch sử)
+    2  # số kết quả công cụ gần nhất giữ nguyên văn; cũ hơn bị lược (đo: mỗi lượt gửi lại toàn bộ lịch sử)
 )
 KEEP_TOOLS = frozenset({"code__read", "code__eval"})  # kết quả đọc/tính được giữ lâu hơn kết quả tìm kiếm
-READ_KEEP_CHARS = 60_000  # tối đa ~15k token kết quả đọc cũ được giữ nguyên văn
+READ_KEEP_CHARS = 20_000  # tối đa ~5k token kết quả đọc cũ được giữ nguyên văn (gọn cho mọi cỡ mô hình)
 CLEARED_HEAD = 160  # ký tự đầu của kết quả cũ còn lại sau khi lược
 CLEAR_ABOVE = 600  # kết quả ngắn hơn mức này không đáng lược
-WRAP_UP_SHARE = 0.7  # quá tỉ lệ ngân sách token này thì nhắc agent trả kết quả ngay
+WRAP_UP_SHARE = 0.65  # quá tỉ lệ ngân sách token này thì nhắc agent trả kết quả ngay
 OUTPUT_TOOL_PREFIX = "final_result"  # tên công cụ đầu ra của PydanticAI
+_JSON_FENCE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.S)
+_INT_STR = re.compile(r"^[+-]?\d+$")
 
 
 REPEAT_NOTE = (
@@ -181,8 +193,67 @@ def thin_history(ctx: RunContext[ToolSession], messages: list[ModelMessage]) -> 
     return messages
 
 
+def _coerce_output_payload(data: Any) -> Any:
+    """Chuẩn hoá nhẹ đầu ra có cấu trúc của mô hình trước khi kiểm chứng (ví dụ `"16486"` → `16486` cho THRESHOLD.observed)."""
+    if not isinstance(data, dict):
+        return data
+    out = dict(cast("dict[str, Any]", data))
+    aspects = out.get("aspects")
+    if isinstance(aspects, list):
+        fixed: list[Any] = []
+        for item in cast("list[Any]", aspects):
+            if isinstance(item, dict):
+                row = dict(cast("dict[str, Any]", item))
+                obs = row.get("observed")
+                if (
+                    str(row.get("aspect", "")).upper() == "THRESHOLD"
+                    and isinstance(obs, str)
+                    and _INT_STR.match(obs.strip())
+                ):
+                    row["observed"] = int(obs.strip())
+                fixed.append(row)
+            else:
+                fixed.append(item)
+        out["aspects"] = fixed
+    return out
+
+
+def _coerce_model(output: BaseModel) -> BaseModel:
+    """Chuẩn hoá nhẹ một BaseModel đã parse (vd THRESHOLD.observed dạng chuỗi số) mà không đổi các trường khác."""
+    raw = output.model_dump()
+    coerced = _coerce_output_payload(raw)
+    if coerced == raw:
+        return output
+    try:
+        return type(output).model_validate(coerced)
+    except ValidationError:
+        return output
+
+
+def _extract_json_object(text: str) -> dict[str, Any] | None:
+    """Trích đối tượng JSON từ chuỗi văn bản hoặc khối markdown ```json ... ``` (dùng cho salvage ở prompted mode)."""
+    s = text.strip()
+    m = _JSON_FENCE.search(s)
+    cand = m.group(1) if m else s
+    if not (cand.startswith("{") and cand.endswith("}")):
+        return None
+    try:
+        parsed = json.loads(cand)
+    except ValueError:
+        return None
+    return cast("dict[str, Any]", parsed) if isinstance(parsed, dict) else None
+
+
+def _output_spec(schema: Any, mode: OutputMode) -> Any:
+    if mode == "native":
+        return NativeOutput(schema)
+    if mode == "prompted":
+        return PromptedOutput(schema)
+    return schema
+
+
 def salvage(messages: Sequence[ModelMessage], output_type: Any) -> BaseModel | None:
-    """Đầu ra gần nhất mà agent đã đề nghị (lời gọi công cụ đầu ra) và còn đúng schema. Dùng khi lần chạy hỏng vì hết ngân
+    """Đầu ra gần nhất mà agent đã đề nghị (lời gọi công cụ đầu ra hoặc JSON trong TextPart) và còn đúng schema. Dùng khi lần chạy hỏng vì hết ngân
     sách hay hết lượt làm lại: bỏ đi thì mất cả kết quả đúng (đo: cổng từ chối vị trí đúng vì chỉ mục thiếu hàm, agent làm
     lại tới cạn ngân sách). Chưa được tin: handler vẫn chạy cổng kiểm tra tất định trên đầu ra này."""
     adapter = TypeAdapter(output_type)
@@ -190,13 +261,22 @@ def salvage(messages: Sequence[ModelMessage], output_type: Any) -> BaseModel | N
         if not isinstance(m, ModelResponse):
             continue
         for part in reversed(m.parts):
+            payload: dict[str, Any] | None = None
             if isinstance(part, ToolCallPart) and part.tool_name.startswith(OUTPUT_TOOL_PREFIX):
                 try:
-                    out = adapter.validate_python(part.args_as_dict())
-                except (ValidationError, ValueError):
+                    payload = part.args_as_dict()
+                except ValueError:
                     continue
-                if isinstance(out, BaseModel):
-                    return out
+            elif isinstance(part, TextPart) and part.content:
+                payload = _extract_json_object(part.content)
+            if payload is None:
+                continue
+            try:
+                out = adapter.validate_python(_coerce_output_payload(payload))
+            except (ValidationError, ValueError):
+                continue
+            if isinstance(out, BaseModel):
+                return out
     return None
 
 
@@ -208,12 +288,15 @@ class PydanticAIRoleRunner:
         llm: LLMGateway,
         trace: TraceSink,
         skills: SkillRegistry | None = None,
+        *,
+        static_skills: bool | None = None,
     ) -> None:
         self._policy = policy
         self._gateway = gateway
         self._llm = llm
         self._trace = trace
         self._skills = skills
+        self._static_skills = static_skills
         self._agents: dict[str, Agent[ToolSession, Any]] = {}
 
     def _wrap(self, spec: ToolSpec) -> Tool[ToolSession]:
@@ -245,6 +328,8 @@ class PydanticAIRoleRunner:
         """Cổng tất định chạy trên đầu ra trước khi nhiệm vụ kết thúc (ví dụ Schema gate với LocationClaim). Không qua
         thì agent được làm lại tối đa MAX_OUTPUT_RETRIES lần trong ngân sách; chỉ mã lỗi liệt kê được trả về agent."""
         session = ctx.deps
+        if isinstance(output, BaseModel):
+            output = _coerce_model(output)
         check = session.output_check
         if check is None or not isinstance(output, BaseModel):
             return output
@@ -262,7 +347,7 @@ class PydanticAIRoleRunner:
         raise ModelRetry(
             "Cổng kiểm tra từ chối đầu ra: "
             + ", ".join(errors)
-            + ". Đọc lại (read_range) đúng các dòng sẽ dẫn, sửa vị trí/đường gọi rồi trả lại."
+            + ". Đọc lại đúng các dòng sẽ dẫn, sửa vị trí/đường gọi rồi trả lại."
         )
 
     def agent(self, role: str, model_key: str | None = None) -> Agent[ToolSession, Any]:
@@ -270,9 +355,11 @@ class PydanticAIRoleRunner:
         if key not in self._agents:
             profile = self._policy.profile(role)
             settings = self._llm.settings_for(key)
+            schema = current_registry().schemas[profile.output_schema]
+            out_spec = _output_spec(schema, self._llm.output_mode_for(key))
             agent = Agent(
                 self._llm.model_for(key),
-                output_type=current_registry().schemas[profile.output_schema],
+                output_type=out_spec,
                 system_prompt=role_prompt(self._policy, role),
                 deps_type=ToolSession,
                 tools=[self._wrap(s) for s in self._gateway.specs_for(role)],
@@ -285,20 +372,27 @@ class PydanticAIRoleRunner:
             self._agents[key] = agent
         return self._agents[key]
 
+    def _use_static_skills(self, key: str) -> bool:
+        if self._static_skills is not None:
+            return self._static_skills
+        return self._llm.static_skills_for(key)
+
     async def run(
         self, envelope: Envelope, context: dict[str, Any], session: ToolSession, model_key: str | None = None
     ) -> RoleOutcome:
         role = envelope.to_role
         budget = self._policy.profile(role).budget_per_task
         model_key = model_key or session.model_key
+        key = model_key or role
         agent = self.agent(role, model_key)
         session.max_tokens = budget.tokens
-        # Chỉ skill agent khai báo trong role.yaml, lọc tất định theo kiểu nhiệm vụ; mô hình chỉ quyết định nạp skill nào
-        # trong số đó.
+        # Chỉ skill agent khai báo trong role.yaml, lọc tất định theo kiểu nhiệm vụ.
         task_type = envelope.body.get("task_type")
         task = str(task_type) if task_type else None
         offered = self._skills.select(self._policy.profile(role).skills, task) if self._skills else []
-        capability = skills_capability(self._skills, offered) if self._skills else None
+        use_static = self._use_static_skills(key)
+        static_instructions = self._skills.render_static(offered) if (self._skills and offered and use_static) else None
+        capability = skills_capability(self._skills, offered) if (self._skills and not use_static) else None
         started = time.monotonic()
 
         # `capture_run_messages` giữ hội thoại kể cả khi lần chạy ném lỗi: đúng lúc hỏng mới cần xem mô hình đã thấy và
@@ -331,6 +425,7 @@ class PydanticAIRoleRunner:
                 result = await agent.run(
                     ContextBuilder.render(envelope, context),
                     deps=session,
+                    instructions=static_instructions,
                     capabilities=[ProcessHistory(thin_history), *([capability] if capability is not None else [])],
                     usage_limits=UsageLimits(
                         request_limit=budget.llm_calls,
@@ -346,12 +441,13 @@ class PydanticAIRoleRunner:
                     "llm_failure",
                     {
                         "msg_id": envelope.msg_id,
-                        "model": model_key or role,
+                        "model": key,
                         "error": type(exc).__name__,
                         "detail": str(exc)[:500],
                         "duration_ms": int((time.monotonic() - started) * 1000),
                         "skills_offered": offered,
-                        "skills_loaded": loaded_skills(transcript),
+                        "skills_loaded": list(offered) if use_static else loaded_skills(transcript),
+                        "skills_mode": "static" if use_static else "dynamic",
                         "tokens": spent,
                         "tool_calls": session.tool_calls,
                         "messages": transcript,
@@ -381,9 +477,10 @@ class PydanticAIRoleRunner:
             "llm_run",
             {
                 "msg_id": envelope.msg_id,
-                "model": model_key or role,
+                "model": key,
                 "skills_offered": offered,
-                "skills_loaded": loaded_skills(messages),
+                "skills_loaded": list(offered) if use_static else loaded_skills(messages),
+                "skills_mode": "static" if use_static else "dynamic",
                 "skills_digest": self._skills.digest if self._skills else None,
                 "duration_ms": int((time.monotonic() - started) * 1000),
                 "input_tokens": usage.input_tokens,

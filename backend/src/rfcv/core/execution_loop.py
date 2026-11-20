@@ -380,7 +380,8 @@ class ExecutionLoop:
             **{name: value for name, value in inv.context.items() if name.startswith("rfc.")},
             "verdict.record": Labeled(verdict.to_json(), TrustLabel.DERIVED),
             "critique.unresolved": Labeled(self._unresolved.get(req_id, []), TrustLabel.DERIVED),
-            "evidence.cited": summarize_evidence(basis, inv.vocabulary_terms, {e.evidence_id for e in basis}),
+            # Gộp các T3 PASS thường để giảm mạnh token Report (~34k → ~4k) mà vẫn giữ đủ evidence_ids đại diện cho Output gate.
+            "evidence.cited": summarize_evidence(basis, inv.vocabulary_terms, max_folded_items=3),
         }
         gate = _ExplanationGate(verdict, evidence)
         outcome, _ = await self._run_role(
