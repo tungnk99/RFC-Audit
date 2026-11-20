@@ -68,6 +68,8 @@ Mỗi cấu hình nên chạy mỗi ca **ít nhất 3 lần** vì kết quả c�
 | 15 | 2026-10-23 | **Nâng cấp hiệu quả** (out12; token = mọi vai, gồm Report): cache nhân chứng + T3 song song, kịch bản dựng từ mẫu, Planner theo sổ tay tất định, T3 trước và định vị mã khi cần, kiểm toán COMPLIANT bằng luật, chẩn đoán T3 + gói ứng viên cho Code Reader, `rfc-protocol@8` | bug | VIOLATION V2, **trúng hunk** (`defect_hit`) | 2 | 121 | 161.099 | 0% | 0/1 | 0 nạp lại |
 | 15 | 2026-10-23 | như trên | fix | COMPLIANT V6 (BEHAVIORAL) | 1 | 39 | 34.071 | 0% | 0/0 | 0 nạp lại |
 | 15 | 2026-10-23 | như trên | head | COMPLIANT V6 (BEHAVIORAL) | 1 | 41 | 34.555 | 0% | 0/0 | 0 nạp lại |
+| 16 | 2026-11-20 | **Unified ACI (`feat/nextgen-agent-research`)**: `static_skills=True` (bỏ `load_capability`), `code_reader/prompt.md` rút gọn, `KEEP_TOOL_RESULTS=2`, `READ_KEEP_CHARS=20_000`, `e2e_live.py` trên `fpt-deepseek-flash` (n = 1 mỗi ca; `GLM_API_KEY` chưa đặt) | faulty | VIOLATION V2 | 1 | 27 | 232.127 | 0% | 0/2 | 0 (tĩnh) |
+| 16 | 2026-11-20 | như trên (`planner` gặp 4 lỗi kết nối tạm thời FPT khi máy nghỉ, mọi worker `code_reader`/`tester`/`verifier` đều 0 lỗi, 0 retry, 0 gate reject) | correct | COMPLIANT V5 (LINKED) | 5 | - | 777.978 | 0% | 0/5 | 0 (tĩnh) |
 
 \* Lãng phí = token tiêu trong các lần chạy agent bị hỏng, chia tổng token. Mỗi ca mới chạy **một lần**, chưa đủ để nói về
 độ ổn định. Khi thêm dòng, ghi thêm thay đổi so với lần trước vào cột Cấu hình.

@@ -68,7 +68,7 @@ CLEAR_ABOVE = 600  # kết quả ngắn hơn mức này không đáng lược
 WRAP_UP_SHARE = 0.65  # quá tỉ lệ ngân sách token này thì nhắc agent trả kết quả ngay
 OUTPUT_TOOL_PREFIX = "final_result"  # tên công cụ đầu ra của PydanticAI
 _JSON_FENCE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.S)
-_INT_STR = re.compile(r"^[+-]?\d+$")
+_INT_STR = re.compile(r"^[+-]?\d{1,18}$")
 
 
 REPEAT_NOTE = (
@@ -252,10 +252,9 @@ def _output_spec(schema: Any, mode: OutputMode) -> Any:
     return schema
 
 
-def salvage(messages: Sequence[ModelMessage], output_type: Any) -> BaseModel | None:
-    """Đầu ra gần nhất mà agent đã đề nghị (lời gọi công cụ đầu ra hoặc JSON trong TextPart) và còn đúng schema. Dùng khi lần chạy hỏng vì hết ngân
-    sách hay hết lượt làm lại: bỏ đi thì mất cả kết quả đúng (đo: cổng từ chối vị trí đúng vì chỉ mục thiếu hàm, agent làm
-    lại tới cạn ngân sách). Chưa được tin: handler vẫn chạy cổng kiểm tra tất định trên đầu ra này."""
+def salvage(messages: Sequence[ModelMessage], output_type: Any, *, allow_text_json: bool = False) -> BaseModel | None:
+    """Đầu ra gần nhất mà agent đã đề nghị (lời gọi công cụ đầu ra; chỉ đọc JSON trong TextPart khi `allow_text_json=True`
+    ở prompted mode để không nhầm bản nháp trong TextPart ở tool/native mode). Chưa được tin: handler vẫn chạy cổng kiểm tra tất định."""
     adapter = TypeAdapter(output_type)
     for m in reversed(messages):
         if not isinstance(m, ModelResponse):
@@ -267,7 +266,7 @@ def salvage(messages: Sequence[ModelMessage], output_type: Any) -> BaseModel | N
                     payload = part.args_as_dict()
                 except ValueError:
                     continue
-            elif isinstance(part, TextPart) and part.content:
+            elif allow_text_json and isinstance(part, TextPart) and part.content:
                 payload = _extract_json_object(part.content)
             if payload is None:
                 continue
@@ -297,7 +296,7 @@ class PydanticAIRoleRunner:
         self._trace = trace
         self._skills = skills
         self._static_skills = static_skills
-        self._agents: dict[str, Agent[ToolSession, Any]] = {}
+        self._agents: dict[tuple[str, str], Agent[ToolSession, Any]] = {}
 
     def _wrap(self, spec: ToolSpec) -> Tool[ToolSession]:
         gateway = self._gateway
@@ -352,7 +351,8 @@ class PydanticAIRoleRunner:
 
     def agent(self, role: str, model_key: str | None = None) -> Agent[ToolSession, Any]:
         key = model_key or role
-        if key not in self._agents:
+        cache_key = (role, key)
+        if cache_key not in self._agents:
             profile = self._policy.profile(role)
             settings = self._llm.settings_for(key)
             schema = current_registry().schemas[profile.output_schema]
@@ -369,8 +369,8 @@ class PydanticAIRoleRunner:
                 defer_model_check=True,
             )
             agent.output_validator(self._check_output)
-            self._agents[key] = agent
-        return self._agents[key]
+            self._agents[cache_key] = agent
+        return self._agents[cache_key]
 
     def _use_static_skills(self, key: str) -> bool:
         if self._static_skills is not None:
@@ -456,7 +456,11 @@ class PydanticAIRoleRunner:
                     requirement_id=envelope.requirement_id,
                 )
                 # Token đã tiêu trước khi hỏng vẫn tính vào ngân sách của yêu cầu.
-                partial = salvage(captured, current_registry().schemas[self._policy.profile(role).output_schema])
+                partial = salvage(
+                    captured,
+                    current_registry().schemas[self._policy.profile(role).output_schema],
+                    allow_text_json=self._llm.output_mode_for(key) == "prompted",
+                )
                 if partial is not None:
                     self._trace.append(
                         envelope.run_id,

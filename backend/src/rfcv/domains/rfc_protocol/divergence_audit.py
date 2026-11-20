@@ -95,9 +95,10 @@ def _safe_macro_token(macros: Sequence[str]) -> VerifiedRef:
             seen.add(token)
             cleaned.append(token)
     joined = ",".join(cleaned[:4])
-    if not _SAFE_TOKEN.fullmatch(joined):
+    candidate = f"ifdef:{joined}"
+    if not _SAFE_TOKEN.fullmatch(candidate):
         return UNVERIFIED
-    return VerifiedRef(f"ifdef:{joined}")
+    return VerifiedRef(candidate)
 
 
 def collect_divergence_points(

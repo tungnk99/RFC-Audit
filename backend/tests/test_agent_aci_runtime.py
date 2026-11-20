@@ -132,9 +132,17 @@ def test_coercion_fixes_string_threshold_and_salvages_fenced_json() -> None:
     assert fixed.aspects[0].observed == 16486
 
     fenced = f"Đây là kết quả:\n```json\n{json.dumps(raw)}\n```"
-    salvaged = salvage([ModelResponse(parts=[TextPart(fenced)])], LocationClaim)
+    # Mặc định (tool/native mode) KHÔNG salvage JSON từ TextPart để tránh bản nháp lọt qua cổng
+    assert salvage([ModelResponse(parts=[TextPart(fenced)])], LocationClaim) is None
+    # Chỉ cho phép salvage TextPart ở prompted mode
+    salvaged = salvage([ModelResponse(parts=[TextPart(fenced)])], LocationClaim, allow_text_json=True)
     assert isinstance(salvaged, LocationClaim)
     assert salvaged.aspects[0].observed == 16486
+
+    # Chuỗi số siêu dài (>18 chữ số) không gây ValueError DoS
+    huge_raw = dict(raw)
+    huge_raw["aspects"] = [{"aspect": "THRESHOLD", "value": "MISMATCH", "observed": "9" * 5000, "lines": [12, 12]}]
+    assert _coerce_output_payload(huge_raw)["aspects"][0]["observed"] == "9" * 5000
 
 
 def test_thin_history_uses_compact_defaults() -> None:
@@ -199,9 +207,9 @@ async def test_code_read_marks_ifdef_disabled_lines_inline() -> None:
     # Dòng 5 được biên dịch nên không có nhãn [DISABLED]
     line5 = next(line for line in res.text.splitlines() if "return;" in line)
     assert "[DISABLED]" not in line5
-    # Dòng 3 bị tắt nên có nhãn [DISABLED]
+    # Dòng 3 bị tắt nên có nhãn [DISABLED] ngay sau số dòng 6 ký tự (không lệch cột)
     line3 = next(line for line in res.text.splitlines() if "SendAlert" in line)
-    assert "[DISABLED]" in line3
+    assert line3.startswith("     3 [DISABLED] ")
 
 
 def test_report_evidence_cited_folds_routine_t3_passes_and_keeps_fail_and_t1() -> None:

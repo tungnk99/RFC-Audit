@@ -1,13 +1,13 @@
-"""Automated Evaluator (kiểu Karpathy autoresearch / AlphaEvolve) cho các nhánh nghiên cứu RFC-Audit.
+r"""Automated Evaluator (kiểu Karpathy autoresearch / AlphaEvolve) cho các nhánh nghiên cứu RFC-Audit.
 
-Chạy một lệnh duy nhất để chấm điểm khách quan mọi biến thể kiến trúc theo vector chỉ số chuẩn:
-  - ci_pass: ruff + pyright + lint-imports + pytest (core/invariants/aci)
-  - verdict_acc & false_compliant: độ chính xác nhãn trên bộ mô phỏng & hard_world (không cần gọi API thật)
-  - adversarial_safe: kiểm tra bất biến chống prompt injection & IFC
-  - ghi kết quả chuẩn hoá vào `backend/eval/results.tsv` để so sánh đường biên Pareto giữa các nhánh.
+Chạy một lệnh duy nhất để chấm điểm khách quan mọi biến thể kiến trúc theo vector chỉ số chuẩn (KHÔNG có fallback bịa điểm):
+  - ci_pass: ruff + pyright + lint-imports + pytest (core + ACI + Stage 2 suites)
+  - adversarial_safe: chạy riêng bộ test bất biến IFC / chống rò rỉ (`test_invariants`, `test_policy_ifc`, `test_leak_scan`)
+  - verdict_acc & false_compliant: chạy thật `rfcv.eval.sim.run_benchmark` trên adapter `tls13` (ghi rõ `sim_total`)
+  - git_dirty: ghi nhận rõ cây làm việc sạch hay chưa commit để đảm bảo khả năng tái lập chính xác.
 
 Dùng:
-  cd backend && uv run python scripts/eval_score.py --label baseline-ch1
+  cd backend && .\.venv\Scripts\python.exe scripts/eval_score.py --label stage3-hardened
 """
 
 from __future__ import annotations
@@ -24,8 +24,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS_TSV = ROOT / "eval" / "results.tsv"
 TSV_HEADER = (
-    "timestamp\tbranch\tcommit\tlabel\tci_pass\tpytest_passed\truff_ok\tpyright_ok\t"
-    "import_linter_ok\tverdict_acc\tfalse_compliant\tadversarial_safe\tduration_s\n"
+    "timestamp\tbranch\tcommit\tdirty\tlabel\tci_pass\tpytest_passed\truff_ok\tpyright_ok\t"
+    "import_linter_ok\tsim_total\tverdict_acc\tfalse_compliant\tadversarial_safe\tduration_s\n"
 )
 
 
@@ -34,10 +34,11 @@ def _run(cmd: list[str], cwd: Path = ROOT) -> tuple[int, str]:
     return proc.returncode, (proc.stdout + "\n" + proc.stderr).strip()
 
 
-def _git_info() -> tuple[str, str]:
+def _git_info() -> tuple[str, str, bool]:
     _, branch = _run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=ROOT.parent)
     _, sha = _run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT.parent)
-    return branch.strip() or "unknown", sha.strip() or "unknown"
+    _, status = _run(["git", "status", "--porcelain"], cwd=ROOT.parent)
+    return branch.strip() or "unknown", sha.strip() or "unknown", bool(status.strip())
 
 
 def _venv_tool(name: str) -> str:
@@ -48,11 +49,18 @@ def _venv_tool(name: str) -> str:
     return name
 
 
+def _parse_pytest_passed(output: str) -> int:
+    parts = output.split()
+    for idx, tok in enumerate(parts):
+        if tok.startswith("passed") and idx > 0 and parts[idx - 1].isdigit():
+            return int(parts[idx - 1])
+    return 0
+
+
 def _run_ci_gates() -> dict[str, Any]:
     ruff_rc, ruff_out = _run([_venv_tool("ruff"), "check", "src", "tests", "agents"])
     pyright_rc, pyright_out = _run([_venv_tool("pyright"), "--pythonpath", sys.executable])
     il_rc, il_out = _run([_venv_tool("lint-imports")])
-    # Chạy bộ test lõi + bất biến + ACI + hard_world + sim (bỏ qua test cần Docker thật).
     test_targets = [
         "tests/test_agent_aci_runtime.py",
         "tests/test_best_of_k.py",
@@ -61,8 +69,6 @@ def _run_ci_gates() -> dict[str, Any]:
         "tests/test_agent_runtime.py",
         "tests/test_skills.py",
         "tests/test_summary_fold.py",
-        "tests/test_invariants.py",
-        "tests/test_policy_ifc.py",
         "tests/test_gates.py",
         "tests/test_verdict_engine.py",
         "tests/test_execution_loop.py",
@@ -71,55 +77,64 @@ def _run_ci_gates() -> dict[str, Any]:
         "tests/test_contracts.py",
         "tests/test_coordination_contracts.py",
     ]
-    existing = [t for t in test_targets if (ROOT / t).is_file()]
-    pt_rc, pt_out = _run([_venv_tool("pytest"), "-q", *existing])
-    passed_count = 0
-    for token in pt_out.split():
-        if token.isdigit():
-            passed_count = int(token)
-            break
-    # Lấy đúng số trước chữ "passed"
-    parts = pt_out.split()
-    for idx, tok in enumerate(parts):
-        if tok.startswith("passed") and idx > 0 and parts[idx - 1].isdigit():
-            passed_count = int(parts[idx - 1])
+    missing = [t for t in test_targets if not (ROOT / t).is_file()]
+    if missing:
+        raise FileNotFoundError(f"Thiếu tệp kiểm thử bắt buộc: {missing}")
+    pt_rc, pt_out = _run([_venv_tool("pytest"), "-q", *test_targets])
+
+    # Chạy riêng bộ kiểm tra an toàn đối kháng / IFC / chống rò rỉ.
+    adv_targets = ["tests/test_invariants.py", "tests/test_policy_ifc.py", "tests/test_leak_scan.py"]
+    adv_rc, adv_out = _run([_venv_tool("pytest"), "-q", *adv_targets])
+
+    passed_count = _parse_pytest_passed(pt_out) + _parse_pytest_passed(adv_out)
+    all_tests_ok = pt_rc == 0 and adv_rc == 0
     return {
         "ruff_ok": ruff_rc == 0,
         "pyright_ok": pyright_rc == 0,
         "import_linter_ok": il_rc == 0,
-        "pytest_ok": pt_rc == 0,
+        "pytest_ok": all_tests_ok,
+        "adversarial_safe": adv_rc == 0,
         "pytest_passed": passed_count,
-        "ci_pass": ruff_rc == 0 and pyright_rc == 0 and il_rc == 0 and pt_rc == 0,
+        "ci_pass": ruff_rc == 0 and pyright_rc == 0 and il_rc == 0 and all_tests_ok,
         "details": {
             "ruff": "" if ruff_rc == 0 else ruff_out[-600:],
             "pyright": "" if pyright_rc == 0 else pyright_out[-600:],
             "lint_imports": "" if il_rc == 0 else il_out[-600:],
             "pytest": "" if pt_rc == 0 else pt_out[-800:],
+            "adversarial": "" if adv_rc == 0 else adv_out[-800:],
         },
     }
 
 
-def _run_sim_benchmark() -> dict[str, Any]:
-    """Chạy kiểm chuẩn tất định qua rfcv.eval.sim để đo verdict_acc và false_compliant không phụ thuộc API."""
-    from rfcv.eval.sim import simulate
+def _run_sim_benchmark(seeds: int = 2) -> dict[str, Any]:
+    """Chạy thật `rfcv.eval.sim.run_benchmark` trên adapter tls13 (không nuốt lỗi, không bịa điểm)."""
+    from rfcv.eval.sim import run_benchmark
 
-    report = simulate(seed=42, samples=20)
-    total = int(report.get("total", 0))
-    correct = int(report.get("correct", 0))
-    false_compliant = int(report.get("false_compliant", 0))
+    report = run_benchmark(ROOT / "adapters" / "tls13", seeds=seeds)
+    cells = report.cells
+    total = len(cells)
+    false_compliant = sum(1 for c in cells if c.kind == "faulty" and c.label == "COMPLIANT")
+    # Đếm số ca đúng chiều: correct/alt_valid phải COMPLIANT; faulty phải VIOLATION (hoặc không COMPLIANT nếu ngoài trần quét).
+    correct = sum(
+        1
+        for c in cells
+        if (c.kind in ("correct", "alt_valid") and c.label == "COMPLIANT")
+        or (c.kind == "faulty" and (c.label == "VIOLATION" or (not c.scan_deviates and c.label != "COMPLIANT")))
+    )
     acc = round(correct / total, 4) if total > 0 else 0.0
     return {"verdict_acc": acc, "false_compliant": false_compliant, "sim_total": total}
 
 
 def _append_tsv(row: dict[str, Any]) -> None:
     RESULTS_TSV.parent.mkdir(parents=True, exist_ok=True)
-    if not RESULTS_TSV.exists():
+    if not RESULTS_TSV.exists() or RESULTS_TSV.read_text(encoding="utf-8").splitlines()[0] != TSV_HEADER.strip():
         RESULTS_TSV.write_text(TSV_HEADER, encoding="utf-8")
     line = (
-        f"{row['timestamp']}\t{row['branch']}\t{row['commit']}\t{row['label']}\t"
+        f"{row['timestamp']}\t{row['branch']}\t{row['commit']}\t{int(row['dirty'])}\t{row['label']}\t"
         f"{int(row['ci_pass'])}\t{row['pytest_passed']}\t{int(row['ruff_ok'])}\t"
-        f"{int(row['pyright_ok'])}\t{int(row['import_linter_ok'])}\t{row['verdict_acc']:.4f}\t"
-        f"{row['false_compliant']}\t{int(row['adversarial_safe'])}\t{row['duration_s']:.2f}\n"
+        f"{int(row['pyright_ok'])}\t{int(row['import_linter_ok'])}\t{row['sim_total']}\t"
+        f"{row['verdict_acc']:.4f}\t{row['false_compliant']}\t{int(row['adversarial_safe'])}\t"
+        f"{row['duration_s']:.2f}\n"
     )
     with RESULTS_TSV.open("a", encoding="utf-8") as fh:
         fh.write(line)
@@ -128,30 +143,30 @@ def _append_tsv(row: dict[str, Any]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Automated Evaluator cho RFC-Audit.")
     parser.add_argument("--label", default="unnamed", help="Nhãn thực nghiệm ghi vào results.tsv")
+    parser.add_argument("--seeds", type=int, default=2, help="Số seed cho rfcv.eval.sim.run_benchmark")
     parser.add_argument("--no-record", action="store_true", help="Chỉ in JSON, không ghi vào results.tsv")
     args = parser.parse_args()
 
     started = time.monotonic()
-    branch, commit = _git_info()
+    branch, commit, dirty = _git_info()
     ci = _run_ci_gates()
-    try:
-        sim = _run_sim_benchmark()
-    except Exception:
-        sim = {"verdict_acc": 1.0 if ci["pytest_ok"] else 0.0, "false_compliant": 0, "sim_total": 0}
+    sim = _run_sim_benchmark(seeds=args.seeds)
 
     row: dict[str, Any] = {
         "timestamp": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "branch": branch,
         "commit": commit,
+        "dirty": dirty,
         "label": args.label,
         "ci_pass": ci["ci_pass"],
         "pytest_passed": ci["pytest_passed"],
         "ruff_ok": ci["ruff_ok"],
         "pyright_ok": ci["pyright_ok"],
         "import_linter_ok": ci["import_linter_ok"],
+        "sim_total": sim["sim_total"],
         "verdict_acc": sim["verdict_acc"],
         "false_compliant": sim["false_compliant"],
-        "adversarial_safe": ci["pytest_ok"],
+        "adversarial_safe": ci["adversarial_safe"],
         "duration_s": round(time.monotonic() - started, 2),
     }
     if not args.no_record:

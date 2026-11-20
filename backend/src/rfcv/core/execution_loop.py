@@ -31,6 +31,7 @@ from rfcv.core.context_builder import ContextBuilder, summarize_evidence, to_jso
 from rfcv.core.envelope import Envelope, EnvelopeFactory, MessageKind
 from rfcv.core.ifc import Labeled, TrustLabel
 from rfcv.core.policy import PolicyStore
+from rfcv.core.reflexion import FailureKind, ReflexionMemory
 from rfcv.core.runner import RoleOutcome, RoleRunner
 from rfcv.evidence.models import Evidence
 from rfcv.evidence.repository import EvidenceRepository, TraceSink
@@ -161,6 +162,7 @@ class ExecutionLoop:
         self._rules = rules if rules is not None else reg.default_rule_set()
         self._new_loop_detector = loop_detector or LoopDetector
         self._progress_of: Callable[[SufficiencyReport, int], Hashable] = progress_of or _evidence_count
+        self.reflexion = ReflexionMemory()
 
     async def investigate(self, inv: Investigation) -> VerdictRecord:
         req = inv.requirement
@@ -321,6 +323,7 @@ class ExecutionLoop:
                 if (
                     t.task_type == self._loop.critique_task
                     and outcome is not None
+                    and outcome.failure is None
                     and isinstance(outcome.output, Critique)
                 ):
                     critique = outcome.output
@@ -330,6 +333,15 @@ class ExecutionLoop:
                     issues = [i for i in raw_issues if not (i.evidence_id and i.evidence_id in ignored)]
                     critique = critique.model_copy(update={"issues": issues})  # Planner chỉ thấy vấn đề đáng đuổi theo
                     unresolved = [{"kind": str(i.kind), "evidence_id": i.evidence_id} for i in issues]
+                    if issues:
+                        self.reflexion.record(
+                            req.requirement_id,
+                            round=tracker.rounds,
+                            role=t.target_role,
+                            task_type=t.task_type,
+                            kind=FailureKind.CRITIQUE_ISSUE,
+                            codes=tuple(str(i.kind) for i in issues),
+                        )
                     if needs_critique and not issues:
                         critiqued_clean = True
                     # Verifier chỉ được dẫn bằng chứng có thật (VF-6): mã không có trong kho là bịa, ghi lại để đo.

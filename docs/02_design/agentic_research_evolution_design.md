@@ -21,7 +21,7 @@ Tài liệu này định nghĩa hướng phát triển và nghiên cứu mới c
 
 ### Nền tảng đã vững (Baseline `B0` trên `dev`)
 - **An toàn theo thiết kế:** Vùng cách ly (`quarantine`) cho đọc mã, kiểm soát luồng thông tin (`ifc.py`), `Schema gate`, `Tool gateway`, `Output gate`, `Evidence store` chuỗi hash.
-- **Không ảo giác kết luận:** Nhãn chỉ do `Verdict engine` (quy tắc V0–V9) quyết định; hai tham chiếu độc lập (OpenSSL, GnuTLS) tự phát hiện lỗi đặc tả RBS (`CT-26`).
+- **Không ảo giác kết luận:** Nhãn chỉ do `Verdict engine` (quy tắc V0–V8) quyết định; hai tham chiếu độc lập (OpenSSL, GnuTLS) tự phát hiện lỗi đặc tả RBS (`CT-26`).
 
 ### Nguyên tắc đỏ không bao giờ phá vỡ
 Dù tích hợp cơ chế đa tác tử chạy song song, tiến hoá hay phản biện sâu, hệ thống luôn giữ 3 bất biến:
@@ -101,14 +101,17 @@ flowchart TD
 1. **Static Skill Injection mặc định:** Nhúng trực tiếp skill cô đọng theo `role.yaml` vào system prompt thay vì bắt agent gọi meta-tool `load_capability` → triệt tiêu `CT-01` (0 lần nạp lặp skill).
 2. **Đa chế độ xuất Schema (`output_mode: tool | native | prompted`) + JSON Coercion nhẹ:** Giải quyết xung đột `thinking` vs `tool_choice` trên DeepSeek/GLM và tự chuẩn hoá lỗi kiểu nhẹ (`"16486"` → `16486`, bóc code fence) trước khi tốn `MAX_OUTPUT_RETRIES`.
 3. **Inline `#ifdef` Annotation trong `code__read`:** Khi `Code Reader` đọc tệp C theo `adapter.build_flags`, công cụ gắn trực tiếp nhãn dòng bị tắt biên dịch (`[DISABLED]`) ngay cạnh số dòng → agent vẫn tự khám phá nhưng nhìn rõ mã thật ngay trong 1 lần đọc.
-4. **Ngữ cảnh sạch & nén lịch sử thông minh:** Rút gọn `code_reader/prompt.md` dạng bảng + 1 ví dụ chuẩn `LocationClaim@1`; giữ `KEEP_TOOL_RESULTS = 2`, `READ_KEEP_CHARS = 20_000`; nén các dòng T3 `PASS` trong `evidence.summary` gửi cho `Report` (~34k → ~4k token).
+4. **Ngữ cảnh sạch & nén lịch sử thông minh:** Rút gọn `code_reader/prompt.md` dạng bảng + 1 ví dụ chuẩn `LocationClaim@1`; giữ `KEEP_TOOL_RESULTS = 2`, `READ_KEEP_CHARS = 20_000`; nén các dòng T3 `PASS` trong `evidence.cited` gửi cho `Report` (`max_folded_items=3`).
 
 ---
 
-## 5. Lộ trình thực thi 3 Chặng & Tiêu chí kiểm chứng
+## 5. Trạng thái cài đặt hiện tại & Lộ trình thực thi
 
-| Chặng | Mục tiêu cụ thể | Đầu ra & Kiểm chứng |
+| Thành phần | Trạng thái trên `feat/nextgen-agent-research` | Mã nguồn & Kiểm chứng |
 |---|---|---|
-| **Chặng 1: Nền tảng ACI & Evaluator** *(trên `feat/nextgen-agent-research`)* | Cài đặt 4 nâng cấp Unified ACI & Runtime (Mục 4), bổ sung mẫu cấu hình đa họ DeepSeek + GLM trong `models.yaml`, dựng script `scripts/eval_score.py` (Automated Evaluator + `results.tsv`). | `pytest`, `ruff`, `pyright`, `lint-imports` xanh 100%; `skill_reloads = 0`; có bảng điểm Baseline `B0` và `B1`. |
-| **Chặng 2: 3 Nhánh Song song & Crossover** *(Phần 1 + Phần 2)* | 3 sub-agent trên 3 workspace cô lập cài đặt & đo đối chứng: **(A)** Best-of-$K$ `Code Reader`, **(B)** Cross-Family Divergence `Verifier` + `RFC Analyst` Pre-Check, **(C)** Map-Reduce Async Fleet + Structured Reflexion. Chấm Elo/Meta-Review → lai ghép thành bản tổng hợp. | Bảng so sánh Pareto (`B0` vs `A` vs `B` vs `C` vs `Synthesis`) trên `e2e_live`, `e2e_hard`, ca đối kháng `injected` (`CT-08`) và wolfSSL thật. |
-| **Chặng 3: Chứng minh quy mô lớn & Adversarial Review** | Dùng Synthetic Bug Factory tiêm 20–30 lỗi thật trên wolfSSL, chạy Audit Fleet với $n \ge 3$ lần lặp (DeepSeek + GLM), chạy 4-Role Adversarial Review rà soát toàn bộ báo cáo. | Số liệu thống kê có ý nghĩa (Recall, Precision, `False COMPLIANT = 0%`, `defect_hit`, độ lệch chuẩn, chi phí/yêu cầu). |
+| **Unified Runtime (`output_mode`, `static_skills`, `thin_history`, coercion)** | **Đã cài & nối trực tiếp** | `llm_gateway.py`, `skills.py`, `runner.py` (`test_agent_aci_runtime.py` + live `e2e_live.py`) |
+| **Inline `#ifdef` `[DISABLED]` trong `code__read` + `code_reader/prompt.md` rút gọn** | **Đã cài & nối trực tiếp** | `code_tools.py`, `agents/code_reader/prompt.md` |
+| **Nén `evidence.cited` cho `Report` + `ReflexionMemory` trong `ExecutionLoop`** | **Đã cài & nối trực tiếp** | `context_builder.py`, `execution_loop.py`, `reflexion.py` |
+| **Automated Evaluator (`eval_score.py` + `results.tsv`)** | **Đã cài & chạy thật** | `scripts/eval_score.py` (CI + IFC/adversarial suite riêng + `rfcv.eval.sim.run_benchmark`) |
+| **Best-of-$K$ `Code Reader`, Divergence `Verifier`, `RBS Pre-Check`, `Audit Fleet`** | **Đã cài & kiểm thử độc lập (sẵn sàng nối dây vào `Runtime`/`ProtocolRuntime`)** | `multi_hypothesis.py`, `divergence_audit.py`, `rbs_precheck.py`, `audit_fleet.py` (`test_best_of_k.py`, `test_divergence_verifier.py`, `test_fleet_reflexion.py`) |
+| **Đa họ GLM thật (`GLM_API_KEY`) & Synthetic Bug Factory quy mô lớn** | **Chờ khoá GLM & đợt đo wolfSSL diện rộng (Chặng 3 mở rộng)** | `config/models.yaml` (đã khai báo sẵn `glm-flash`) |

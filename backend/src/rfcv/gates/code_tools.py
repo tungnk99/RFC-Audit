@@ -196,12 +196,22 @@ CC_TOOL_DESCRIPTORS: tuple[ToolDescriptor, ...] = (
 def _result(
     header: str, body: str, shown: frozenset[tuple[str, int]] = frozenset(), cap: int = OUT_BYTES
 ) -> ToolResult:
-    """Kết quả không bao giờ bị từ chối vì kích thước: quá cỡ thì cắt ở ranh giới dòng và nói rõ."""
+    """Kết quả không bao giờ bị từ chối vì kích thước: quá cỡ thì cắt ở ranh giới dòng và nói rõ.
+    Nếu bị cắt, loại bỏ các số dòng đã bị cắt khỏi `shown` để không cho phép dẫn dòng agent chưa thấy."""
     text = f"[UNTRUSTED CODE] {header}\n{body}"
     raw = text.encode("utf-8")
     if len(raw) > cap:
         cut = raw[:cap].decode("utf-8", errors="ignore")
         cut = cut[: cut.rfind("\n")] if "\n" in cut else cut
+        if shown:
+            kept_nums: set[int] = set()
+            for line in cut.split("\n")[1:]:
+                head = line[:6].strip()
+                if head.isdigit():
+                    kept_nums.add(int(head))
+                elif (m := _MATCH.match(line)) is not None:
+                    kept_nums.add(int(m.group("line")))
+            shown = frozenset((f, n) for f, n in shown if n in kept_nums)
         text = cut + "\n(đã cắt vì quá dài; thu hẹp mẫu hoặc đọc tiếp bằng offset)"
     return ToolResult(text, TrustLabel.UNTRUSTED, shown)
 
@@ -397,12 +407,11 @@ def build_cc_tools(
             compiled: set[int] | None = compiled_of(file, tuple(build_flags), closed_world=closed_world)
             if compiled is not None:
                 annotated: list[str] = []
-                for idx_offset, raw_line in enumerate(body.splitlines()):
+                for idx_offset, raw_line in enumerate(body.split("\n")):
                     lineno = start + idx_offset
                     if lineno not in compiled:
                         disabled_seen += 1
-                        prefix, sep, rest = raw_line.partition(" ")
-                        annotated.append(f"{prefix} [DISABLED]{sep}{rest}" if sep else f"{raw_line} [DISABLED]")
+                        annotated.append(f"{raw_line[:6]} [DISABLED]{raw_line[6:]}")
                     else:
                         annotated.append(raw_line)
                 body = "\n".join(annotated)

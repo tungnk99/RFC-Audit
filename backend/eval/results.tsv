@@ -1,3 +1,2 @@
-timestamp	branch	commit	label	ci_pass	pytest_passed	ruff_ok	pyright_ok	import_linter_ok	verdict_acc	false_compliant	adversarial_safe	duration_s
-2026-11-20T09:25:36Z	feat/nextgen-agent-research	b433e9d	stage1-unified-aci	1	223	1	1	1	1.0000	0	1	25.09
-2026-11-20T10:37:08Z	feat/nextgen-agent-research	38a3257	stage2-crossover-abc	1	250	1	1	1	1.0000	0	1	20.56
+timestamp	branch	commit	dirty	label	ci_pass	pytest_passed	ruff_ok	pyright_ok	import_linter_ok	sim_total	verdict_acc	false_compliant	adversarial_safe	duration_s
+2026-11-20T17:12:57Z	feat/nextgen-agent-research	660e5e6	1	stage3-hardened	1	262	1	1	1	44	0.4773	16	1	50.94
