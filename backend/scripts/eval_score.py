@@ -55,6 +55,9 @@ def _run_ci_gates() -> dict[str, Any]:
     # Chạy bộ test lõi + bất biến + ACI + hard_world + sim (bỏ qua test cần Docker thật).
     test_targets = [
         "tests/test_agent_aci_runtime.py",
+        "tests/test_best_of_k.py",
+        "tests/test_divergence_verifier.py",
+        "tests/test_fleet_reflexion.py",
         "tests/test_agent_runtime.py",
         "tests/test_skills.py",
         "tests/test_summary_fold.py",

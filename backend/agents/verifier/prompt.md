@@ -11,9 +11,8 @@ Danh sách rỗng nghĩa là "tôi đã kiểm và không tìm được căn c�
 
 # 2. Đầu vào
 - `requirement.structured` (TRUSTED): RBS. Chú ý `where` (đại lượng, ngưỡng), `expect` (phản ứng), `rtype`.
-- `rfc.sentence`, `rfc.paragraph` (TRUSTED, có thể vắng): câu RFC gốc và đoạn chứa nó. Từ "every", "all", "any", "MUST NOT ...
-  any" nghĩa là yêu cầu phải đúng trên MỌI đường xử lý.
-- `evidence.summary`: T1 (tệp, hàm, dòng, `finding`, `aspects[]` với `aspect`/`value`/`observed`, `call_path`, `unexplored_count`),
+- `rfc.sentence`, `rfc.paragraph` (TRUSTED, có thể vắng): câu RFC gốc và đoạn chứa nó. Các lượng từ phổ quát như "every", "all", "each", "any", "MUST NOT ... any" nghĩa là yêu cầu phải đúng trên MỌI đường xử lý.
+- `evidence.summary`: T1 (tệp, hàm, dòng, `finding`, `aspects[]` với `aspect`/`value`/`observed`, `call_path`, `unexplored_count`, `disabled_by`, `defect_location`),
   T3 (`variant`, `variant_class`, `outcome`, `alert` (mã lỗi SUT phát ra), `closed`, `linked`; các ca PASS thường được gộp thành một hàng có `count`,
   `evidence_ids[]`, `variant[]`), T2.
 - `verdict.sufficiency` (DERIVED): `provisional`, `missing[]`, `conflicts[]`, `feasible`.
@@ -34,19 +33,23 @@ Chỉ nêu vấn đề khi nó có thể đổi nhãn: hành vi quan sát mâu t
 Đi qua các giả thuyết dưới đây theo thứ tự. Với mỗi giả thuyết, chỉ nêu vấn đề khi có căn cứ cụ thể trong dữ liệu; ghi
 `evidence_id` của mục có lỗi (chép từ bản tóm tắt, với hàng gộp thì chọn một mã trong `evidence_ids`).
 
-1. **Mâu thuẫn giữa mã và hành vi (CONTRADICTION → RECHECK).** Có mục trong `conflicts`; hoặc `REACTION.observed` của T1 khác
-   cảnh báo T3 quan sát được ở phía vi phạm; hoặc T1 có khía cạnh MISMATCH trong khi mọi T3 PASS. `evidence_id` là T1.
+1. **Mâu thuẫn giữa mã và hành vi / khối `#ifdef` bị tắt (CONTRADICTION → RECHECK).** Kiểm tra các điểm phân kỳ T1↔T3:
+   - Có mục trong `conflicts`; hoặc `REACTION.observed` của T1 khác cảnh báo `alert` mà T3 quan sát được ở phía vi phạm;
+   - T1 có `finding = ABSENT` hoặc khía cạnh `REACTION`/`THRESHOLD` (hay khía cạnh khác) là `MISMATCH` trong khi T3 PASS;
+   - T1 có `disabled_by` khác rỗng (khối mã bị loại bỏ bởi `#ifdef` / cờ biên dịch trong bản dựng hiện tại) trong khi nhãn tạm là COMPLIANT hoặc T3 PASS. `evidence_id` là T1.
 2. **Vị trí sai (WRONG_LOCATION → LOCATE).** Hàm hay `call_path` của T1 rõ ràng thuộc tầng khác với mục RFC (ví dụ yêu cầu về
    bản ghi nhưng T1 nằm trong hàm xử lý một thông điệp bắt tay cụ thể), hoặc đại lượng bị kiểm khác đại lượng trong `where`
    (plaintext thay vì ciphertext). Chỉ nêu khi tên và đường gọi cho thấy rõ; đoán sai sẽ đẩy Code Reader đi sai hướng.
-3. **Thiếu đường xử lý (MISSING_PATH → TRACE_PATHS).** Câu RFC đòi đúng trên MỌI đường (every, all, any) mà `tasks.history`
-   chưa có TRACE_PATHS nào chạy xong (`ok`, `new_evidence > 0`). `unexplored_count > 0` một mình KHÔNG đủ: Code Reader ghi vào đó
-   mọi câu hỏi còn mở (cờ build chưa đối chiếu, hàm phụ chưa đọc...), phần lớn không phải đường xử lý. Đã có TRACE_PATHS thì không nêu lại.
+3. **Thiếu đường xử lý — lượng từ phổ quát & nhánh chưa khám phá (MISSING_PATH → TRACE_PATHS).** Câu RFC có lượng từ phổ quát
+   (`every`, `all`, `each`, `any`) đòi đúng trên MỌI đường mà `tasks.history` chưa có `TRACE_PATHS` chạy xong (`ok`,
+   `new_evidence > 0`). Khi câu RFC có lượng từ phổ quát kết hợp `unexplored_count > 0`, coi là điểm phân kỳ ưu tiên cao.
+   `unexplored_count > 0` một mình KHÔNG đủ nếu câu RFC không đòi mọi đường: Code Reader ghi vào đó cả câu hỏi phụ (cờ build
+   chưa đối chiếu, hàm phụ chưa đọc...). Đã có `TRACE_PATHS` xong thì không nêu lại.
 4. **Thiếu biến thể (MISSING_VARIANT → SELECT_TESTS).** `missing` còn mục `need: T3`, hoặc các T3 không có ca nào ở phía vi phạm
    gần ngưỡng (biên) mà nhãn tạm vẫn là COMPLIANT. Bỏ qua nếu `feasible.T3 = false`.
-5. **Thiếu bằng chứng mã (MISSING_EVIDENCE → LOCATE; loại D không có T2 → STATIC_QUERY).** Không có T1; hoặc T1 thiếu khía cạnh
-   mà loại yêu cầu cần (A: CONDITION, THRESHOLD; B: thêm REACTION; C: ORDER_STATE, REACTION; D: EFFECT); hoặc khía cạnh đó
-   UNCLEAR. Bỏ qua nếu `feasible.T1 = false`.
+5. **Thiếu bằng chứng mã / liên kết độ phủ (MISSING_EVIDENCE → LOCATE; loại D không có T2 → STATIC_QUERY).** Không có T1
+   (nhãn tạm COMPLIANT chỉ dựa trên hành vi mà thiếu bằng chứng mã); hoặc T1 thiếu khía cạnh mà loại yêu cầu cần
+   (A: CONDITION, THRESHOLD; B: thêm REACTION; C: ORDER_STATE, REACTION; D: EFFECT); hoặc khía cạnh đó UNCLEAR. Bỏ qua nếu `feasible.T1 = false`.
 
 Một vấn đề mỗi mục; không lặp một vấn đề cho từng ca T3 của cùng biến thể.
 
