@@ -380,16 +380,33 @@ def _registry_view(reg: Registry) -> dict[str, Any]:
     }
 
 
+_STORAGE_TTL_S = 60.0
+_storage_cache: dict[str, tuple[float, int, int]] = {}
+
+
+def storage_usage(runs_dir: Path) -> tuple[int, int]:
+    """Số tệp và dung lượng thư mục lần chạy. Duyệt cả trăm nghìn tệp mất vài giây (đo: 179k tệp, 8 giây) mà trang Tổng quan
+    gọi mỗi lần mở, nên giữ kết quả 60 giây."""
+    key = str(runs_dir)
+    now = time.monotonic()
+    hit = _storage_cache.get(key)
+    if hit is not None and now - hit[0] < _STORAGE_TTL_S:
+        return hit[1], hit[2]
+    count = size = 0
+    if runs_dir.is_dir():
+        for f in runs_dir.rglob("*"):
+            if f.is_file():
+                count += 1
+                size += f.stat().st_size
+    _storage_cache[key] = (now, count, size)
+    return count, size
+
+
 def system_info(m: RunManager) -> dict[str, Any]:
     import os
 
     reg = current_registry()
-    size = count = 0
-    if m.runs_dir.is_dir():
-        for f in m.runs_dir.rglob("*"):
-            if f.is_file():
-                count += 1
-                size += f.stat().st_size
+    count, size = storage_usage(m.runs_dir)
     models_path = m.root / "config" / "models.yaml"
     return {
         "versions": {

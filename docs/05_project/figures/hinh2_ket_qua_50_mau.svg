@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" font-family="Segoe UI, Arial, sans-serif" font-size="12.5">
+  <rect width="900" height="380" fill="#fff"/>
+  <text x="20" y="24" font-size="13.5" font-weight="600" fill="#0f172a">Kết quả trên bộ 50 mẫu (28 có lỗi, 22 không lỗi), mỗi mẫu chạy một lần</text>
+  <!-- trục -->
+  <g stroke="#e2e8f0"><line x1="330" y1="44" x2="330" y2="330"/><line x1="457.5" y1="44" x2="457.5" y2="330"/><line x1="585" y1="44" x2="585" y2="330"/><line x1="712.5" y1="44" x2="712.5" y2="330"/><line x1="840" y1="44" x2="840" y2="330"/></g>
+  <g fill="#64748b" font-size="11" text-anchor="middle"><text x="330" y="346">0%</text><text x="457.5" y="346">25%</text><text x="585" y="346">50%</text><text x="712.5" y="346">75%</text><text x="840" y="346">100%</text></g>
+  <!-- thanh: thang 0-100% => 330..840 (không tuyến tính ở 25/50) nên vẽ tuyến tính 5.1px/% -->
+  <g fill="#334155" text-anchor="end">
+    <text x="318" y="68">Kết luận đúng, họ R (bản ghi dài)</text>
+    <text x="318" y="98">Kết luận đúng, họ U (loại bản ghi lạ)</text>
+    <text x="318" y="128">Kết luận đúng, họ G (không có nhóm chung)</text>
+    <text x="318" y="158">Phát hiện đúng mẫu có lỗi</text>
+    <text x="318" y="188">Không báo sai trên mẫu sạch</text>
+    <text x="318" y="228" font-weight="600">Chỉ đúng vị trí mã gây lỗi</text>
+    <text x="318" y="258">  trong đó lỗi thật của wolfSSL</text>
+    <text x="318" y="288">  trong đó lỗi tự tạo, wolfSSL</text>
+    <text x="318" y="318">  trong đó lỗi tự tạo, OpenSSL</text>
+  </g>
+  <!-- thang: x = 330 + 5.1*p -->
+  <g>
+    <rect x="330" y="54" width="510" height="20" rx="4" fill="#16a34a"/><text x="846" y="69" fill="#14532d" font-weight="600">18/18</text>
+    <rect x="330" y="84" width="510" height="20" rx="4" fill="#16a34a"/><text x="846" y="99" fill="#14532d" font-weight="600">14/14</text>
+    <rect x="330" y="114" width="510" height="20" rx="4" fill="#16a34a"/><text x="846" y="129" fill="#14532d" font-weight="600">18/18</text>
+    <rect x="330" y="144" width="510" height="20" rx="4" fill="#16a34a"/><text x="846" y="159" fill="#14532d" font-weight="600">28/28</text>
+    <rect x="330" y="174" width="510" height="20" rx="4" fill="#16a34a"/><text x="846" y="189" fill="#14532d" font-weight="600">22/22</text>
+    <rect x="330" y="214" width="163" height="20" rx="4" fill="#ea580c"/><text x="499" y="229" fill="#7c2d12" font-weight="600">9/28 = 32%</text>
+    <rect x="330" y="244" width="3" height="20" fill="#ea580c"/><text x="339" y="259" fill="#7c2d12" font-weight="600">0/3</text>
+    <rect x="330" y="274" width="194" height="20" rx="4" fill="#fb923c"/><text x="530" y="289" fill="#7c2d12" font-weight="600">6/16 = 38%</text>
+    <rect x="330" y="304" width="168" height="20" rx="4" fill="#fb923c"/><text x="504" y="319" fill="#7c2d12" font-weight="600">3/9 = 33%</text>
+  </g>
+  <!-- khoảng tin cậy Wilson 95% của tỷ lệ định vị (18–51%) -->
+  <text x="580" y="229" fill="#7c2d12" font-size="11px">khoảng tin cậy Wilson 95%: 18–51%</text>
+  <text x="20" y="372" fill="#475569" font-size="11px">Cột xanh: kết luận (do kiểm thử quyết định). Cột cam: chỉ vị trí mã (do Code Reader đề xuất), phần còn yếu. Khoảng tin cậy phía có lỗi: 88–100%; phía sạch: sai 0–15%.</text>
+</svg>

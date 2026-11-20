@@ -2,6 +2,7 @@ import { $, api, empty, fmt, html, icon, labelOf, modeName, mount, on, pageHead,
 
 const FILTERS = [['all', 'Tất cả'], ['active', 'Đang chạy'], ['finished', 'Hoàn tất'], ['bad', 'Lỗi / ngắt'], ['cancelled', 'Đã huỷ']];
 const PAGE = 15;
+const picked = new Set();
 const st = { q: '', f: 'all', verdict: '', adapter: '', mode: '', sort: 'created_at', dir: -1, page: 0 };
 
 export default async function (ctx) {
@@ -32,10 +33,11 @@ export default async function (ctx) {
         <select id="f-verdict" aria-label="Lọc theo kết luận"><option value="">Mọi kết luận</option><option value="COMPLIANT" ${st.verdict === 'COMPLIANT' ? 'selected' : ''}>Tuân thủ</option><option value="VIOLATION" ${st.verdict === 'VIOLATION' ? 'selected' : ''}>Vi phạm</option><option value="other" ${st.verdict === 'other' ? 'selected' : ''}>Khác</option></select>
         <select id="f-adapter" aria-label="Lọc theo giao thức"><option value="">Mọi giao thức</option>${adapters.map((a) => html`<option ${st.adapter === a ? 'selected' : ''}>${a}</option>`)}</select>
         <select id="f-mode" aria-label="Lọc theo chế độ"><option value="">Mọi chế độ</option>${['demo', 'real', 'cli'].map((m) => html`<option value="${m}" ${st.mode === m ? 'selected' : ''}>${modeName(m)}</option>`)}</select>
-        <span class="muted small grow" style="text-align:right">${rows.length} lần chạy</span></div>
-      ${rows.length ? html`<div class="table-wrap"><table class="tbl"><thead><tr>${th('created_at', 'Lần chạy')}${th('adapter', 'Giao thức')}<th>Chế độ</th>${th('status', 'Trạng thái')}<th>Kết luận</th>${th('tokens', 'Token', 'num')}${th('dur', 'Thời lượng', 'num')}<th></th></tr></thead><tbody>
-        ${shown.map((r) => { const live = r.status === 'queued' || r.status === 'running'; return html`<tr class="click" data-open="${r.run_id}">
-          <td><div class="mono">${r.run_id}</div><div class="muted small">${fmt.time(r.started_at || r.created_at)} · ${fmt.ago(r.started_at || r.created_at)}</div></td>
+        <span class="muted small grow" style="text-align:right">${rows.length} lần chạy</span>
+        <button class="btn ${picked.size === 2 ? 'primary' : ''}" id="do-compare" ${picked.size === 2 ? '' : 'disabled'} title="Chọn đúng hai lần chạy bằng ô tick">${icon('layers', 14)}So sánh${picked.size ? ` (${picked.size}/2)` : ''}</button></div>
+      ${rows.length ? html`<div class="table-wrap"><table class="tbl"><thead><tr><th style="width:32px"></th>${th('created_at', 'Lần chạy')}${th('adapter', 'Giao thức')}<th>Chế độ</th>${th('status', 'Trạng thái')}<th>Kết luận</th>${th('tokens', 'Token', 'num')}${th('dur', 'Thời lượng', 'num')}<th></th></tr></thead><tbody>
+        ${shown.map((r) => { const live = r.status === 'queued' || r.status === 'running'; return html`<tr class="click" tabindex="0" data-open="${r.run_id}">
+          <td data-pick-cell><input type="checkbox" data-pick="${r.run_id}" ${picked.has(r.run_id) ? 'checked' : ''} aria-label="Chọn để so sánh ${r.run_id}"></td><td><div class="mono">${r.run_id}</div><div class="muted small">${fmt.time(r.started_at || r.created_at)} · ${fmt.ago(r.started_at || r.created_at)}</div></td>
           <td>${r.spec.adapter || '–'}${r.spec.requirements?.length ? html`<div class="muted small">${r.spec.requirements.join(', ')}</div>` : ''}</td><td>${modeName(r.spec.mode)}</td>
           <td>${status(r.status)}${r.error ? html`<div class="small" style="color:var(--critical-text);max-width:260px" title="${r.error}">${r.error.slice(0, 80)}</div>` : ''}${r.leak_scan && !r.leak_scan.clean ? html`<div><span class="badge bad">${icon('alert', 12)}rò rỉ ${r.leak_scan.count}</span></div>` : ''}</td>
           <td>${(r.verdicts || []).map((v) => verdict(v.label, v.rule))}${live ? html`<span class="muted small">đang điều tra…</span>` : ''}</td>
@@ -60,6 +62,9 @@ export default async function (ctx) {
   on(ctx.el, 'click', '[data-cancel]', async (el, e) => { e.stopPropagation(); await api(`/api/runs/${el.dataset.cancel}/cancel`, { body: {} }).catch((x) => toast(x.message, 'bad')); load(); });
   on(ctx.el, 'click', '[data-rerun]', async (el, e) => { e.stopPropagation(); try { const r = await api(`/api/runs/${el.dataset.rerun}/rerun`, { body: {} }); toast('Đã xếp hàng lần chạy lại', 'ok'); location.hash = `#/runs/${r.runs[0].run_id}`; } catch (x) { toast(x.message, 'bad'); } });
   on(ctx.el, 'click', '.icon-btn[download]', (_, e) => e.stopPropagation());
+  on(ctx.el, 'change', '[data-pick]', (el) => { if (el.checked) { if (picked.size >= 2) picked.delete([...picked][0]); picked.add(el.dataset.pick); } else picked.delete(el.dataset.pick); draw(); });
+  on(ctx.el, 'click', '[data-pick-cell]', (_, e) => e.stopPropagation());
+  on(ctx.el, 'click', '#do-compare', () => { const [a, b] = [...picked]; if (a && b) location.hash = `#/compare/${a}/${b}`; });
   on(ctx.el, 'click', 'tr[data-open]', (tr) => { location.hash = `#/runs/${tr.dataset.open}`; });
   await load();
   const timer = setInterval(() => { if (ctx.alive() && (runs.some((r) => r.status === 'queued' || r.status === 'running') || false)) load(); }, 3000);

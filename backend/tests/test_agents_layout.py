@@ -96,7 +96,7 @@ def test_wired_flag_matches_the_handlers_that_really_exist(manifest: AdapterMani
 def test_agents_outside_the_task_flow_are_declared_as_such() -> None:
     specs = {a.name: a for a in AGENTS}
     assert specs["planner"].wired and specs["planner"].stage == "planning"
-    assert not specs["rfc_analyst"].wired and specs["rfc_analyst"].stage == "pre"
+    assert specs["rfc_analyst"].wired and specs["rfc_analyst"].stage == "pre"  # nối qua RuntimeConfig.spec_analysis (chỉ đối chiếu)
     assert specs["report"].wired and specs["report"].stage == "post"  # nối qua ExecutionLoop.explain (BL-30)
 
 

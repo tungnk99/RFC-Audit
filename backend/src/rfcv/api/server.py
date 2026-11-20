@@ -12,6 +12,7 @@ import asyncio
 import json
 import mimetypes
 import os
+import threading
 import time
 import urllib.parse
 from collections.abc import AsyncIterator
@@ -169,6 +170,7 @@ class RunRequest(BaseModel):
     executor: str | None = None
     sut_launcher: str | None = None
     budget: dict[str, Any] = Field(default_factory=dict)
+    spec_analysis: bool = False
 
 
 async def _require_json(request: Request) -> None:
@@ -184,6 +186,8 @@ def _reply(result: tuple[int, Any]) -> JSONResponse:
 
 def create_app(api: Api, frontend: Path | None = None, allowed_hosts: list[str] | None = None) -> FastAPI:
     public = {"/api/auth/status", "/api/auth/login", "/api/auth/setup", "/api/auth/logout", "/api/health"}
+    # Duyệt thư mục lần chạy mất vài giây khi có nhiều tệp; làm nóng bộ nhớ đệm ngay lúc khởi động để trang Tổng quan không phải chờ.
+    threading.Thread(target=admin.storage_usage, args=(api.m.runs_dir,), daemon=True).start()
 
     def guard(request: Request) -> None:
         """Mọi `/api/…` (trừ đăng nhập/trạng thái) cần phiên hợp lệ; yêu cầu ghi chỉ nhận từ chính trang này (Origin khớp Host)."""
@@ -463,11 +467,14 @@ def create_app(api: Api, frontend: Path | None = None, allowed_hosts: list[str] 
             ".svg": "image/svg+xml",
             ".html": "text/html",
             ".json": "application/json",
+            ".woff2": "font/woff2",
         }
         ctype = fixed.get(target.suffix.lower()) or mimetypes.guess_type(target.name)[0] or "application/octet-stream"
         if ctype.startswith("text/") or ctype == "application/json":
             ctype += "; charset=utf-8"
-        return Response(target.read_bytes(), media_type=ctype, headers={"Cache-Control": "no-store"})
+        # Phông chữ đóng gói không đổi nên cho cache lâu; mã giao diện giữ no-store để sửa là thấy ngay.
+        cache = "public, max-age=31536000, immutable" if target.suffix.lower() == ".woff2" else "no-store"
+        return Response(target.read_bytes(), media_type=ctype, headers={"Cache-Control": cache})
 
     return app
 

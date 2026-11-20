@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 990" font-family="Segoe UI, Arial, sans-serif" font-size="14">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+    <style>
+      .t{fill:#0f172a;text-anchor:middle;font-size:14px;font-weight:600}
+      .llm{fill:#ede9fe;stroke:#6d28d9;stroke-width:1.8} .det{fill:#dcfce7;stroke:#15803d;stroke-width:1.8} .dat{fill:#f1f5f9;stroke:#475569;stroke-width:1.8} .inp{fill:#fff7ed;stroke:#c2410c;stroke-width:2.2}
+      .ln{stroke:#334155;stroke-width:1.8;fill:none} .h{fill:#1e293b;font-weight:600;font-size:14px}
+    </style>
+  </defs>
+  <rect width="1100" height="990" fill="#fff"/>
+
+  <!-- gốc: câu RFC và RBS, hai đầu vào SUT -->
+  <rect class="inp" x="420" y="20" width="260" height="60" rx="8"/><text class="t" x="550" y="56">Câu RFC (MUST / SHOULD)</text>
+  <rect class="dat" x="400" y="120" width="300" height="60" rx="8"/><text class="t" x="550" y="156">Đặc tả hành vi RBS</text>
+  <path class="ln" d="M550,80 V120" marker-end="url(#a)"/>
+  <rect class="inp" x="20" y="120" width="190" height="60" rx="8"/><text class="t" x="115" y="156">Bản build SUT</text>
+  <rect class="inp" x="870" y="120" width="190" height="60" rx="8"/><text class="t" x="965" y="156">Mã nguồn SUT</text>
+
+  <!-- cột trái: hộp đen -->
+  <rect x="20" y="240" width="520" height="550" rx="10" fill="#fafafa" stroke="#64748b" stroke-width="1.8"/>
+  <rect class="det" x="60" y="285" width="440" height="56" rx="8"/><text class="t" x="280" y="318">Biên dịch RBS thành oracle + tập biến thể</text>
+  <rect class="llm" x="60" y="365" width="440" height="56" rx="8"/><text class="t" x="280" y="398">Tester Agent chọn kịch bản</text>
+  <rect class="det" x="60" y="445" width="440" height="56" rx="8"/><text class="t" x="280" y="478">Test driver chạy trong container</text>
+  <rect class="dat" x="60" y="525" width="440" height="56" rx="8"/><text class="t" x="280" y="558">Vết sự kiện quan sát được</text>
+  <rect class="det" x="60" y="605" width="440" height="56" rx="8"/><text class="t" x="280" y="638">Oracle so vết với expect: PASS / FAIL</text>
+  <rect class="dat" x="60" y="685" width="440" height="56" rx="8"/><text class="t" x="280" y="718">Evidence T3</text>
+  <path class="ln" d="M280,341 V365" marker-end="url(#a)"/><path class="ln" d="M280,421 V445" marker-end="url(#a)"/><path class="ln" d="M280,501 V525" marker-end="url(#a)"/><path class="ln" d="M280,581 V605" marker-end="url(#a)"/><path class="ln" d="M280,661 V685" marker-end="url(#a)"/>
+  <path class="ln" d="M450,180 V285" marker-end="url(#a)"/>
+  <path class="ln" d="M40,180 V473 H60" marker-end="url(#a)"/>
+  <text class="h" x="40" y="775">Hộp đen (hành vi chạy thật)</text>
+
+  <!-- cột phải: hộp trắng -->
+  <rect x="580" y="240" width="500" height="550" rx="10" fill="#fafafa" stroke="#64748b" stroke-width="1.8"/>
+  <rect x="600" y="273" width="470" height="160" rx="9" fill="none" stroke="#c2410c" stroke-width="1.8" stroke-dasharray="7 4"/>
+  <rect class="llm" x="620" y="285" width="220" height="56" rx="8"/><text class="t" x="730" y="318">Code Reader Agent</text>
+  <rect class="dat" x="620" y="365" width="220" height="56" rx="8"/><text class="t" x="730" y="398">Vị trí mã + 3 khía cạnh</text>
+  <rect class="dat" x="890" y="285" width="160" height="136" rx="8"/><text class="t" x="970" y="342">Mã nguồn SUT</text><text class="t" x="970" y="362">đã lập chỉ mục</text>
+  <rect class="det" x="620" y="465" width="220" height="56" rx="8"/><text class="t" x="730" y="498">Schema gate</text>
+  <rect class="dat" x="620" y="545" width="220" height="56" rx="8"/><text class="t" x="730" y="578">Evidence T1</text>
+  <path class="ln" d="M650,180 V285" marker-end="url(#a)"/>
+  <path class="ln" d="M890,313 H840" marker-end="url(#a)"/>
+  <path class="ln" d="M730,341 V365" marker-end="url(#a)"/><path class="ln" d="M730,421 V465" marker-end="url(#a)"/><path class="ln" d="M730,521 V545" marker-end="url(#a)"/>
+  <path class="ln" d="M965,180 V285" marker-end="url(#a)"/>
+  <text class="h" x="1060" y="775" style="text-anchor:end">Hộp trắng (mã nguồn)</text>
+
+  <!-- hợp nhất -->
+  <rect class="det" x="340" y="830" width="420" height="56" rx="8"/><text class="t" x="550" y="863">Verdict engine: đối chiếu T3 với T1</text>
+  <path class="ln" d="M280,741 V810 H500 V830" marker-end="url(#a)"/>
+  <path class="ln" d="M730,601 V810 H600 V830" marker-end="url(#a)"/>
+
+  <!-- chú giải -->
+  <rect class="inp" x="20" y="925" width="24" height="16" rx="3"/><text x="52" y="938" fill="#1e293b" font-size="13px">đầu vào</text>
+  <rect class="llm" x="160" y="925" width="24" height="16" rx="3"/><text x="192" y="938" fill="#1e293b" font-size="13px">AI Agent (LLM, chỉ đề xuất)</text>
+  <rect class="det" x="420" y="925" width="24" height="16" rx="3"/><text x="452" y="938" fill="#1e293b" font-size="13px">thành phần deterministic (gate)</text>
+  <rect class="dat" x="720" y="925" width="24" height="16" rx="3"/><text x="752" y="938" fill="#1e293b" font-size="13px">dữ liệu / evidence</text>
+  <rect x="920" y="925" width="24" height="16" rx="3" fill="none" stroke="#c2410c" stroke-width="1.8" stroke-dasharray="4 3"/><text x="952" y="938" fill="#1e293b" font-size="13px">vùng cách ly</text>
+</svg>

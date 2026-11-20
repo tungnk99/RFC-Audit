@@ -8,7 +8,7 @@ agents/
   planner/        role.yaml  prompt.md      Planner (đặc quyền)
   tester/         role.yaml  prompt.md      Test (đặc quyền)
   verifier/       role.yaml  prompt.md      Verifier (đặc quyền)
-  rfc_analyst/    role.yaml  prompt.md      RFC Analyst (đặc quyền, chưa nối vào luồng chạy)
+  rfc_analyst/    role.yaml  prompt.md      RFC Analyst (đặc quyền; nối một phần: bước phân tích RFC trước vòng điều tra, chỉ đối chiếu)
   report/         role.yaml  prompt.md      Report (đặc quyền, chưa nối)
   code_reader/    role.yaml  prompt.md      Code Reader (cách ly)
   code_indexer/   role.yaml  prompt.md      Code Indexer (cách ly, chưa nối)

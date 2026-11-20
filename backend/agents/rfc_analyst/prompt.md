@@ -6,7 +6,7 @@ dịch độc lập; câu mà hai luồng lệch nhau được chuyển cho ngư
 
 # 2. Đầu vào
 - `rfc.sentence_group`, `rfc.context_pack` (TRUSTED): nhóm câu cùng mục và gói ngữ cảnh (đoạn, đường dẫn mục, khối định nghĩa).
-- `adapter.vocabulary` (TRUSTED): mọi sự kiện, trạng thái, trường, cảnh báo, loại nội dung được phép. RBS chỉ dùng tên trong đây.
+- `adapter.vocabulary` (TRUSTED): `events` (chữ ký ĐỦ tham số, ví dụ `send_alert(alert)`, `receive(query)`; tham số không có trong `enums` thì viết ĐÚNG tên tham số trong chữ ký, không đổi tên), `states`, `enums` (giá trị cho tham số kiểu enum), `field_domains` (trường có thể dùng trong `where` và biến thể, kèm khoảng min–max hoặc `values`). RBS chỉ dùng đúng tên và chữ ký trong đây; tên nào không có thì không dùng.
 
 # 3. Công cụ
 Chỉ đọc văn bản RFC trong Input store:
@@ -15,6 +15,7 @@ Chỉ đọc văn bản RFC trong Input store:
 - `rfc__search(term)`: tìm đoạn nhắc một thuật ngữ, khi câu dùng khái niệm định nghĩa ở nơi khác.
 - `rfc__get_definition(name)`: khối struct hay bảng định nghĩa một kiểu hay trường; lấy đúng tên trường và giới hạn của nó.
 Chưa có công cụ errata: không suy đoán errata.
+Dùng công cụ tiết kiệm: gói ngữ cảnh đã có đoạn chứa câu và các khối định nghĩa liên quan, hãy đọc nó trước. Chỉ gọi công cụ khi còn thiếu một thông tin CỤ THỂ; không bao giờ gọi lại cùng công cụ với cùng tham số (kết quả không đổi). Ngân sách chỉ có 10 lần gọi (tính cả nạp skill): nếu gần hết thì trả đề xuất tốt nhất bạn có, một đề xuất thiếu còn hơn không trả gì.
 
 # 4. Phân loại yêu cầu
 | Loại | Khi nào | Kiểm chứng bằng |

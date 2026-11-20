@@ -1,0 +1,31 @@
+/* Tổng quan và biểu đồ */
+.viz { width: 100%; height: auto; display: block; overflow: visible; } .viz .grid { stroke: var(--grid); stroke-width: 1; } .viz .base { stroke: var(--axis); stroke-width: 1; } .viz .axis { fill: var(--muted); font-size: 11px; }
+.viz .hit:hover path, .viz .hit:hover rect:not([fill=transparent]) { filter: brightness(1.2); }
+.hbars { display: grid; gap: 8px; } .hbar { display: grid; grid-template-columns: minmax(90px, 38%) 1fr auto; gap: 12px; align-items: center; }
+.hb-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); } .hb-label small { color: var(--muted); margin-left: 6px; }
+.hb-track { height: 10px; background: var(--surface-2); border-radius: 5px; } .hb-fill { height: 100%; border-radius: 0 4px 4px 0; min-width: 3px; } .hb-val { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 48px; text-align: right; }
+.segbar { display: flex; gap: 2px; height: 14px; } .seg-part { border-radius: 4px; min-width: 6px; } .seg-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; }
+.seg-key { display: flex; align-items: center; gap: 6px; } .seg-key .sw { width: 10px; height: 10px; border-radius: 3px; } .seg-key small { color: var(--muted); }
+.chart-empty { color: var(--muted); padding: 28px 0; text-align: center; } .chart-body { min-height: 60px; }
+.health { display: grid; gap: 2px; } .health-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); } .health-row:last-child { border: 0; } .health-row .ic.ok { color: var(--good-text); } .health-row .ic.bad { color: var(--critical-text); } .health-row .ic.warn { color: var(--warning-text); }
+.kpi-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: var(--s-5); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.kpi-strip .kpi { padding: var(--s-4) var(--s-4) var(--s-4) var(--s-5); border-left: 1px solid var(--border); } .kpi-strip .kpi:first-child { border-left: 0; padding-left: 0; }
+.k-label { font-size: var(--fs-2); color: var(--muted); } .k-val { font-size: var(--fs-7); font-weight: 600; letter-spacing: -.03em; line-height: 1.15; margin: 4px 0 2px; font-variant-numeric: tabular-nums; } .k-foot { display: block; font-size: var(--fs-2); color: var(--muted); }
+@media (max-width: 900px) { .kpi-strip { grid-template-columns: repeat(2, 1fr); } .kpi-strip .kpi:nth-child(3) { border-left: 0; padding-left: 0; } .kpi-strip .kpi { border-bottom: 1px solid var(--border); } }
+.card.chart { background: transparent; border: 0; border-top: 1px solid var(--border); border-radius: 0; padding: var(--s-3) 0 0; }
+.health { display: grid; gap: 0; } .health-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--rule); } .health-row:last-child { border: 0; } .health-row .ic.ok { color: var(--good-text); } .health-row .ic.bad { color: var(--critical-text); } .health-row .ic.warn { color: var(--warning-text); }
+.stat .l { font-size: var(--fs-2); color: var(--muted); } .stat .v { font-size: var(--fs-6); font-weight: 600; font-variant-numeric: tabular-nums; }
+.bar > i, .hb-fill { background: var(--viz); } .segbar { height: 8px; } .segbar .seg-part { border-radius: 2px; }
+.hb-track { height: 8px; background: var(--surface-3); border-radius: 4px; } .hb-fill { border-radius: 4px; } .hb-val { font-weight: 500; }
+.grid.g-2-1 { align-items: start; }
+.statusline { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-5); padding: var(--s-2) 0 var(--s-3); font-size: var(--fs-2); border-bottom: 1px solid var(--border); margin-bottom: var(--s-4); min-height: 34px; }
+.sl-item { display: inline-flex; align-items: center; gap: 6px; } .sl-item b { font-weight: 500; color: var(--text-2); }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; } .dot.ok { background: var(--good-text); } .dot.warn { background: var(--warning-text); } .dot.bad { background: var(--critical-text); }
+.sl-more { margin-left: auto; color: var(--muted); } .sl-more:hover { color: var(--text); text-decoration: none; }
+.kpi-strip { border-top: 0; }
+.card .stat { background: none; border: 0; padding: 0; border-radius: 0; } .card .grid.g3 { gap: var(--s-4) !important; }
+.card .stat .l { font-size: var(--fs-2); } .card .stat .v { font-size: var(--fs-6); margin-top: 0; }
+
+/* biểu đồ là tâm điểm trang Tổng quan: cột theo ngày màu nhấn, lớn hơn */
+:root, :root[data-theme="dark"] { --viz: #5b8def; } :root[data-theme="light"] { --viz: #2563eb; }
+#c-daily .viz { max-height: 260px; } .card.chart { padding-top: var(--s-4); } .card.chart h3 { font-size: var(--fs-4); }

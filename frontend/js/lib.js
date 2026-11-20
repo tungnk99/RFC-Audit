@@ -80,7 +80,9 @@ export const STATUS = {
 export const status = (s) => { const [t, c, i] = STATUS[s] || [s, 'mute', 'info']; return html`<span class="badge ${c}${s === 'running' ? ' pulse' : ''}">${icon(i, 12)}${t}</span>`; };
 export const LABEL = { COMPLIANT: ['TUÂN THỦ', 'ok', 'check'], VIOLATION: ['VI PHẠM', 'bad', 'x'] };
 export const labelOf = (l) => LABEL[l] || [String(l || '–'), 'warn', 'alert'];
-export const verdict = (l, rule) => { const [t, c, i] = labelOf(l); return html`<span class="badge ${c}">${icon(i, 12)}${t}${rule ? html`<em>${rule}</em>` : ''}</span>`; };
+/* Giải thích quy tắc kết luận (V0–V9) khi rê chuột; story.js điền bảng này từ từ điển của nó. */
+export const ruleTitles = {};
+export const verdict = (l, rule) => { const [t, c, i] = labelOf(l); const tip = rule ? ruleTitles[String(rule).split('-')[0]] || '' : ''; return html`<span class="badge ${c}" ${tip ? raw(`title="${esc(tip)}"`) : ''}>${icon(i, 12)}${t}${rule ? html`<em>${rule}</em>` : ''}</span>`; };
 export const chip = (text, cls = '') => html`<span class="chip ${cls}">${text}</span>`;
 export const modeName = (m) => ({ demo: 'Demo mô phỏng', real: 'Mã thật', cli: 'CLI' }[m] || m || '–');
 export const zoneName = (z) => ({ privileged: 'đặc quyền', quarantine: 'cách ly' }[z] || z);

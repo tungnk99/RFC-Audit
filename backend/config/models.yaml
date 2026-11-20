@@ -30,15 +30,15 @@ models:
     api_key_env: FPT_API_KEY
     settings: {temperature: 0, extra_body: {thinking: {type: disabled}}}
 
-# Hiện chỉ có một mô hình nên mọi agent dùng chung. Khi có thêm mô hình thì khai báo ở `models` rồi đổi dòng tương ứng.
+# Hiện mọi agent dùng chung fpt-deepseek-flash (FPT, tiết kiệm chi phí); deepseek-flash vẫn khai báo để đổi lại. Khi có thêm mô hình thì khai báo ở `models` rồi đổi dòng tương ứng.
 # Hai chỗ thiết kế muốn KHÁC họ mô hình để lỗi ít tương quan: rfc_analyst.b (luồng dịch thứ hai, M2) và verifier
 # (phản biện độc lập). Dùng chung một mô hình thì độc lập đó chưa có; ghi lại khi đánh giá.
 agents:
-  rfc_analyst.a: deepseek-flash
-  rfc_analyst.b: deepseek-flash
-  planner: deepseek-flash
-  tester: deepseek-flash
-  verifier: deepseek-flash
-  report: deepseek-flash
-  code_indexer: deepseek-flash
-  code_reader: deepseek-flash
+  rfc_analyst.a: fpt-deepseek-flash
+  rfc_analyst.b: fpt-deepseek-flash
+  planner: fpt-deepseek-flash
+  tester: fpt-deepseek-flash
+  verifier: fpt-deepseek-flash
+  report: fpt-deepseek-flash
+  code_indexer: fpt-deepseek-flash
+  code_reader: fpt-deepseek-flash

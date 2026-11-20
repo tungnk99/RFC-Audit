@@ -58,6 +58,10 @@ class ToolSession:
     output_check: OutputCheck | None = None
     output_rejections: int = 0
     max_tokens: int = 0  # ngân sách token của nhiệm vụ (0 = không giới hạn); runtime dùng để nhắc agent trả kết quả
+    call_cache: dict[str, str] = field(
+        default_factory=dict[str, str]
+    )  # (công cụ, tham số) -> kết quả đã trả, để chặn lặp
+    model_key: str | None = None  # chọn luồng mô hình của vai trò (ví dụ rfc_analyst.a); None: theo tên vai trò
 
 
 @dataclass(frozen=True)

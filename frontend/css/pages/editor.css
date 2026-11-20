@@ -1,0 +1,12 @@
+/* Bộ soạn thảo có kiểm soát */
+.editor { z-index: 55; }
+.ed-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 420px; } @media (max-width: 1100px) { .ed-body { grid-template-columns: 1fr; } .ed-side { display: none; } }
+.ed-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; } .ed-wrap { flex: 1; min-height: 0; display: flex; background: var(--bg); }
+.gutter { width: 54px; padding: 12px 8px 12px 0; text-align: right; color: var(--muted); font: 12px/1.6 var(--font-mono); white-space: pre; overflow: hidden; user-select: none; border-right: 1px solid var(--border); background: var(--surface); }
+#ed-ta { flex: 1; resize: none; border: 0; border-radius: 0; background: var(--bg); color: var(--text); padding: 12px 16px; font: 12px/1.6 var(--font-mono); tab-size: 2; white-space: pre; overflow: auto; outline: none; }
+.ed-foot { display: flex; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--border); background: var(--surface); } .ed-foot input { flex: 1; }
+.ed-side { border-left: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; min-height: 0; } .ed-pane { padding: 14px; overflow: auto; flex: 1; } .sh { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 6px; }
+.udiff { font: 12px/1.55 var(--font-mono); border: 1px solid var(--border); border-radius: 6px; overflow: auto; } .ud { display: flex; white-space: pre; min-width: max-content; } .ud .n { width: 36px; text-align: right; padding-right: 6px; color: var(--muted); flex: none; user-select: none; } .ud .s { width: 18px; text-align: center; flex: none; } .ud code { background: none; padding: 0; font-size: inherit; }
+.ud.add { background: color-mix(in srgb, var(--good) 14%, transparent); } .ud.del { background: color-mix(in srgb, var(--critical) 14%, transparent); } .ud.gap { color: var(--muted); background: var(--surface-2); padding: 1px 12px; }
+.hist { display: grid; gap: 8px; } .hv { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; background: var(--surface-2); }
+.ex-head .badge { margin-left: 4px; }

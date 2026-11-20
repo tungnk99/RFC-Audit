@@ -11,6 +11,7 @@ chỉ ảnh hưởng thư mục này.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 from collections.abc import Sequence
@@ -25,6 +26,9 @@ from pydantic_ai.messages import (
     ModelMessagesTypeAdapter,
     ModelRequest,
     ModelResponse,
+    RetryPromptPart,
+    TextPart,
+    ThinkingPart,
     ToolCallPart,
     ToolReturnPart,
     UserPromptPart,
@@ -53,6 +57,34 @@ CLEARED_HEAD = 160  # ký tự đầu của kết quả cũ còn lại sau khi l
 CLEAR_ABOVE = 600  # kết quả ngắn hơn mức này không đáng lược
 WRAP_UP_SHARE = 0.7  # quá tỉ lệ ngân sách token này thì nhắc agent trả kết quả ngay
 OUTPUT_TOOL_PREFIX = "final_result"  # tên công cụ đầu ra của PydanticAI
+
+
+REPEAT_NOTE = (
+    "\n[LẶP LẠI: bạn đã gọi đúng lệnh này, kết quả y hệt và đã nằm trong lịch sử. Đừng gọi lại. Dùng kết quả đã có và gọi NGAY "
+    "công cụ final_result để trả kết quả.]"
+)
+LIVE_POLL_S = 0.4  # chu kỳ đọc hội thoại đang diễn ra để phát sự kiện agent_step
+LIVE_TEXT_CHARS = 4000  # mỗi bước trực tiếp chỉ mang tối đa chừng này ký tự; bản đầy đủ nằm ở llm_run khi lượt kết thúc
+
+
+def _live_steps(messages: Sequence[ModelMessage], start: int) -> list[dict[str, Any]]:
+    """Các bước mới của mô hình từ vị trí `start`: lời nói, suy nghĩ, lời gọi công cụ (trước khi công cụ chạy xong), lần bị cổng bắt làm lại."""
+    out: list[dict[str, Any]] = []
+    for msg in messages[start:]:
+        for part in msg.parts:
+            if isinstance(part, ThinkingPart) and part.content:
+                out.append({"step": "thinking", "text": part.content[:LIVE_TEXT_CHARS]})
+            elif isinstance(part, TextPart) and part.content:
+                out.append({"step": "text", "text": part.content[:LIVE_TEXT_CHARS]})
+            elif isinstance(part, ToolCallPart):
+                try:
+                    args: Any = part.args_as_dict()
+                except Exception:
+                    args = str(part.args)
+                out.append({"step": "call", "tool": part.tool_name, "args": args, "call_id": part.tool_call_id})
+            elif isinstance(part, RetryPromptPart):
+                out.append({"step": "retry", "text": str(part.content)[:LIVE_TEXT_CHARS]})
+    return out
 
 
 def _dump(messages: Sequence[ModelMessage]) -> list[dict[str, Any]]:
@@ -188,11 +220,17 @@ class PydanticAIRoleRunner:
         gateway = self._gateway
 
         async def call(ctx: RunContext[ToolSession], **kwargs: Any) -> str:
+            # Mô hình nhỏ hay gọi lại y hệt một lệnh cho tới khi hết ngân sách (đo: RFC Analyst gọi rfc.get_definition 9 lần cùng
+            # tham số rồi hỏng). Gọi lại đúng lệnh cũ thì trả kết quả đã có, không tốn ngân sách, kèm lời nhắc dừng.
+            key = spec.name + json.dumps(kwargs, sort_keys=True, default=str)
+            if (prior := ctx.deps.call_cache.get(key)) is not None:
+                return prior + REPEAT_NOTE
             try:
                 text = (await gateway.call(ctx.deps, spec.name, kwargs)).text
             except ToolDenied as denied:
                 # Mã lỗi liệt kê, không kèm chi tiết chính sách.
                 text = f"DENIED: {denied.code.value}"
+            ctx.deps.call_cache[key] = text
             return text + budget_note(ctx.deps)
 
         return Tool[ToolSession].from_schema(
@@ -252,6 +290,7 @@ class PydanticAIRoleRunner:
     ) -> RoleOutcome:
         role = envelope.to_role
         budget = self._policy.profile(role).budget_per_task
+        model_key = model_key or session.model_key
         agent = self.agent(role, model_key)
         session.max_tokens = budget.tokens
         # Chỉ skill agent khai báo trong role.yaml, lọc tất định theo kiểu nhiệm vụ; mô hình chỉ quyết định nạp skill nào
@@ -261,9 +300,33 @@ class PydanticAIRoleRunner:
         offered = self._skills.select(self._policy.profile(role).skills, task) if self._skills else []
         capability = skills_capability(self._skills, offered) if self._skills else None
         started = time.monotonic()
+
         # `capture_run_messages` giữ hội thoại kể cả khi lần chạy ném lỗi: đúng lúc hỏng mới cần xem mô hình đã thấy và
         # trả lời gì. Mỗi nhiệm vụ một ngữ cảnh riêng nên chạy song song không lẫn.
+        async def stream_steps() -> None:
+            """Phát từng bước của mô hình ra trace NGAY khi nó xuất hiện (mô hình thường im lặng cả chục giây giữa hai sự kiện công cụ).
+            Chỉ để quan sát: lỗi ở đây không được làm hỏng nhiệm vụ."""
+            seen = 0
+            try:
+                while True:
+                    steps = _live_steps(captured, seen)
+                    seen = len(captured)
+                    for step in steps:
+                        self._trace.append(
+                            envelope.run_id,
+                            "agent_step",
+                            {"msg_id": envelope.msg_id, **step},
+                            role=role,
+                            requirement_id=envelope.requirement_id,
+                        )
+                    await asyncio.sleep(LIVE_POLL_S)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                return
+
         with capture_run_messages() as captured:
+            streamer = asyncio.create_task(stream_steps())
             try:
                 result = await agent.run(
                     ContextBuilder.render(envelope, context),
@@ -307,6 +370,8 @@ class PydanticAIRoleRunner:
                         requirement_id=envelope.requirement_id,
                     )
                 return RoleOutcome(partial, spent, type(exc).__name__)
+            finally:
+                streamer.cancel()
 
         usage = result.usage
         tokens = int((usage.input_tokens or 0) + (usage.output_tokens or 0))

@@ -53,7 +53,7 @@ hết ngân sách hoặc phát hiện lặp. Chi tiết: [phối hợp agent](..
 | Test (thư mục `tester/`) | đặc quyền | chọn kịch bản kiểm thử trong DSL giới hạn | có |
 | Verifier | đặc quyền | phản biện bằng chứng, không đọc mã | có |
 | Code Indexer | **cách ly** | lập bản đồ hàm → thành phần | có (chưa thử với LLM thật) |
-| RFC Analyst | đặc quyền | dịch câu RFC sang RBS | **chưa nối** |
+| RFC Analyst | đặc quyền | dịch câu RFC sang RBS | **nối một phần**: chạy trước vòng điều tra khi bật phân tích RFC, mù với RBS viết tay, kết quả chỉ để đối chiếu (chưa dùng làm đầu vào kết luận, chưa có luồng thứ hai khác họ) |
 | Report | đặc quyền | giải thích kết luận, qua Output gate; lệnh `rfcv report` chưa nối | có |
 | Locator (tất định) | không LLM | truy vấn phân tích tĩnh (loại D) | **chưa nối** |
 

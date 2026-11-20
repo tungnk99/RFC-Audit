@@ -346,6 +346,21 @@ lệch dưới đây chưa sửa vì ảnh hưởng rộng hơn; mỗi mục là
 - **Hướng sửa:** kịch bản ClientHello/Finished có đệm; đo độ phủ mã bằng gcov/lcov (LINKED); chạy T3 song song.
 - **Đóng khi:** bảng độ phủ theo nhóm ca khớp với tlsfuzzer thuần trên cả ba phiên bản.
 
+### CT-30 · P1 · RFC Analyst dịch RFC → RBS: đo lần đầu cho thấy chất lượng thấp, chưa dùng được làm đầu vào kết luận
+
+- **Bằng chứng (BL-23, đo ngày 2026-10-24, `scripts/measure_rfc_analyst.py`, DeepSeek-V4-Flash, mù với RBS viết tay, mỗi câu 2 lần):** trên 8 câu của DNS, HTTP/2, QUIC, SSH
+  (9 RBS; loại TLS13-0042 vì ví dụ này nằm trong `prompt.md` nên không mù thật), 18 lượt: agent trả được đề xuất 10/18; đúng cú pháp 8/18; qua cổng từ vựng + biên dịch oracle 3/18;
+  khớp hoàn toàn RBS đã duyệt 0/18; khớp về ngữ nghĩa (bỏ `variants`, `within_ms`) 1/18. 8/18 lượt hỏng vì `UsageLimitExceeded` (gọi công cụ lặp hoặc đọc quá nhiều rồi hết hạn mức).
+  Cổng từ chối vì từ vựng: tên tham số/trường tự đặt (ví dụ `receive(request)` thay vì `receive(query)`), thiếu tham số (`send_disconnect`), trạng thái không có trong adapter.
+- **Đã sửa trong lúc đo:** (1) bản TXT của RFC không có "khối định nghĩa" nên `rfc.get_definition` trả rỗng và agent gọi lặp: nay nhận khối struct/enum thụt lề, chấp nhận tên có dấu chấm;
+  (2) chặn gọi lặp y hệt một lệnh (trả kết quả cũ, không tốn ngân sách, nhắc gọi `final_result`); (3) đưa từ vựng đầy đủ (chữ ký sự kiện, enum, miền trường) thay danh sách tên trần.
+  Sau (1)-(2) TLS13-0042 khớp hoàn toàn 2/2 nhưng đó là ca có ví dụ trong prompt. Sau (3) tỉ lệ qua cổng chỉ nhích từ 2/18 lên 3/18 và số lượt hỏng vì hạn mức tăng.
+- **Giới hạn:** mẫu rất nhỏ, RBS chuẩn do một người viết (lệch chưa chắc là AI sai), chỉ một họ mô hình, ca TLS chưa mù. Định danh câu trong RBS theo RFCXML còn RFC trong `inputs/` là TXT nên cần `adapters/*/sentence_aliases.yaml` (3 bí danh đã đối chiếu tay);
+  `HTTP2-0001` trỏ vào câu không mang modal ở bản TXT, cần xem lại câu nguồn.
+- **Quyết định:** RFC Analyst chỉ chạy ở chế độ đối chiếu (`spec_analysis`), KHÔNG đưa RBS của agent vào kết luận. Hướng cải thiện: mô hình mạnh hơn hoặc có suy luận cho riêng agent này (BL-16), cho agent trả đề xuất sớm rồi tinh chỉnh,
+  thêm ví dụ theo loại A–D và theo từng adapter, mở rộng bộ vàng tới 30 mục.
+- **Đóng khi:** qua cổng ≥ 90% và khớp ngữ nghĩa đạt ngưỡng đã đăng ký trên bộ ≥ 30 mục mù thật.
+
 ## Đã xử lý
 
 | ID | Vấn đề | Nguyên nhân gốc | Đã sửa ở | Bài học |

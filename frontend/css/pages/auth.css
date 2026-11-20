@@ -1,0 +1,32 @@
+/* Đăng nhập, tài khoản */
+.auth-root { position: fixed; inset: 0; z-index: 90; background: var(--bg); overflow-y: auto; }
+.auth-wrap { min-height: 100%; display: grid; place-items: center; padding: 24px; background: radial-gradient(900px 500px at 15% 0%, color-mix(in srgb, var(--accent) 10%, transparent), transparent), radial-gradient(700px 420px at 100% 100%, color-mix(in srgb, var(--series-7) 8%, transparent), transparent); }
+.auth-card { width: min(400px, 100%); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 28px 28px 24px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 14px; }
+.auth-card h1 { font-size: 22px; margin: 4px 0 -6px; letter-spacing: -.01em; }
+.auth-card p { margin: 0; line-height: 1.5; }
+.auth-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.auth-brand .mark { width: 36px; height: 36px; border-radius: 6px; background: linear-gradient(135deg, var(--series-1), var(--series-7)); display: grid; place-items: center; color: #fff; }
+.auth-brand b { font-size: 17px; display: block; line-height: 1.1; } .auth-brand small { color: var(--muted); font-size: 12px; }
+.auth-card .field input { height: 38px; }
+.btn.lg { height: 40px; justify-content: center; font-size: 14px; margin-top: 2px; }
+.auth-err { min-height: 18px; color: var(--critical-text); font-size: 12.5px; }
+.auth-err:empty { display: none; }
+.uwrap { position: relative; }
+.uchip { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); cursor: pointer; text-align: left; font: inherit; }
+button.uchip:hover { background: var(--hover); border-color: var(--border-strong); }
+.uchip.local { cursor: default; color: var(--muted); font-size: 12px; gap: 8px; padding: 8px 10px; }
+.uchip .avatar { width: 28px; height: 28px; font-size: 13px; flex: none; }
+.uchip .uname { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.uchip .uname b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .uchip .uname small { color: var(--muted); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uchip .uc { transform: rotate(-90deg); color: var(--muted); }
+.umenu { position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 6px; box-shadow: var(--shadow); padding: 4px; z-index: 30; display: flex; flex-direction: column; }
+.umenu button { display: flex; align-items: center; gap: 8px; border: 0; background: transparent; color: var(--text); padding: 8px 10px; border-radius: 7px; cursor: pointer; font: inherit; font-size: 13px; text-align: left; } .umenu button:hover { background: var(--hover); }
+.urow .avatar { width: 30px; height: 30px; flex: none; } .urow.off { opacity: .55; }
+.urow-name { display: flex; align-items: center; gap: 10px; } .urow-name b { display: block; } .urow-name small { color: var(--muted); }
+.urow-actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.urow select { height: 30px; font-size: 12.5px; }
+.auth-wrap { background: var(--bg); }
+.auth-card { border-radius: 10px; box-shadow: var(--shadow); background: var(--surface); }
+.auth-brand .mark { background: var(--primary); color: var(--primary-fg); border-radius: var(--r-md); width: 32px; height: 32px; }
+.uchip { border-radius: var(--r-md); background: transparent; } .umenu { border-radius: var(--r-lg); border: 0; box-shadow: var(--shadow); }
+.avatar { background: var(--surface-3); color: var(--text); }

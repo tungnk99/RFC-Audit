@@ -83,6 +83,17 @@ def describe(event: Mapping[str, Any]) -> str:
             return f"{p.get('error')} sau {p.get('duration_ms')}ms"
         case "output_retry":
             return f"lần {p.get('attempt')}: {p.get('errors')}"
+        case "rfc_analysis_start":
+            return f"phân tích {p.get('sentence_id')} (mù với RBS viết tay)"
+        case "rfc_analysis_skipped":
+            return f"bỏ qua {p.get('sentence_id')}: {p.get('reason')}"
+        case "rfc_proposal":
+            cmp = cast("Mapping[str, Any]", p.get("compare") or {})
+            state = "khớp" if cmp.get("agree") else f"lệch {cmp.get('diffs', [])}" if cmp else "không có đối chiếu"
+            return f"{'chấp nhận' if p.get('accepted') else 'bị cổng từ chối'}; {state}"
+        case "agent_step":
+            what = p.get("tool") or str(p.get("text") or "")[:80]
+            return f"{p.get('step')}: {what}"
         case "t3":
             return f"{p.get('variant')}: {p.get('outcome')}"
         case "t3_case":

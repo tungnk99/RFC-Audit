@@ -399,6 +399,26 @@ class ExecutionLoop:
         )
         return explanation
 
+    async def analyze_spec(
+        self,
+        inv: Investigation,
+        body: dict[str, Any],
+        available: Mapping[str, Labeled[Any]],
+        *,
+        model_key: str | None = None,
+    ) -> RoleOutcome | None:
+        """Vai trò dịch đặc tả chạy MỘT lần cho một yêu cầu, trước vòng điều tra. Hub chỉ giao việc, giữ ngân sách riêng và
+        ghi vết; việc kiểm đầu ra và đối chiếu với bản đã duyệt do miền làm. Không đổi gì trong vòng điều tra sau đó."""
+        role = self._loop.spec_role
+        if role is None or role not in self._policy.roles:
+            return None
+        outcome, _ = await self._run_role(role, inv, body, available, BudgetTracker(self._budget), model_key=model_key)
+        return outcome
+
+    def log_event(self, kind: str, payload: dict[str, Any], requirement_id: str) -> None:
+        """Cho miền ghi sự kiện của bước chạy trước vòng điều tra (vòng 0), cùng khuôn với mọi sự kiện của hub."""
+        self._log(kind, payload, requirement_id, round=0)
+
     # ------------------------------------------------------------------
 
     async def _plan(
@@ -599,6 +619,7 @@ class ExecutionLoop:
         handler: TaskHandler | None = None,
         task: TaskSpec | None = None,
         seed_shown: frozenset[tuple[str, int]] = frozenset(),
+        model_key: str | None = None,
     ) -> tuple[RoleOutcome, int]:
         env = self._envelope(inv, role, body, tracker)
         self._trace_envelope(env)
@@ -607,6 +628,7 @@ class ExecutionLoop:
         session = ToolSession(
             self.run_id, role, inv.requirement.requirement_id, max_tool_calls=profile.budget_per_task.tool_calls
         )
+        session.model_key = model_key
         session.shown_lines |= (
             seed_shown  # dòng mã đã nằm trong ngữ cảnh chuẩn bị sẵn: agent được phép dẫn như khi tự đọc
         )

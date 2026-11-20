@@ -1,20 +1,22 @@
 /* Theo dõi một lần chạy: đồ thị agent trực tiếp, hội thoại Hub↔agent, dòng thời gian, tổng kết kết luận, bằng chứng, bản kê,
    và ngăn chi tiết "AI nhận gì · dùng gì · trả gì". Nguồn dữ liệu duy nhất là trace.db/evidence.db do lõi ghi. */
-import { $, $$, api, copyBtn, empty, esc, fmt, html, icon, kv, labelOf, mount, on, openDrawer, raw, status, tabs, toast, verdict, modeName } from '../lib.js';
+import { $, $$, api, copyBtn, empty, esc, fmt, html, icon, kv, labelOf, mount, on, closeDrawer, openDrawer, raw, status, tabs, toast, verdict, modeName } from '../lib.js';
 import { findingCard, summaryLine } from '../findings-view.js';
 import { agentRate, flagMenu, reviewMeta, wireForm } from '../review.js';
 import { app } from '../lib.js';
 import { codeTab, newCodeState, scrollToLine } from '../code-view.js';
 import { closeExplorer, openExplorer } from '../explorer.js';
+import { agentInspector, agentName, buildModel, lessonsView, narrate, storyView, swimlane } from '../story.js';
 
 const HUB = 'execution_loop';
 const KIND_VN = {
   requirement_start: 'bắt đầu yêu cầu', round_start: 'vòng mới', sufficiency: 'đánh giá độ đủ', plan: 'quyết định kế hoạch', plan_context: 'bối cảnh kế hoạch',
   message: 'giao việc', role_run: 'agent xong', llm_run: 'lần gọi LLM', llm_failure: 'LLM lỗi', task_result: 'kết quả nhiệm vụ', critique_result: 'phản biện',
   stop: 'dừng', verdict: 'KẾT LUẬN', gate_reject: 'cổng từ chối', role_failure: 'agent hỏng', task_rejected: 'nhiệm vụ bị từ chối', stop_rejected: 'dừng bị từ chối',
+  rfc_analysis_start: 'bắt đầu phân tích RFC', rfc_proposal: 'đề xuất RBS từ RFC', rfc_analysis_skipped: 'bỏ qua phân tích RFC', agent_step: 'bước của agent',
   tool_call: 'gọi công cụ', tool_denied: 'công cụ bị chặn', output_retry: 'làm lại đầu ra', t3: 'kiểm thử T3', t3_case: 'ca kiểm thử', suspicious_scan: 'quét điểm đáng ngờ trong mã',
 };
-const NOISY = new Set(['tool_call', 't3_case', 't3', 'plan_context', 'round_start']);
+const NOISY = new Set(['agent_step', 'tool_call', 't3_case', 't3', 'plan_context', 'round_start']);
 const GW = 560, GH = 430;
 const NODE_LABEL = { [HUB]: 'Hub', evidence: 'Kho bằng chứng', verdict: 'Verdict engine' };
 
@@ -25,13 +27,13 @@ export default async function (ctx) {
   ctx.setCrumbs([{ text: 'Lần chạy', href: '#/runs' }, { text: id }]);
   const roleInfo = Object.fromEntries(cat.agents.map((a) => [a.name, a]));
 
-  const S = { id, run: detail, status: detail.status, events: [], nodes: {}, req: {}, llmByMsg: {}, lastSeq: 0, evCount: 0, tab: 'chat', sel: null, follow: true, tl: { kind: '', role: '', q: '', noisy: false }, ev: null, evDirty: true, es: null, replaying: false, speed: 1, speedPref: 4, graphKey: null, pos: null, code: newCodeState(), reviews: [], rvStates: {}, rvErr: {}, meta: null, canReview: false };
+  const S = { id, run: detail, status: detail.status, events: [], nodes: {}, req: {}, llmByMsg: {}, lastSeq: 0, evCount: 0, tab: 'story', inspect: null, trs: {}, trLoad: {}, ran: new Set(), sel: null, follow: true, tl: { kind: '', role: '', q: '', noisy: false }, ev: null, evDirty: true, es: null, replaying: false, speed: 1, speedPref: 4, graphKey: null, pos: null, code: newCodeState(), reviews: [], rvStates: {}, rvErr: {}, meta: null, canReview: false };
 
   /* ---------- trạng thái suy ra từ sự kiện ---------- */
   const nodeOf = (role) => (S.nodes[role] ||= { id: role, runs: 0, tokens: 0, tools: 0, working: 0, errors: 0, det: !(roleInfo[role] && !roleInfo[role].deterministic) });
   const reqOf = (rid) => (rid ? (S.req[rid] ||= { id: rid, tokens: 0, tool_calls: 0, round: 0, provisional: null, missing: null, verdict: null, t3: {}, evidence: 0 }) : null);
   const seedNodes = () => { nodeOf(HUB).det = false; nodeOf('evidence').det = true; nodeOf('verdict').det = true; cat.agents.filter((a) => a.wired && !a.deterministic).forEach((a) => nodeOf(a.name)); };
-  const resetDerived = () => { Object.assign(S, { nodes: {}, req: {}, llmByMsg: {}, lastSeq: 0, evCount: 0, graphKey: null }); seedNodes(); };
+  const resetDerived = () => { Object.assign(S, { nodes: {}, req: {}, llmByMsg: {}, lastSeq: 0, evCount: 0, graphKey: null, ran: new Set() }); seedNodes(); };
 
   function apply(e, animate) {
     const p = e.payload || {}, r = reqOf(e.requirement_id);
@@ -42,8 +44,8 @@ export default async function (ctx) {
       case 'message': { nodeOf(e.role).working++; if (r && p.round) r.round = Math.max(r.round, p.round); if (animate) pulse(HUB, e.role, 'var(--series-7)'); break; }
       case 'tool_call': { nodeOf(e.role).tools++; if (animate) flash(e.role); break; }
       case 'llm_run': case 'llm_failure': S.llmByMsg[p.msg_id] = e.seq; break;
-      case 'role_run': { const n = nodeOf(p.role); n.working = Math.max(0, n.working - 1); n.runs++; n.tokens += p.tokens || 0; if (!p.ok) n.errors++; if (r) { r.tokens += p.tokens || 0; r.tool_calls += p.tool_calls || 0; } if (animate) pulse(p.role, HUB, p.ok ? 'var(--good)' : 'var(--critical)'); break; }
-      case 'task_result': if (r) r.evidence += p.new_evidence || 0; S.evCount += p.new_evidence || 0; S.evDirty = true; if (animate && p.new_evidence) pulse(HUB, 'evidence', 'var(--series-3)'); break;
+      case 'role_run': { S.ran.add(p.msg_id); const n = nodeOf(p.role); n.working = Math.max(0, n.working - 1); n.runs++; n.tokens += p.tokens || 0; if (!p.ok) n.errors++; if (r) { r.tokens += p.tokens || 0; r.tool_calls += p.tool_calls || 0; } if (animate) pulse(p.role, HUB, p.ok ? 'var(--good)' : 'var(--critical)'); break; }
+      case 'task_result': if (!S.ran.has(p.msg_id) && p.target) { const n = nodeOf(p.target); n.working = Math.max(0, n.working - 1); n.runs++; } if (r) r.evidence += p.new_evidence || 0; S.evCount += p.new_evidence || 0; S.evDirty = true; if (animate && p.new_evidence) pulse(HUB, 'evidence', 'var(--series-3)'); break;
       case 'sufficiency': if (r) { r.provisional = p.provisional; r.missing = (p.missing || []).length; } if (animate) pulse(HUB, 'verdict', 'var(--warning)'); break;
       case 't3': if (r) r.t3[p.outcome] = (r.t3[p.outcome] || 0) + 1; break;
       case 'stop': if (r) r.stop = p; break;
@@ -63,7 +65,7 @@ export default async function (ctx) {
     const pos = (S.pos = layout()); const ids = Object.keys(pos);
     return raw(`<svg class="graph" viewBox="0 0 ${GW} ${GH}" role="img" aria-label="Mạng agent">${ids.filter((i) => i !== HUB).map((i) => `<line class="edge" x1="${pos[HUB][0]}" y1="${pos[HUB][1]}" x2="${pos[i][0]}" y2="${pos[i][1]}"/>`).join('')}<g>${ids.map((nid) => {
       const [x, y] = pos[nid]; const cls = nid === HUB ? 'hub' : nid === 'evidence' ? 'sink' : nid === 'verdict' ? 'verdict' : '';
-      const shape = nid === HUB ? `<rect class="body" x="${x - 40}" y="${y - 29}" width="80" height="58" rx="14"/>` : cls ? `<rect class="body" x="${x - 52}" y="${y - 25}" width="104" height="50" rx="10"/>` : `<rect class="body" x="${x - 58}" y="${y - 26}" width="116" height="52" rx="26"/>`;
+      const shape = nid === HUB ? `<rect class="body" x="${x - 40}" y="${y - 29}" width="80" height="58" rx="14"/>` : cls ? `<rect class="body" x="${x - 64}" y="${y - 25}" width="128" height="50" rx="10"/>` : `<rect class="body" x="${x - 58}" y="${y - 26}" width="116" height="52" rx="26"/>`;
       return `<g class="node ${cls}" data-node="${esc(nid)}" tabindex="0" role="button" aria-label="${esc(NODE_LABEL[nid] || nid)}">${shape}<text x="${x}" y="${y - 2}">${esc(NODE_LABEL[nid] || nid)}</text><text class="sub" x="${x}" y="${y + 12}" data-sub="${esc(nid)}"></text></g>`;
     }).join('')}</g><g id="pulses"></g></svg>`);
   }
@@ -73,7 +75,7 @@ export default async function (ctx) {
     if (S.graphKey !== key) { S.graphKey = key; mount(box, graphSvg()); }
     $$('[data-node]', box).forEach((g) => {
       const nid = g.dataset.node, n = S.nodes[nid]; if (!n) return;
-      g.classList.toggle('working', n.working > 0); g.classList.toggle('error', n.errors > 0 && n.working === 0); g.classList.toggle('sel', S.sel === nid); g.classList.toggle('det', !!n.det && !['evidence', 'verdict'].includes(nid));
+      g.classList.toggle('working', n.working > 0); g.classList.toggle('error', n.errors > 0 && n.working === 0); g.classList.toggle('sel', S.inspect === nid || S.sel === nid); g.classList.toggle('det', !!n.det && !['evidence', 'verdict'].includes(nid));
       const sub = $('[data-sub]', g); sub.textContent = nid === 'evidence' ? S.evCount + ' mục' : nid === 'verdict' ? '' : nid === HUB ? 'điều phối' : n.working > 0 ? 'đang chạy…' : `${n.runs}× · ${fmt.tok(n.tokens)}`;
     });
   }
@@ -162,6 +164,10 @@ export default async function (ctx) {
       case 'stop': return `${p.reason} · ${p.used?.rounds ?? '–'} vòng · ${fmt.tok(p.used?.tokens)} token · ${p.used?.tool_calls ?? '–'} công cụ`;
       case 'verdict': return `${labelOf(p.label)[0]} theo quy tắc ${p.rule} · bảo đảm ${p.assurance} · ${L(p.evidence_ids)} bằng chứng`;
       case 'tool_call': return `${p.tool} ${JSON.stringify(p.args || {}).slice(0, 90)}`;
+      case 'rfc_analysis_start': return `dịch ${p.sentence_id} (mù với RBS viết tay)`;
+      case 'rfc_analysis_skipped': return `${p.sentence_id}: ${p.reason}`;
+      case 'rfc_proposal': return `${p.accepted ? 'cổng chấp nhận' : 'cổng từ chối'} · ${p.compare ? (p.compare.agree ? 'khớp RBS đã duyệt' : 'lệch: ' + (p.compare.diffs || []).join(', ')) : 'không đối chiếu được'}`;
+      case 'agent_step': return p.step === 'call' ? `gọi ${p.tool}` : `${p.step}: ${String(p.text || '').slice(0, 80)}`;
       case 'tool_denied': return `${p.tool}: ${p.code}`;
       case 't3': return `${p.variant}: ${p.outcome}`;
       case 'suspicious_scan': return `đã quét ${p.symbols} ký hiệu, ${p.findings} điểm đáng ngờ, ${p.new} bằng chứng mới`;
@@ -214,6 +220,16 @@ export default async function (ctx) {
         <div class="muted small">Phân tích vi phạm sẽ hiện ngay khi Verdict engine kết luận.</div></section>`)}
       <div class="banner info" style="margin-top:6px">${icon('info', 16)}<div>Nhãn do Verdict engine gán bằng bộ quy tắc cố định, có phiên bản là hash nội dung. Agent chỉ đề xuất; một đề xuất chỉ thành bằng chứng sau khi qua cổng kiểm chứng không dùng LLM.</div></div>`;
   }
+  /* Hành trình (kể chuyện), làn thời gian và bài học: dựng từ sự kiện, nhớ theo (số sự kiện, seq cuối). */
+  const model = () => { const k = S.events.length + ':' + S.lastSeq; if (S.mk !== k) { S.mk = k; S.model = buildModel(S.events); } return S.model; };
+  const introHidden = () => { try { return localStorage.getItem('rfcv-intro-off') === '1'; } catch { return false; } };
+  const tabStory = () => { const m = model(); return html`<div class="section"><h4>Ai làm gì, lúc nào</h4>${swimlane(m)}</div>${storyView(m, { hideIntro: introHidden() })}`; };
+  const tabLessons = () => lessonsView(model());
+  function drawNow() {
+    if (!live() && S.findings?.length) { mount($('#now', ctx.el), ''); return; }  // đã có thẻ kết luận bên dưới: không lặp lại
+    const n = narrate(model(), live()), tone = ['bad', 'ok', 'warn'].includes(n.tone) ? n.tone : 'info';
+    mount($('#now', ctx.el), html`<div class="now-bar ${tone} ${n.pulse ? 'pulse' : ''}" role="status" aria-live="polite"><i class="dot"></i><div class="grow"><div class="head">${n.head}</div><div class="sub2">${n.sub}</div></div></div>`);
+  }
   const tabManifest = () => {
     const m = S.run.manifest, sp = S.run.spec;
     return html`<div class="section"><h4>Cấu hình</h4>${kv([['Giao thức', sp.adapter], ['Chế độ', modeName(sp.mode)], ['Yêu cầu', (sp.requirements || []).join(', ') || 'tất cả'], ['Mã nguồn', sp.code_root || (sp.mode === 'demo' ? 'mô phỏng' : '–')], ['Chỉ mục / sandbox / SUT', [sp.code_index, sp.executor, sp.sut_launcher].filter(Boolean).join(' · ') || '–'], ['Ngân sách', Object.keys(sp.budget || {}).length ? JSON.stringify(sp.budget) : 'mặc định'], ['Tạo lúc', fmt.time(S.run.created_at)], ['Thời lượng', fmt.dur(S.run.started_at, S.run.ended_at)]])}</div>
@@ -230,19 +246,19 @@ export default async function (ctx) {
 
   function frame() {
     mount(ctx.el, html`
-      <header class="page-head" id="head"></header><div id="err"></div><div id="quick"></div>
+      <header class="page-head" id="head"></header><div id="err"></div><div id="now"></div><div id="quick"></div>
       <div class="run-top" id="top"></div>
       <div class="run-layout"><div>
-        <section class="card graph-card"><div class="card-head"><div><h3>Mạng agent</h3><p class="sub">Nét đứt = thành phần tất định. Bấm một nút để lọc hội thoại.</p></div></div><div id="graph-box"></div>
+        <section class="card graph-card"><div class="card-head"><div><h3>Mạng agent</h3><p class="sub">Nét đứt = thành phần tất định. Bấm một nút để theo dõi agent đó: suy nghĩ, công cụ, kết quả.</p></div></div><div id="graph-box"></div>
           <div class="legend-line"><span><i style="background:var(--series-7)"></i>Hub giao việc</span><span><i style="background:var(--good)"></i>agent trả kết quả</span><span><i style="background:var(--series-3)"></i>ghi bằng chứng</span><span><i style="background:var(--warning)"></i>đánh giá độ đủ</span></div></section>
         <section class="card"><div class="card-head"><h3>Yêu cầu</h3></div><div id="reqs"></div></section></div>
       <section class="card"><div id="tabs"></div><div id="tab-body"></div></section></div>`);
   }
   function drawHead() {
     const r = S.run, isLive = live();
-    mount($('#head', ctx.el), html`<div><h1 class="mono" style="font-size:20px">${r.run_id} ${copyBtn(r.run_id)}</h1><p class="sub row" style="gap:8px">${status(S.status)}<span>${r.spec.adapter || '–'} · ${modeName(r.spec.mode)}</span>${Object.values(S.req).filter((x) => x.verdict).map((x) => html`<span>${verdict(x.verdict.label, x.verdict.rule)}</span>`)}</p></div>
+    mount($('#head', ctx.el), html`<div><h1 class="mono" style="font-size:20px">${r.run_id} ${copyBtn(r.run_id)}</h1><p class="sub row" style="gap:8px">${status(S.status)}<span>${r.spec.adapter || '–'} · ${modeName(r.spec.mode)}</span></p></div>
       <div class="actions">${isLive ? html`<button class="btn danger" id="cancel-run">${icon('stop', 14)}Huỷ</button>` : S.replaying ? html`<button class="btn" id="replay">${icon('stop', 14)}Dừng phát lại</button>` : html`<button class="btn" id="replay">${icon('play', 14)}Phát lại</button><select id="speed" aria-label="Tốc độ">${[1, 4, 16].map((s) => html`<option value="${s}" ${s === S.speedPref ? 'selected' : ''}>${s}×</option>`)}</select>`}
-        ${r.spec.mode === 'demo' || r.spec.mode === 'real' ? html`<button class="btn" id="rerun">${icon('refresh', 14)}Chạy lại</button>` : ''}<a class="btn" href="/api/runs/${S.id}/export" download>${icon('download', 14)}Xuất JSON</a></div>`);
+        ${r.spec.mode === 'demo' || r.spec.mode === 'real' ? html`<button class="btn" id="rerun">${icon('refresh', 14)}Chạy lại</button>` : ''}<a class="btn" href="#/report/${S.id}">${icon('book', 14)}Báo cáo</a><a class="btn" href="/api/runs/${S.id}/export" download>${icon('download', 14)}Xuất JSON</a></div>`);
     mount($('#err', ctx.el), r.error ? html`<div class="banner bad">${icon('alert', 18)}<div><b>Lần chạy ${S.status === 'failed' ? 'bị lỗi' : S.status}.</b><div class="mono small">${r.error}</div></div></div>` : '');
   }
   function drawTop() {
@@ -252,7 +268,7 @@ export default async function (ctx) {
       ${stat('Token', fmt.tok(tu), tb ? html`<div class="bar"><i style="width:${Math.min(100, (tu / tb) * 100)}%"></i></div><div class="muted small">trên ngân sách ${fmt.tok(tb)}</div>` : '')}${stat('Bằng chứng · công cụ', html`${S.evCount} · ${tools}`)}`);
   }
   function drawReqs() {
-    mount($('#reqs', ctx.el), Object.values(S.req).length ? html`${Object.values(S.req).map((r) => { const b = r.budget || {}; return html`<div class="req-card"><div class="row"><b class="mono">${r.id}</b><span class="chip">${r.modal || ''} · ${r.rtype || ''}</span>${r.verdict ? verdict(r.verdict.label, r.verdict.rule) : r.provisional ? html`<span class="muted small">tạm:</span>${verdict(r.provisional.label, r.provisional.rule)}` : html`<span class="badge info pulse">${icon('activity', 12)}đang điều tra</span>`}</div>
+    mount($('#reqs', ctx.el), Object.values(S.req).length ? html`${Object.values(S.req).map((r) => { const b = r.budget || {}; return html`<div class="req-card"><div class="row"><b class="mono">${r.id}</b><span class="chip">${r.modal || ''} · ${r.rtype || ''}</span>${r.verdict ? '' : r.provisional ? html`<span class="muted small">tạm:</span>${verdict(r.provisional.label, r.provisional.rule)}` : html`<span class="badge info pulse">${icon('activity', 12)}đang điều tra</span>`}</div>
       <div class="muted small" style="margin:6px 0 4px">vòng ${r.round}${b.rounds ? '/' + b.rounds : ''} · ${r.evidence} bằng chứng${r.missing != null && !r.verdict ? ` · còn thiếu ${r.missing}` : ''} · ${fmt.tok(r.tokens)} token</div>
       <div class="bar"><i style="width:${b.tokens ? Math.min(100, (r.tokens / b.tokens) * 100) : 0}%"></i></div>
       ${Object.keys(r.t3).length ? html`<div style="margin-top:6px">${Object.entries(r.t3).map(([k, n]) => html`<span class="badge ${k === 'PASS' ? 'ok' : k === 'FAIL' ? 'bad' : 'warn'}">${k} ${n}</span>`)}</div>` : ''}</div>`; })}` : html`<div class="muted small">Chưa có yêu cầu nào bắt đầu.</div>`);
@@ -263,13 +279,46 @@ export default async function (ctx) {
     if (!$('#graph-box', ctx.el)) return;
     S.canReview = canReview();
     if (Object.values(S.req).some((r) => r.verdict) && (!S.findings || S.findingsDirty)) { S.findingsDirty = false; await loadFindings(); }
-    updateGraph(); drawHead(); drawTop(); drawReqs();
+    updateGraph(); drawHead(); drawNow(); drawTop(); drawReqs(); if (S.inspect) { ensureTranscripts(); refreshInspector(); }
     mount($('#quick', ctx.el), S.findings?.length ? html`<div class="quicks">${S.findings.map((f) => summaryLine(f, S.rvStates?.[f.requirement_id] || 'pending'))}</div>` : '');
-    mount($('#tabs', ctx.el), tabs([['chat', 'Hội thoại'], ['summary', 'Kết luận'], ['timeline', 'Dòng thời gian'], ['evidence', 'Bằng chứng', S.evCount || null], ['manifest', 'Bản kê & cấu hình']], S.tab));
+    mount($('#tabs', ctx.el), tabs([['story', 'Hành trình'], ['chat', 'Hội thoại'], ['summary', 'Kết luận'], ['lessons', 'Bài học'], ['timeline', 'Dòng thời gian'], ['evidence', 'Bằng chứng', S.evCount || null], ['manifest', 'Bản kê & cấu hình']], S.tab));
     const body = $('#tab-body', ctx.el), sc = $('.feed', body), atBottom = !sc || sc.scrollHeight - sc.scrollTop - sc.clientHeight < 40, top = sc ? sc.scrollTop : 0;
-    const out = S.tab === 'chat' ? tabChat() : S.tab === 'timeline' ? tabTimeline() : S.tab === 'evidence' ? await tabEvidence() : S.tab === 'summary' ? await tabSummary() : tabManifest();
+    const openIdx = $$('details', body).map((d, i) => (d.open ? i : -1)).filter((i) => i >= 0);  // giữ các mục đã mở qua lần vẽ lại
+    const out = S.tab === 'story' ? tabStory() : S.tab === 'lessons' ? tabLessons() : S.tab === 'chat' ? tabChat() : S.tab === 'timeline' ? tabTimeline() : S.tab === 'evidence' ? await tabEvidence() : S.tab === 'summary' ? await tabSummary() : tabManifest();
     if (!ctx.alive()) return; mount(body, out);
+    if (openIdx.length) { const ds = $$('details', body); openIdx.forEach((i) => { if (ds[i]) ds[i].open = true; }); }
     const sc2 = $('.feed', body); if (sc2) { sc2.scrollTop = atBottom && S.follow ? sc2.scrollHeight : top; sc2.onscroll = () => { S.follow = sc2.scrollHeight - sc2.scrollTop - sc2.clientHeight < 40; }; }
+  }
+
+  /* ---------- theo dõi một agent (bấm nút trên đồ thị) ---------- */
+  const inspectorHtml = () => agentInspector(model(), S.inspect, S.trs, { live: live() });
+  /* Nạp hội thoại LLM của các lượt đã xong, mỗi lượt một lần; xong thì vẽ lại ngăn. */
+  function ensureTranscripts() {
+    const steps = model().reqs.flatMap((r) => r.rounds.flatMap((x) => x.steps)).filter((s) => s.to === S.inspect && s.llm && s.llm.payload.has_transcript !== false);
+    steps.forEach((s) => {
+      const q = s.llm.seq; if (S.trs[q] || S.trLoad[q]) return; S.trLoad[q] = true;
+      api(`/api/runs/${S.id}/events/${q}`).then((ev) => { S.trs[q] = ev.transcript || { steps: [] }; }).catch(() => { S.trs[q] = { steps: [] }; }).finally(() => { if (ctx.alive()) refreshInspector(true); });
+    });
+  }
+  function refreshInspector(force) {
+    const body = $('#drawer-body'); if (!S.inspect || !body || $('#drawer').hidden || !$(`[data-inspector="${CSS.escape(S.inspect)}"]`, body)) return;
+    const top = body.scrollTop;
+    const open = $$('details', body).map((d, i) => (d.open ? i : -1)).filter((i) => i >= 0), closed = $$('details.ag-run', body).map((d, i) => (!d.open ? i : -1)).filter((i) => i >= 0);
+    mount(body, inspectorHtml());
+    const ds = $$('details', body); open.forEach((i) => { if (ds[i]) ds[i].open = true; });
+    const runs = $$('details.ag-run', body); closed.forEach((i) => { if (runs[i] && !runs[i].classList.contains('run')) runs[i].open = false; });
+    body.scrollTop = live() && S.inspFollow ? body.scrollHeight : top; syncJump();
+  }
+  /* Theo kiểu terminal: đang ở cuối thì luôn bám bước mới nhất; kéo lên đọc thì dừng bám và hiện nút "Mới nhất". */
+  function syncJump() {
+    const d = $('#drawer'); let b = $('#ag-jump'); const need = !!S.inspect && live() && !S.inspFollow && !d.hidden;
+    if (need && !b) { b = document.createElement('button'); b.id = 'ag-jump'; b.className = 'btn ag-jump'; b.innerHTML = 'Mới nhất ↓'; b.onclick = () => { S.inspFollow = true; const body = $('#drawer-body'); body.scrollTop = body.scrollHeight; syncJump(); }; d.appendChild(b); }
+    if (b) b.hidden = !need;
+  }
+  const onInspScroll = () => { if (!S.inspect) return; const body = $('#drawer-body'); S.inspFollow = body.scrollHeight - body.scrollTop - body.clientHeight < 80; syncJump(); };
+  function openInspector(role) {
+    S.inspect = role; S.inspFollow = true; openDrawer(`Theo dõi · ${agentName(role)}`, inspectorHtml(), true); ensureTranscripts();
+    const body = $('#drawer-body'); body.onscroll = onInspScroll; if (live()) body.scrollTop = body.scrollHeight; syncJump();
   }
 
   /* ---------- ngăn chi tiết ---------- */
@@ -305,7 +354,7 @@ export default async function (ctx) {
   }
   function replay(speed) {
     if (S.replaying) { S.replaying = false; return; }
-    const all = S.events.slice(), real = S.status; S.replaying = true; S.speed = speed; S.events = []; resetDerived(); all.forEach((e) => e.role && nodeOf(e.role)); S.status = 'running'; S.tab = 'chat';
+    const all = S.events.slice(), real = S.status; S.replaying = true; S.speed = speed; S.events = []; resetDerived(); all.forEach((e) => e.role && nodeOf(e.role)); S.status = 'running'; S.tab = 'story';
     let i = 0;
     const next = () => {
       if (!S.replaying || i >= all.length) { S.replaying = false; S.speed = 1; S.status = real; S.events = all; resetDerived(); all.forEach((e) => apply(e, false)); render(); return; }
@@ -316,6 +365,8 @@ export default async function (ctx) {
   }
 
   /* ---------- sự kiện ---------- */
+  on(ctx.el, 'click', '[data-tabgo]', (b) => { S.tab = b.dataset.tabgo; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  on(ctx.el, 'click', '[data-dismiss-intro]', () => { try { localStorage.setItem('rfcv-intro-off', '1'); } catch { /* không lưu được thì thôi */ } render(); });
   on(ctx.el, 'click', '[data-tab]', (b, e) => { e.preventDefault(); S.tab = b.dataset.tab; render(); });
   on(ctx.el, 'click', '[data-seq]', (el, e) => { e.preventDefault(); openEvent(Number(el.dataset.seq)); });
   on(ctx.el, 'click', '[data-ev]', async (el, e) => {
@@ -325,7 +376,7 @@ export default async function (ctx) {
   });
   wireForm(ctx.el, () => ({ run: S.id, setError: (rid, err) => { S.rvErr[rid] = err; }, onSubmitted: async () => { await loadReviews(); window.dispatchEvent(new Event('rfcv:review-submitted')); render(); } }), render);
   const onRv = () => render(); window.addEventListener('rfcv:rv', onRv);
-  on(ctx.el, 'click', '[data-node]', (g) => { S.sel = S.sel === g.dataset.node ? null : g.dataset.node; S.tab = 'chat'; render(); });
+  on(ctx.el, 'click', '[data-node]', (g) => { openInspector(g.dataset.node); render(); });
   on(ctx.el, 'keydown', '[data-node]', (g, e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); g.dispatchEvent(new MouseEvent('click', { bubbles: true })); } });
   on(ctx.el, 'click', '[data-code]', (b, e) => { e.preventDefault(); const [path, line] = b.dataset.code.split('|'); openExplorer(S.id, { path, line: Number(line) }); });
   on(ctx.el, 'click', '[data-explorer]', () => openExplorer(S.id, { path: S.code.cur }));
@@ -344,21 +395,24 @@ export default async function (ctx) {
   on(ctx.el, 'change', '#tl-kind', (el) => { S.tl.kind = el.value; render(); }); on(ctx.el, 'change', '#tl-role', (el) => { S.tl.role = el.value; render(); });
   on(ctx.el, 'change', '#tl-noisy', (el) => { S.tl.noisy = el.checked; render(); }); on(ctx.el, 'change', '#tl-q', (el) => { S.tl.q = el.value; render(); });
   on(ctx.el, 'click', '#verify', async () => { const o = $('#verify-out', ctx.el); try { const r = await api(`/api/runs/${S.id}/verify`); mount(o, r.ok ? html`<span class="badge ok">${icon('check', 12)}nguyên vẹn · ${r.count} bản ghi</span>` : html`<span class="badge bad">HỎNG ${JSON.stringify(r)}</span>`); } catch (e) { o.textContent = e.message; } });
-  const drawerClick = (e) => { const b = e.target.closest('[data-open]'); if (b) openEvent(Number(b.dataset.open)); };
+  const drawerClick = (e) => {
+    const f = e.target.closest('[data-filter-role]'); if (f) { S.sel = f.dataset.filterRole; S.tab = 'chat'; closeDrawer(); render(); return; }
+    const b = e.target.closest('[data-open]'); if (b) { S.inspect = null; openEvent(Number(b.dataset.open)); }
+  };
   $('#drawer-body').addEventListener('click', drawerClick);
 
   /* ---------- khởi động ---------- */
   frame(); seedNodes();
   const first = await loadEvents(); if (!ctx.alive()) return;
   [S.meta] = await Promise.all([reviewMeta(), loadReviews()]);
-  S.status = first.status; S.follow = live(); if (S.events.some((e) => e.kind === 'verdict') && !live()) S.tab = 'summary';
-  if (openTab) { S.tab = openTab === 'code' || openTab === 'explorer' ? 'evidence' : openTab; if (openTab === 'code' || openTab === 'explorer') S.evView = 'code'; }
+  S.status = first.status; S.follow = live();  if (openTab) { S.tab = openTab === 'code' || openTab === 'explorer' ? 'evidence' : openTab; if (openTab === 'code' || openTab === 'explorer') S.evView = 'code'; }
   if (openTab === 'review') S.tab = 'summary';
   await draw();
   if (openTab === 'review' && openReq) setTimeout(() => { const el = document.getElementById('rv-' + openReq); el?.scrollIntoView({ block: 'start' }); el?.classList.add('flash-box'); }, 120);
   if (openSeq) openEvent(Number(openSeq));
+  if (openTab === 'agent' && openReq) { S.tab = 'story'; openInspector(openReq); }
   if (live()) connect();
-  const tick = setInterval(() => { if (live() || S.replaying) { const el = elapsed(); if (el != null) drawTop(); } }, 1000);
+  const tick = setInterval(() => { if (live() || S.replaying) { const el = elapsed(); if (el != null) drawTop(); $('#drawer-body [data-since]').forEach((e) => { e.textContent = fmt.sec(Math.max(0, (Date.now() * 1e6 - Number(e.dataset.since)) / 1e9)); }); } }, 1000);
   if (openTab === 'explorer') openExplorer(S.id);
-  ctx.onLeave(() => { window.removeEventListener('rfcv:rv', onRv); closeExplorer(); clearInterval(tick); S.es?.close(); S.replaying = false; $('#drawer-body').removeEventListener('click', drawerClick); });
+  ctx.onLeave(() => { S.inspect = null; $('#ag-jump')?.remove(); $('#drawer-body').onscroll = null; window.removeEventListener('rfcv:rv', onRv); closeExplorer(); clearInterval(tick); S.es?.close(); S.replaying = false; $('#drawer-body').removeEventListener('click', drawerClick); });
 }

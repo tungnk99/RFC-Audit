@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Segoe UI, Arial, sans-serif" font-size="12.5">
+  <rect width="900" height="400" fill="#fff"/>
+  <text x="20" y="24" font-size="13.5" font-weight="600" fill="#0f172a">RFC Analyst Agent dịch lại câu RFC (mù với bản viết tay): tỷ lệ đạt từng bước kiểm tra tất định</text>
+  <!-- trục y: 0..100% => y=330..60 (2.7px/%) -->
+  <g stroke="#e2e8f0"><line x1="70" y1="330" x2="870" y2="330"/><line x1="70" y1="276" x2="870" y2="276"/><line x1="70" y1="222" x2="870" y2="222"/><line x1="70" y1="168" x2="870" y2="168"/><line x1="70" y1="114" x2="870" y2="114"/><line x1="70" y1="60" x2="870" y2="60"/></g>
+  <g fill="#64748b" font-size="11" text-anchor="end"><text x="62" y="334">0%</text><text x="62" y="280">20%</text><text x="62" y="226">40%</text><text x="62" y="172">60%</text><text x="62" y="118">80%</text><text x="62" y="64">100%</text></g>
+
+  <!-- 4 nhóm x 4 mô hình. Nhóm i bắt đầu x = 90 + i*200; cột rộng 36, cách 4 -->
+  <!-- Nhóm 1: trả được đề xuất: 56, 89, 100, 67 -->
+  <g>
+    <rect x="90"  y="179" width="36" height="151" fill="#6366f1"/><text x="108" y="173" text-anchor="middle" fill="#312e81" font-size="10.5px">10/18</text>
+    <rect x="130" y="90"  width="36" height="240" fill="#0ea5e9"/><text x="148" y="84" text-anchor="middle" fill="#0c4a6e" font-size="10.5px">8/9</text>
+    <rect x="170" y="60"  width="36" height="270" fill="#14b8a6"/><text x="188" y="54" text-anchor="middle" fill="#134e4a" font-size="10.5px">9/9</text>
+    <rect x="210" y="149" width="36" height="181" fill="#f59e0b"/><text x="228" y="143" text-anchor="middle" fill="#78350f" font-size="10.5px">6/9</text>
+  </g>
+  <!-- Nhóm 2: đúng cú pháp: 44, 56, 78, 0 -->
+  <g>
+    <rect x="290" y="211" width="36" height="119" fill="#6366f1"/><text x="308" y="205" text-anchor="middle" fill="#312e81" font-size="10.5px">8/18</text>
+    <rect x="330" y="179" width="36" height="151" fill="#0ea5e9"/><text x="348" y="173" text-anchor="middle" fill="#0c4a6e" font-size="10.5px">5/9</text>
+    <rect x="370" y="119" width="36" height="211" fill="#14b8a6"/><text x="388" y="113" text-anchor="middle" fill="#134e4a" font-size="10.5px">7/9</text>
+    <rect x="410" y="328" width="36" height="2" fill="#f59e0b"/><text x="428" y="322" text-anchor="middle" fill="#78350f" font-size="10.5px">0/9</text>
+  </g>
+  <!-- Nhóm 3: qua cổng từ vựng + oracle: 17, 22, 22, 0 -->
+  <g>
+    <rect x="490" y="284" width="36" height="46" fill="#6366f1"/><text x="508" y="278" text-anchor="middle" fill="#312e81" font-size="10.5px">3/18</text>
+    <rect x="530" y="270" width="36" height="60" fill="#0ea5e9"/><text x="548" y="264" text-anchor="middle" fill="#0c4a6e" font-size="10.5px">2/9</text>
+    <rect x="570" y="270" width="36" height="60" fill="#14b8a6"/><text x="588" y="264" text-anchor="middle" fill="#134e4a" font-size="10.5px">2/9</text>
+    <rect x="610" y="328" width="36" height="2" fill="#f59e0b"/><text x="628" y="322" text-anchor="middle" fill="#78350f" font-size="10.5px">0/9</text>
+  </g>
+  <!-- Nhóm 4: khớp về ý với bản viết tay: 6, 11, 11, 0 -->
+  <g>
+    <rect x="690" y="314" width="36" height="16" fill="#6366f1"/><text x="708" y="308" text-anchor="middle" fill="#312e81" font-size="10.5px">1/18</text>
+    <rect x="730" y="300" width="36" height="30" fill="#0ea5e9"/><text x="748" y="294" text-anchor="middle" fill="#0c4a6e" font-size="10.5px">1/9</text>
+    <rect x="770" y="300" width="36" height="30" fill="#14b8a6"/><text x="788" y="294" text-anchor="middle" fill="#134e4a" font-size="10.5px">1/9</text>
+    <rect x="810" y="328" width="36" height="2" fill="#f59e0b"/><text x="828" y="322" text-anchor="middle" fill="#78350f" font-size="10.5px">0/9</text>
+  </g>
+  <g fill="#334155" text-anchor="middle" font-size="12px">
+    <text x="168" y="350">Trả được đề xuất</text><text x="368" y="350">Đúng cú pháp RBS</text><text x="568" y="350">Qua cổng từ vựng + oracle</text><text x="768" y="350">Khớp về ý với bản viết tay</text>
+  </g>
+  <!-- chú giải -->
+  <g font-size="11.5px" fill="#334155">
+    <rect x="70" y="372" width="14" height="12" fill="#6366f1"/><text x="90" y="383">DeepSeek-V4-Flash (mô hình đang dùng, 2 lượt/câu, n = 18)</text>
+    <rect x="420" y="372" width="14" height="12" fill="#0ea5e9"/><text x="440" y="383">V4 Pro</text>
+    <rect x="500" y="372" width="14" height="12" fill="#14b8a6"/><text x="520" y="383">V4.1 Flash</text>
+    <rect x="600" y="372" width="14" height="12" fill="#f59e0b"/><text x="620" y="383">gpt-oss-120b</text>
+    <text x="705" y="383" fill="#64748b">(ba mô hình sau: 1 lượt/câu, n = 9)</text>
+  </g>
+</svg>

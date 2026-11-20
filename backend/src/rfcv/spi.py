@@ -89,6 +89,8 @@ class LoopPolicy:
     planner_role: str = "planner"
     # Vai trò viết giải thích sau khi có kết luận (Output gate kiểm đầu ra); None: miền không có bước giải thích.
     report_role: str | None = None
+    # Vai trò dịch câu quy phạm của đặc tả thành yêu cầu có cấu trúc, chạy trước vòng điều tra khi bật phân tích đặc tả; None: miền không có.
+    spec_role: str | None = None
     critique_task: str | None = "CRITIQUE"
     # Nhãn tạm cần một lần phản biện sạch trước khi dừng (mặc định chỉ COMPLIANT, vì dễ sai nhất).
     critique_before: frozenset[str] = frozenset({"COMPLIANT"})

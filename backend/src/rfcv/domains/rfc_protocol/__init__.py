@@ -49,6 +49,7 @@ def pack() -> DomainPack:
         loop=LoopPolicy(
             planner_role="planner",
             report_role="report",
+            spec_role="rfc_analyst",
             critique_task=schemas.TaskType.CRITIQUE.value,
             locate_task=schemas.TaskType.LOCATE.value,
             locate_before=frozenset({"VIOLATION"}),

@@ -11,6 +11,22 @@ uv run rfcv serve --env-file .env      # mở http://127.0.0.1:8765/
 
 `--env-file` chỉ nạp các biến khoá mô hình khai báo trong `config/models.yaml` (ví dụ `DEEPSEEK_API_KEY`), không nạp biến khác (như `SUPABASE_*`). Bỏ cờ này nếu đã đặt biến vào môi trường. Thêm `--code-root <thư mục>` (lặp được) để cho phép chọn kho mã ngoài thư mục cha của `backend/`.
 
+## Hệ thiết kế
+
+Hướng "công cụ kỹ thuật tinh gọn": nền trung tính, mật độ cao, một màu nhấn, **màu chỉ dành cho nghĩa** (kết luận, trạng thái, diff); phân cấp bằng cỡ chữ và đường kẻ mảnh thay cho hộp.
+
+| Tệp | Vai trò |
+|---|---|
+| `css/tokens.css` | Nguồn duy nhất cho màu (sáng/tối), thang chữ 11–28px, khoảng cách 4px, bán kính 4/6/8, `@font-face`. Đổi giao diện: sửa ở đây. |
+| `css/base.css` | Reset, chữ, mã, focus, thanh cuộn, `prefers-reduced-motion`. |
+| `css/components.css` | Nút, ô nhập, tab, badge (biểu tượng + chữ màu, không viên thuốc), chip, bảng, banner, toast, drawer, modal, cmdk. |
+| `css/layout.css` | Khung: thanh bên gập được (`[`), thanh trên, đầu trang, responsive, in. |
+| `css/pages/*.css` | Riêng từng màn hình (dashboard, new, run, code, editor, review, auth, knowledge). |
+
+- **Phông chữ đóng gói** ở `fonts/` (Inter variable, JetBrains Mono; giấy phép OFL kèm theo), chạy offline; máy chủ trả `font/woff2` và cho cache dài.
+- **Phím tắt:** `Ctrl K` lệnh nhanh, `g d/n/r/v/p/a/s` đi nhanh, `[` thu gọn thanh bên, `?` bảng phím tắt.
+- Thêm màn hình mới: tạo `js/pages/<tên>.js`, đăng ký trong `main.js`, đặt CSS riêng vào `css/pages/` rồi thêm `<link>` ở `index.html`. Chỉ dùng token, không đặt màu/cỡ chữ cứng.
+
 ## Màn hình
 
 | Màn hình | Làm gì |
@@ -19,6 +35,10 @@ uv run rfcv serve --env-file .env      # mở http://127.0.0.1:8765/
 | **Lần chạy (trực tiếp)** | Bên trái: đồ thị agent, Hub ở giữa, xung nháy theo từng thông điệp (giao việc, trả kết quả, ghi bằng chứng, đánh giá độ đủ), nút sáng khi agent đang làm; dưới đó là tiến độ từng yêu cầu (vòng, token, bằng chứng, nhãn tạm, kết luận). Bên phải: **Hội thoại** (Hub giao gì cho ai, ai trả gì), **Dòng thời gian** (mọi sự kiện, lọc được), **Bằng chứng** (kho chỉ ghi thêm), **Bản kê & cấu hình** (hash đầu vào, kiểm tra chuỗi hash). Bấm một nút trên đồ thị để lọc theo agent. |
 | **Ngăn chi tiết** | Mở từ "Xem AI nhận gì · dùng gì · trả gì": ① đầu vào nhiệm vụ AI nhận và lời nhắc vai trò, ② skill đã được đưa/đã nạp và từng lần gọi công cụ kèm tham số và kết quả, ③ đầu ra cuối trước khi qua cổng kiểm chứng. Link thẳng: `#/run/<run_id>/event/<seq>`. |
 | **Lịch sử** | Mọi lần chạy trong `runs/` (kể cả chạy bằng CLI). Mở lại, hoặc **Phát lại** một lần đã xong với tốc độ 1×/4×/16× để xem lại luồng phối hợp. |
+
+## Phân tích RFC (RFC Analyst)
+
+Bật ở màn **Chạy mới → Phân tích RFC bằng AI**. Trước vòng điều tra, agent dịch lại câu RFC của từng yêu cầu sang RBS, **mù với bản viết tay**; cổng tất định kiểm cú pháp, từ vựng/oracle, định danh câu; rồi đối chiếu từng trường với RBS đã duyệt. Hiện ở đầu **Hành trình** của yêu cầu (chương "Phân tích RFC"), và bấm node `rfc_analyst` trên đồ thị để theo dõi bước của agent. Kết quả chỉ để đối chiếu, không đổi kết luận. Cần văn bản RFC ở `backend/inputs/rfc/` (bản TXT cần `sentence_aliases.yaml` của adapter vì RBS đánh số câu theo RFCXML). Số đo: `backend/scripts/measure_rfc_analyst.py`.
 
 ## Quy tắc
 

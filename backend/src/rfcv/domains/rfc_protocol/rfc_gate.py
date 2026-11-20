@@ -228,6 +228,9 @@ _TXT_FIGURE = re.compile(
 _TXT_COLUMNS = re.compile(r"\S\s{3,}\S")  # ô của bảng cách nhau từ 3 dấu cách (văn xuôi chỉ có 2 sau dấu chấm)
 
 
+_TXT_DEFINITION = re.compile(r"\b(?:struct|enum|union)\b[^;{}]{0,60}\{")  # mở đầu khối kiểu dữ liệu trong RFC dạng TXT
+
+
 def _is_figure(block: list[str]) -> bool:
     """Hình vẽ hay bảng, không phải văn xuôi. Không dựa vào độ thụt lề: danh sách định nghĩa thụt sâu vẫn là văn xuôi quy phạm."""
     if any(_TXT_FIGURE.search(ln) for ln in block):
@@ -288,6 +291,9 @@ def _txt_sections(text: str) -> dict[str, _Section]:
         if _is_figure(block):
             sec.blocks.append("\n".join(block))
         else:
+            if _TXT_DEFINITION.search("\n".join(block)):
+                # Khối struct/enum thụt lề trông như văn xuôi nên vẫn là đoạn (giữ nguyên định danh câu), nhưng cũng là khối định nghĩa.
+                sec.blocks.append("\n".join(block))
             sec.paragraphs.append((str(len(sec.paragraphs) + 1), " ".join(" ".join(ln.split()) for ln in block)))
         block.clear()
 

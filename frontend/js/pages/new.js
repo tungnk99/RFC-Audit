@@ -1,6 +1,6 @@
 import { $, $$, api, closeModal, empty, fmt, html, icon, mount, on, openModal, pageHead, toast } from '../lib.js';
 
-const form = { adapters: {}, mode: 'demo', demo_case: 'faulty', code_root: '', code_index: '', executor: '', sut_launcher: '', budget: {} };
+const form = { adapters: {}, mode: 'demo', demo_case: 'faulty', code_root: '', code_index: '', executor: '', sut_launcher: '', budget: {}, spec_analysis: false };
 const PRESETS = { fast: ['Nhanh', { rounds: 4, tokens: 400000, seconds: 300, tool_calls: 40 }], std: ['Chuẩn', {}], deep: ['Sâu', { rounds: 12, tokens: 3000000, seconds: 3600, tool_calls: 300 }] };
 const BUDGET = [['rounds', 'Số vòng tối đa', 8], ['tokens', 'Token tối đa', 1500000], ['seconds', 'Thời gian tối đa (giây)', 1800], ['tool_calls', 'Lời gọi công cụ tối đa', 120]];
 
@@ -17,6 +17,7 @@ export default async function (ctx) {
     ${pageHead('Chạy kiểm chứng', 'Chọn giao thức RFC và yêu cầu cần kiểm chứng, chọn nguồn mã, rồi để các agent điều tra. Mỗi giao thức là một lần chạy riêng, xếp hàng chạy lần lượt.')}
     <div class="new-layout"><div>
       <section class="card"><div class="step-title"><span class="n">1</span><h2>Giao thức RFC và yêu cầu</h2></div>
+        ${noXml() ? html`<div class="banner warn">${icon('alert', 15)}<div>Chưa có tệp RFCXML trong <span class="mono">inputs/rfc</span> cho ${noXml()} RFC. Với các RFC đó agent chỉ thấy RBS, không thấy câu gốc của RFC.</div></div>` : ''}
         ${adapters.length ? adapters.map((a) => proto(a)) : empty('Không tìm thấy adapter nào', 'Thêm adapter vào thư mục adapters/ rồi tải lại.')}</section>
       <section class="card"><div class="step-title"><span class="n">2</span><h2>Nguồn mã và chế độ chạy</h2></div>
         <label class="opt ${form.mode === 'demo' ? 'on' : ''}"><input type="radio" name="mode" value="demo" ${form.mode === 'demo' ? 'checked' : ''}>
@@ -28,17 +29,23 @@ export default async function (ctx) {
             <div class="hint">Chọn kho mã của bản triển khai (đúng commit), chỉ mục mã, bộ chạy lệnh và bộ chạy SUT.</div>
             ${form.mode === 'real' ? realFields(caps) : ''}</div></label>
       </section>
-      <section class="card"><div class="card-head"><div class="step-title" style="margin:0"><span class="n">3</span><h2>Ngân sách mỗi yêu cầu</h2></div>
+      <section class="card"><div class="step-title"><span class="n">3</span><h2>Phân tích RFC bằng AI (tuỳ chọn)</h2></div>
+        <label class="opt ${form.spec_analysis ? 'on' : ''}"><input type="checkbox" id="spec-analysis" ${form.spec_analysis ? 'checked' : ''}>
+          <div class="grow"><b>Cho RFC Analyst dịch lại câu RFC sang RBS trước khi điều tra</b>
+            <div class="hint">AI không được thấy RBS viết tay; chỉ nhận câu RFC, ngữ cảnh và từ vựng. Kết quả được <b>đối chiếu</b> với RBS đã duyệt và hiện ở đầu Hành trình. Không đổi kết luận. Cần văn bản RFC trong <span class="mono">inputs/rfc</span>; tốn thêm khoảng 30–60k token mỗi yêu cầu.</div></div></label>
+      </section>
+      <section class="card"><div class="card-head"><div class="step-title" style="margin:0"><span class="n">4</span><h2>Ngân sách mỗi yêu cầu</h2></div>
         <div class="seg">${Object.entries(PRESETS).map(([k, [l]]) => html`<button data-preset="${k}">${l}</button>`)}</div></div>
         <div class="grid g4">${BUDGET.map(([k, l, d]) => html`<div class="field"><label for="b-${k}">${l}</label><input id="b-${k}" type="number" data-budget="${k}" placeholder="${fmt.int(d)}" value="${form.budget[k] ?? ''}"></div>`)}</div>
         <div class="hint" style="margin-top:8px">Để trống = mặc định. Hết ngân sách trước khi đủ bằng chứng thì yêu cầu dừng với nhãn cần xem xét, không kết luận bừa.</div></section>
     </div>
     <aside class="sticky">${summary()}</aside></div>`;
 
+  const noXml = () => new Set(adapters.flatMap((a) => a.specs.filter((s) => !s.xml_available).map((s) => s.doc))).size;
   const proto = (a) => { const on = !!form.adapters[a.id]; const picked = form.adapters[a.id] || new Set(); return html`
     <div class="proto ${on ? 'on' : ''}"><label class="proto-head"><input type="checkbox" data-adapter="${a.id}" ${on ? 'checked' : ''}>
       <div class="grow"><b style="font-size:15px">${a.id}</b> <span class="muted small">v${a.version} · ${a.domain}</span>
-        <div style="margin-top:4px">${a.specs.map((s) => html`<span class="chip ${s.role === 'primary' ? 'accent' : ''}" title="Mục xét: ${s.sections.join(', ')}">${s.doc}${s.role === 'primary' ? '' : ' · tham chiếu'}${s.xml_available ? '' : html`<span class="ic warn-dot" title="Chưa có tệp RFCXML trong inputs/rfc: agent sẽ chỉ thấy RBS, không thấy câu RFC gốc">${icon('alert', 11)}</span>`}</span>`)}</div>
+        <div style="margin-top:4px">${a.specs.map((s) => html`<span class="chip ${s.role === 'primary' ? 'accent' : ''}" title="Mục xét: ${s.sections.join(', ')}">${s.doc}${s.role === 'primary' ? '' : ' · tham chiếu'}</span>`)}</div>
         <div class="muted small" style="margin-top:2px">${a.requirements.length} yêu cầu đã duyệt · SUT ${a.sut.repo.split('/').pop()} · thành phần: ${a.components.join(', ')}</div></div></label>
       ${on ? html`<div class="reqs"><div class="row small muted" style="margin-bottom:4px"><span>Yêu cầu (RBS)</span><a href="#" data-all="${a.id}">chọn hết</a><a href="#" data-none="${a.id}">bỏ hết</a></div>
         ${a.requirements.length ? a.requirements.map((r) => html`<div class="req"><input type="checkbox" data-req="${a.id}|${r.id}" ${picked.has(r.id) ? 'checked' : ''} aria-label="${r.id}">
@@ -65,7 +72,7 @@ export default async function (ctx) {
       <button class="btn primary" id="start" style="width:100%;justify-content:center;margin-top:16px" ${ok ? '' : 'disabled'}>${icon('play', 15)}Bắt đầu kiểm chứng</button></section>`;
   };
 
-  const request = () => ({ adapters: Object.entries(form.adapters).map(([id, reqs]) => ({ id, requirements: [...reqs] })), mode: form.mode, demo_case: form.demo_case, code_root: form.code_root, code_index: form.code_index, executor: form.executor, sut_launcher: form.sut_launcher, budget: form.budget });
+  const request = () => ({ adapters: Object.entries(form.adapters).map(([id, reqs]) => ({ id, requirements: [...reqs] })), mode: form.mode, demo_case: form.demo_case, code_root: form.code_root, code_index: form.code_index, executor: form.executor, sut_launcher: form.sut_launcher, budget: form.budget, spec_analysis: form.spec_analysis });
   const validate = () => {
     clearTimeout(timer); pre = { state: 'wait', errors: [] }; refreshSummary();
     timer = setTimeout(async () => {
@@ -82,6 +89,7 @@ export default async function (ctx) {
   on(ctx.el, 'click', '[data-all]', (el, e) => { e.preventDefault(); const a = adapters.find((x) => x.id === el.dataset.all); form.adapters[a.id] = new Set(a.requirements.map((r) => r.id)); redraw(); });
   on(ctx.el, 'click', '[data-none]', (el, e) => { e.preventDefault(); form.adapters[el.dataset.none] = new Set(); redraw(); });
   on(ctx.el, 'change', '[name=mode]', (el) => { form.mode = el.value; redraw(); });
+  on(ctx.el, 'change', '#spec-analysis', (el) => { form.spec_analysis = el.checked; redraw(); });
   on(ctx.el, 'change', '#demo-case', (el) => { form.demo_case = el.value; });
   on(ctx.el, 'input', '#code-root', (el) => { form.code_root = el.value; validate(); });
   on(ctx.el, 'change', '#code-index', (el) => { form.code_index = el.value; redraw(); });

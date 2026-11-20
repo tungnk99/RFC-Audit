@@ -20,7 +20,7 @@ from rfcv.api.server import build_app, load_model_keys
 from rfcv.assembly import Providers, Runtime, RuntimeConfig
 from test_assembly import ScriptedRunner, make_providers
 
-KEY_ENV = "DEEPSEEK_API_KEY"
+KEY_ENV = "FPT_API_KEY"
 SECRET = "sk-test-secret-value-1234567890"
 
 
@@ -62,7 +62,7 @@ def test_catalog_lists_protocols_requirements_and_agents(keyed: None) -> None:
     assert {s["doc"] for s in tls["specs"]} == {"RFC8446", "RFC9846"}
     names = {a["name"] for a in cat["agents"]}
     assert {"planner", "code_reader", "tester", "verifier"} <= names
-    assert cat["models"]["models"]["deepseek-flash"]["key_set"] is True
+    assert cat["models"]["models"]["fpt-deepseek-flash"]["key_set"] is True
 
 
 def test_catalog_never_exposes_key_values(keyed: None) -> None:
@@ -712,7 +712,7 @@ def test_agent_profile_models_and_skill_edits_are_gated_by_the_core_validators(
         "khoá API" in e
         for e in check("models", "models", models + "\n# api_key: sk-abcdefghijklmnopqrstuvwxyz123456\n")["errors"]
     )
-    assert not check("models", "models", models.replace("planner: deepseek-flash", "planner: mo-hinh-khong-co"))["ok"]
+    assert not check("models", "models", models.replace("planner: fpt-deepseek-flash", "planner: mo-hinh-khong-co"))["ok"]
 
     skill = call(conn, "GET", "/api/edit/read?kind=skill&name=core/check-ifdef-compiled-lines")[1]["text"]
     assert check("skill", "core/check-ifdef-compiled-lines", skill)["ok"]

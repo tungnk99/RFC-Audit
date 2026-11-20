@@ -280,12 +280,19 @@ class AgentTools:
             doc, err = self._rfc_doc(s, p.rfc)
             if doc is None:
                 return _text("rfc.get_definition", err, TrustLabel.TRUSTED)
-            rows = [f"--- mục {sec}\n{body}" for sec, body in doc.definitions(p.name)]
-            return _text(
-                "rfc.get_definition",
-                "\n".join(rows) or f"Không có khối định nghĩa nào nhắc '{p.name}'.",
-                TrustLabel.TRUSTED,
+            found = doc.definitions(p.name)
+            note = ""
+            if not found and "." in p.name:
+                # Tên có chấm (Kiểu.trường): khối định nghĩa nằm ở tên kiểu, không ở tên trường.
+                for part in p.name.split("."):
+                    found = found or doc.definitions(part)
+                note = f"(không có khối nhắc đúng '{p.name}'; đây là khối của thành phần tên đơn)\n" if found else ""
+            rows = [f"--- mục {sec}\n{body}" for sec, body in found]
+            miss = (
+                f"Không có khối định nghĩa nào nhắc '{p.name}'. Gọi lại cũng cho kết quả y hệt: dùng tên đơn (không dấu chấm), "
+                "hoặc rfc.search, hoặc trả kết quả với thông tin đã có."
             )
+            return _text("rfc.get_definition", note + "\n".join(rows) if rows else miss, TrustLabel.TRUSTED)
 
         return ToolSpec(
             "rfc.get_definition",

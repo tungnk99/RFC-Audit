@@ -1,5 +1,5 @@
 /* Khung ứng dụng: thanh bên, định tuyến theo hash, giao diện sáng/tối, lệnh nhanh (Ctrl+K), theo dõi lần chạy đang diễn ra. */
-import { $, $$, api, app, closeDrawer, closeModal, esc, fmt, html, icon, mount, on, raw, status, toast, STATUS } from './lib.js';
+import { $, $$, api, app, closeDrawer, closeModal, esc, fmt, html, icon, mount, on, openModal, raw, status, toast, STATUS } from './lib.js';
 import { wireReview } from './review.js';
 import { authScreen, userChip, wireUserChip } from './auth.js';
 
@@ -14,11 +14,11 @@ const NAV = [
   ['Quản trị', [['#/system', 'Hệ thống & mô hình', 'sliders', 'system']]],
 ];
 const ROUTES = [
-  [/^#?\/?$/, 'dashboard'], [/^#\/new$/, 'new'], [/^#\/runs$/, 'runs'], [/^#\/runs\/([^/]+)(?:\/event\/(\d+)|\/tab\/(\w+)(?:\/([^/]+))?)?$/, 'run'], [/^#\/review(?:\/(\w+))?$/, 'review'],
+  [/^#?\/?$/, 'dashboard'], [/^#\/new$/, 'new'], [/^#\/runs$/, 'runs'], [/^#\/runs\/([^/]+)(?:\/event\/(\d+)|\/tab\/(\w+)(?:\/([^/]+))?)?$/, 'run'], [/^#\/compare\/([^/]+)\/([^/]+)$/, 'compare'], [/^#\/report\/([^/]+)$/, 'report'], [/^#\/review(?:\/(\w+))?$/, 'review'],
   [/^#\/protocols(?:\/([^/]+))?$/, 'protocols'], [/^#\/agents(?:\/([^/]+))?$/, 'agents'], [/^#\/skills(?:\/([^/]+)\/([^/]+))?$/, 'skills'], [/^#\/system(?:\/([^/]+))?$/, 'system'], [/^#\/users$/, 'users'],
 ];
-const TITLES = { dashboard: 'Tổng quan', new: 'Chạy kiểm chứng', runs: 'Lần chạy', run: 'Chi tiết lần chạy', review: 'Duyệt & phản hồi', protocols: 'Giao thức & yêu cầu', agents: 'Agents', skills: 'Skills', system: 'Hệ thống & mô hình', users: 'Người dùng' };
-const NAV_OF = { dashboard: 'dashboard', new: 'new', runs: 'runs', run: 'runs', review: 'review', protocols: 'protocols', agents: 'agents', skills: 'skills', system: 'system', users: 'users' };
+const TITLES = { dashboard: 'Tổng quan', new: 'Chạy kiểm chứng', runs: 'Lần chạy', run: 'Chi tiết lần chạy', compare: 'So sánh lần chạy', report: 'Báo cáo', review: 'Duyệt & phản hồi', protocols: 'Giao thức & yêu cầu', agents: 'Agents', skills: 'Skills', system: 'Hệ thống & mô hình', users: 'Người dùng' };
+const NAV_OF = { dashboard: 'dashboard', new: 'new', runs: 'runs', run: 'runs', compare: 'runs', report: 'runs', review: 'review', protocols: 'protocols', agents: 'agents', skills: 'skills', system: 'system', users: 'users' };
 /* Menu hiện theo vai trò: mục quản lý người dùng chỉ có với admin khi máy chủ bật đăng nhập. */
 const navItems = () => (app.auth && app.isAdmin ? NAV.map(([g, items]) => (g === 'Quản trị' ? [g, [...items, ...NAV_ADMIN[1]]] : [g, items])) : NAV);
 
@@ -32,14 +32,15 @@ function drawSidebar() {
   const cur = NAV_OF[currentRoute()?.[0]];
   mount($('#sidebar'), html`
     <a class="brand" href="#/"><span class="mark">${icon('shield', 16)}</span><span>RFC-Audit<small>Kiểm chứng tuân thủ RFC</small></span></a>
-    <nav class="nav">${navItems().map(([g, items]) => html`<div class="nav-group">${g}</div>${items.map(([href, label, ic, key]) => html`<a href="${href}" class="${key === cur ? 'on' : ''}">${icon(ic, 17)}${label}${key === 'runs' && state.active.length ? html`<span class="pill">${state.active.length}</span>` : ''}${key === 'review' && state.pending ? html`<span class="pill warnpill">${state.pending}</span>` : ''}</a>`)}`)}</nav>
+    <nav class="nav">${navItems().map(([g, items]) => html`<div class="nav-group">${g}</div>${items.map(([href, label, ic, key]) => html`<a href="${href}" class="${key === cur ? 'on' : ''}">${icon(ic, 16)}<span>${label}</span>${key === 'runs' && state.active.length ? html`<span class="pill">${state.active.length}</span>` : ''}${key === 'review' && state.pending ? html`<span class="pill warnpill">${state.pending}</span>` : ''}</a>`)}`)}</nav>
     <div class="side-foot">
       <div class="conn" id="conn" hidden><i></i><span>đang kết nối…</span></div>
       ${app.readOnly ? html`<div class="badge warn" title="rfcv serve --read-only">${icon('lock', 12)}Chế độ chỉ đọc</div>` : ''}
       ${userChip()}
-      <div class="row"><button class="btn sm ghost" id="theme-btn">${icon(document.documentElement.dataset.theme === 'dark' ? 'sun' : 'moon', 15)}<span>${document.documentElement.dataset.theme === 'dark' ? 'Giao diện sáng' : 'Giao diện tối'}</span></button></div>
+      <div class="row" style="flex-wrap:nowrap"><button class="btn sm ghost grow" id="theme-btn" style="justify-content:flex-start">${icon(document.documentElement.dataset.theme === 'dark' ? 'sun' : 'moon', 15)}<span>${document.documentElement.dataset.theme === 'dark' ? 'Giao diện sáng' : 'Giao diện tối'}</span></button><button class="icon-btn" id="collapse-btn" title="Thu gọn thanh bên ([)" aria-label="Thu gọn thanh bên">${icon('menu', 15)}</button></div>
     </div>`);
   wireUserChip();
+  $('#collapse-btn').onclick = toggleSide;
   $('#theme-btn').onclick = () => {
     const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.dataset.theme = t; localStorage.setItem('rfcv-theme', t); drawSidebar(); pingHealth();
@@ -50,6 +51,30 @@ async function pingHealth() {
   try { const h = await api('/api/health'); const ro = !!h.read_only; if (ro !== app.readOnly) { app.readOnly = ro; drawSidebar(); } el.hidden = true; }
   catch { el.hidden = false; el.className = 'conn bad'; el.querySelector('span').textContent = 'Mất kết nối backend'; }
 }
+
+/* ---------- thanh bên gập được, phím tắt ---------- */
+const sideKey = 'rfcv-side-collapsed';
+const applySide = () => { let c = false; try { c = localStorage.getItem(sideKey) === '1'; } catch { /* bỏ qua */ } $('#shell').classList.toggle('collapsed', c); };
+function toggleSide() { let c = false; try { c = localStorage.getItem(sideKey) === '1'; localStorage.setItem(sideKey, c ? '0' : '1'); } catch { /* bỏ qua */ } applySide(); }
+const GO = { d: ['#/', 'Tổng quan'], n: ['#/new', 'Chạy kiểm chứng'], r: ['#/runs', 'Lần chạy'], v: ['#/review', 'Duyệt & phản hồi'], p: ['#/protocols', 'Giao thức'], a: ['#/agents', 'Agents'], s: ['#/skills', 'Skills'] };
+function showShortcuts() {
+  openModal(html`<div class="mh"><h3>Phím tắt</h3></div><div class="shortcuts">
+    <span><kbd>Ctrl</kbd> <kbd>K</kbd></span><span>Tìm trang, lần chạy, agent, skill</span>
+    ${Object.entries(GO).map(([k, [, l]]) => html`<span><kbd>g</kbd> <kbd>${k}</kbd></span><span>Đi tới ${l}</span>`)}
+    <span><kbd>[</kbd></span><span>Thu gọn / mở thanh bên</span><span><kbd>?</kbd></span><span>Bảng phím tắt này</span><span><kbd>Esc</kbd></span><span>Đóng ngăn chi tiết, hộp thoại</span></div>
+    <div class="mf"><button class="btn" id="m-close">Đóng</button></div>`);
+  $('#m-close').onclick = closeModal;
+}
+document.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('tr.click[tabindex]')) { e.preventDefault(); e.target.click(); } });
+let gPending = 0;
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+  if (e.key === '[') { toggleSide(); return; }
+  if (e.key === '?') { showShortcuts(); return; }
+  if (e.key === 'g') { gPending = Date.now(); return; }
+  if (gPending && Date.now() - gPending < 1200 && GO[e.key]) { location.hash = GO[e.key][0]; }
+  gPending = 0;
+});
 
 /* ---------- định tuyến ---------- */
 function currentRoute() {
@@ -136,7 +161,7 @@ async function openCmdk() {
 const closeCmdk = () => { $('#cmdk').hidden = true; };
 
 /* ---------- khởi động ---------- */
-mount($('#search-ic'), icon('search', 15)); mount($('#menu-btn'), icon('menu', 18)); mount($('#drawer-close'), icon('x', 16));
+applySide(); mount($('#search-ic'), icon('search', 14)); mount($('#menu-btn'), icon('menu', 18)); mount($('#drawer-close'), icon('x', 16));
 $('#search-btn').onclick = openCmdk; $('#menu-btn').onclick = () => $('#shell').classList.toggle('nav-open');
 $('#drawer-close').onclick = closeDrawer; $('#scrim').onclick = closeDrawer;
 document.addEventListener('keydown', (e) => {

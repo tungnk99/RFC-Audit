@@ -1,0 +1,2 @@
+# Xem adapters/tls13/sentence_aliases.yaml: RBS đánh số câu theo RFCXML, bản TXT đánh số khác.
+"RFC9000§19.15#p5.6.1s2": "RFC9000§19.15#p8s2"   # Values less than 1 and greater than 20 are invalid and MUST be treated as a connection error of type FRAME_ENCODING_ERROR.

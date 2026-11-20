@@ -44,6 +44,7 @@ class RunSpec:
     executor: str | None = None
     sut_launcher: str | None = None
     budget: dict[str, float] = field(default_factory=dict[str, float])
+    spec_analysis: bool = False  # trước vòng điều tra, RFC Analyst dịch lại câu RFC (mù) rồi đối chiếu với RBS đã duyệt
 
     @classmethod
     def from_json(cls, d: dict[str, Any]) -> RunSpec:
@@ -114,6 +115,7 @@ class RunManager:
             "executor": body.get("executor") or None,
             "sut_launcher": body.get("sut_launcher") or None,
             "budget": budget,
+            "spec_analysis": bool(body.get("spec_analysis")),
         }
         specs: list[RunSpec] = []
         for item in chosen:
@@ -299,6 +301,7 @@ class RunManager:
             executor=spec.executor if spec.mode == "real" else None,
             sut_launcher=spec.sut_launcher if spec.mode == "real" else None,
             budget=RequirementBudget(**spec.budget) if spec.budget else None,  # type: ignore[arg-type]
+            spec_analysis=spec.spec_analysis,
         )
 
     def _providers(self, spec: RunSpec, cfg: RuntimeConfig) -> Providers | None:

@@ -81,6 +81,8 @@ class RuntimeConfig:
     scripted_plans: bool = (
         True  # luật sổ tay tất định thì hub tự lập kế hoạch, không gọi Planner LLM (xem PlaybookRule.deterministic)
     )
+    # Trước vòng điều tra, agent dịch câu RFC thành RBS (mù với bản người viết) rồi đối chiếu; chỉ quan sát, không đổi RBS dùng cho kết luận.
+    spec_analysis: bool = False
     explain: bool = False  # sau mỗi kết luận, Report agent viết giải thích và Output gate kiểm (thêm khoảng 4% token)
     budget: RequirementBudget | None = None
     image_digests: Mapping[str, str] = field(default_factory=dict[str, str])
@@ -139,6 +141,9 @@ class Runtime:
                 self.requirements.add(rid, {"rtype": inv.requirement.rtype, "modal": inv.requirement.modal}, "loader")
                 self.requirements.transition(rid, State.SPECIFIED, "oracle_compiler")
                 self.requirements.transition(rid, State.INVESTIGATING, "execution_loop")
+                analyze = getattr(self.pack.runtime, "analyze_spec", None)
+                if self.config.spec_analysis and analyze is not None:
+                    await analyze(self, inv)
                 verdict = await self.loop.investigate(inv)
                 if self.config.explain:
                     await self.loop.explain(inv, verdict)  # không đổi nhãn; giải thích không qua Output gate thì bị bỏ

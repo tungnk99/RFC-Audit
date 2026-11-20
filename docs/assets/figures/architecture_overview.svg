@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1620" height="965" viewBox="0 0 1620 965" font-family="Segoe UI, Arial, sans-serif">
+<defs><marker id="h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 1L10 5L0 9z" fill="#4b5563"/></marker><marker id="t" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M10 1L0 5L10 9z" fill="#4b5563"/></marker></defs>
+<rect width="1620" height="965" fill="#fff"/>
+<text x="20" y="30" font-size="20" font-weight="700" fill="#1f3a5f" text-anchor="start" >Kiến trúc hệ thống RFCAudit</text>
+<text x="20" y="50" font-size="12.5" font-weight="400" fill="#6b7280" text-anchor="start" >Tác tử (LLM) chỉ đề xuất; thành phần tất định kiểm chứng và gán nhãn kết luận</text>
+<rect x="150" y="62" width="1450" height="660" rx="4" fill="none" stroke="#9ca3af" stroke-width="1.2" stroke-dasharray="8 5"/>
+<text x="162" y="80" font-size="12" font-weight="600" fill="#6b7280" text-anchor="start" font-style="italic">Security-Aware Agent Harness</text>
+<text x="20" y="135" font-size="13" font-weight="700" fill="#1f3a5f" text-anchor="start" >Tác tử</text>
+<text x="20" y="151" font-size="13" font-weight="700" fill="#1f3a5f" text-anchor="start" >(LLM)</text>
+<text x="20" y="247" font-size="13" font-weight="700" fill="#1f3a5f" text-anchor="start" >Điều phối</text>
+<text x="20" y="354" font-size="13" font-weight="700" fill="#1f3a5f" text-anchor="start" >Kiểm chứng</text>
+<text x="20" y="370" font-size="13" font-weight="700" fill="#1f3a5f" text-anchor="start" >tất định</text>
+<text x="20" y="787" font-size="13" font-weight="700" fill="#1f3a5f" text-anchor="start" >Đầu vào,</text>
+<text x="20" y="803" font-size="13" font-weight="700" fill="#1f3a5f" text-anchor="start" >môi trường</text>
+<line x1="20" y1="205" x2="1600" y2="205" stroke="#e5e7eb" stroke-width="1"/>
+<line x1="20" y1="300" x2="1600" y2="300" stroke="#e5e7eb" stroke-width="1"/>
+<line x1="20" y1="440" x2="1600" y2="440" stroke="#e5e7eb" stroke-width="1"/>
+<text x="170" y="98" font-size="10.5" font-weight="700" fill="#c2410c" text-anchor="start" >VÙNG CÁCH LY</text>
+<text x="653" y="98" font-size="10.5" font-weight="700" fill="#1f3a5f" text-anchor="start" >VÙNG ĐẶC QUYỀN</text>
+<rect x="170" y="108" width="150" height="72" rx="3" fill="#fff" stroke="#c2410c" stroke-width="1.8"/>
+<text x="245.0" y="141.5" font-size="14" font-weight="600" fill="#1f3a5f" text-anchor="middle" >Code Indexer</text>
+<text x="245.0" y="158.5" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >bản đồ thành phần</text>
+<rect x="331" y="108" width="150" height="72" rx="3" fill="#fff" stroke="#c2410c" stroke-width="1.8"/>
+<text x="406.0" y="141.5" font-size="14" font-weight="600" fill="#1f3a5f" text-anchor="middle" >Code Reader</text>
+<text x="406.0" y="158.5" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >định vị mã</text>
+<rect x="492" y="108" width="150" height="72" rx="3" fill="#1f3a5f" stroke="#1f3a5f" stroke-width="1.2"/>
+<text x="567.0" y="141.5" font-size="14" font-weight="600" fill="#fff" text-anchor="middle" >Verifier</text>
+<text x="567.0" y="158.5" font-size="11.5" font-weight="400" fill="#cbd5e1" text-anchor="middle" >phản biện</text>
+<rect x="653" y="108" width="150" height="72" rx="3" fill="#1f3a5f" stroke="#1f3a5f" stroke-width="1.2"/>
+<text x="728.0" y="141.5" font-size="14" font-weight="600" fill="#fff" text-anchor="middle" >RFC Analyst</text>
+<text x="728.0" y="158.5" font-size="11.5" font-weight="400" fill="#cbd5e1" text-anchor="middle" >RFC → RBS</text>
+<rect x="814" y="108" width="150" height="72" rx="3" fill="#1f3a5f" stroke="#1f3a5f" stroke-width="1.2"/>
+<text x="889.0" y="141.5" font-size="14" font-weight="600" fill="#fff" text-anchor="middle" >Planner</text>
+<text x="889.0" y="158.5" font-size="11.5" font-weight="400" fill="#cbd5e1" text-anchor="middle" >chọn bước tiếp</text>
+<rect x="975" y="108" width="150" height="72" rx="3" fill="#1f3a5f" stroke="#1f3a5f" stroke-width="1.2"/>
+<text x="1050.0" y="141.5" font-size="14" font-weight="600" fill="#fff" text-anchor="middle" >Tester</text>
+<text x="1050.0" y="158.5" font-size="11.5" font-weight="400" fill="#cbd5e1" text-anchor="middle" >kịch bản DSL</text>
+<rect x="1136" y="108" width="150" height="72" rx="3" fill="#1f3a5f" stroke="#1f3a5f" stroke-width="1.2"/>
+<text x="1211.0" y="141.5" font-size="14" font-weight="600" fill="#fff" text-anchor="middle" >Report</text>
+<text x="1211.0" y="158.5" font-size="11.5" font-weight="400" fill="#cbd5e1" text-anchor="middle" >giải thích kết luận</text>
+<path d="M 245.0 180 L 245.0 215" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<path d="M 406.0 180 L 406.0 215" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<path d="M 567.0 180 L 567.0 215" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<path d="M 728.0 180 L 728.0 215" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<path d="M 889.0 180 L 889.0 215" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<path d="M 1050.0 180 L 1050.0 215" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<path d="M 1211.0 180 L 1211.0 215" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<rect x="170" y="215" width="1116" height="66" rx="3" fill="#dfe6f0" stroke="#1f3a5f" stroke-width="1.4"/>
+<text x="728.0" y="238.0" font-size="14" font-weight="600" fill="#1f3a5f" text-anchor="middle" >Execution loop (hub)</text>
+<text x="728.0" y="255.0" font-size="11.5" font-weight="400" fill="#374151" text-anchor="middle" >giao việc theo sổ tay điều phối · ngân sách · phát hiện lặp; agent không gọi nhau trực tiếp</text>
+<text x="728.0" y="270.0" font-size="11.5" font-weight="400" fill="#374151" text-anchor="middle" >Context builder · IFC tracker · LLM gateway (giữ khóa API) · Policy store · Trace log</text>
+<rect x="170" y="320" width="150" height="86" rx="3" fill="#eef1f5" stroke="#6b7280" stroke-width="1.2"/>
+<text x="245.0" y="353.0" font-size="14" font-weight="600" fill="#1f2937" text-anchor="middle" >Code gate</text>
+<text x="245.0" y="370.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >chỉ mục mã;</text>
+<text x="245.0" y="385.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >công cụ chỉ đọc</text>
+<rect x="331" y="320" width="150" height="86" rx="3" fill="#eef1f5" stroke="#6b7280" stroke-width="1.2"/>
+<text x="406.0" y="353.0" font-size="14" font-weight="600" fill="#1f2937" text-anchor="middle" >Schema gate</text>
+<text x="406.0" y="370.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >đối chiếu vị trí với</text>
+<text x="406.0" y="385.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >chỉ mục → T1</text>
+<rect x="653" y="320" width="150" height="86" rx="3" fill="#eef1f5" stroke="#6b7280" stroke-width="1.2"/>
+<text x="728.0" y="360.5" font-size="14" font-weight="600" fill="#1f2937" text-anchor="middle" >RFC gate</text>
+<text x="728.0" y="377.5" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >tách câu BCP 14</text>
+<rect x="814" y="320" width="150" height="86" rx="3" fill="#eef1f5" stroke="#6b7280" stroke-width="1.2"/>
+<text x="889.0" y="353.0" font-size="14" font-weight="600" fill="#1f2937" text-anchor="middle" >Oracle compiler</text>
+<text x="889.0" y="370.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >RBS → oracle,</text>
+<text x="889.0" y="385.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >tập biến thể</text>
+<rect x="975" y="320" width="150" height="86" rx="3" fill="#eef1f5" stroke="#6b7280" stroke-width="1.2"/>
+<text x="1050.0" y="353.0" font-size="14" font-weight="600" fill="#1f2937" text-anchor="middle" >Tool gateway</text>
+<text x="1050.0" y="370.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >từ chối mặc định;</text>
+<text x="1050.0" y="385.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >kiểm DSL</text>
+<rect x="1136" y="320" width="150" height="86" rx="3" fill="#eef1f5" stroke="#6b7280" stroke-width="1.2"/>
+<text x="1211.0" y="353.0" font-size="14" font-weight="600" fill="#1f2937" text-anchor="middle" >Test driver</text>
+<text x="1211.0" y="370.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >chạy SUT + tham chiếu;</text>
+<text x="1211.0" y="385.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >nhân chứng → T3</text>
+<rect x="492" y="320" width="150" height="86" rx="3" fill="#fff" stroke="#9ca3af" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="567.0" y="353.0" font-size="14" font-weight="600" fill="#6b7280" text-anchor="middle" >Coverage linker</text>
+<text x="567.0" y="370.0" font-size="11.5" font-weight="400" fill="#9ca3af" text-anchor="middle" >T1 ↔ T3 qua độ phủ</text>
+<text x="567.0" y="385.0" font-size="11.5" font-weight="400" fill="#9ca3af" text-anchor="middle" >(chưa có độ phủ thật)</text>
+<path d="M 245.0 281 L 245.0 320" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<path d="M 406.0 281 L 406.0 320" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<path d="M 567.0 281 L 567.0 320" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<path d="M 728.0 281 L 728.0 320" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<path d="M 889.0 281 L 889.0 320" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<path d="M 1050.0 281 L 1050.0 320" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<path d="M 1211.0 281 L 1211.0 320" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<text x="1330" y="305" font-size="10.5" font-weight="700" fill="#1f3a5f" text-anchor="start" >BẰNG CHỨNG VÀ KẾT LUẬN</text>
+<rect x="1330" y="320" width="260" height="80" rx="3" fill="#fff" stroke="#1f3a5f" stroke-width="2"/>
+<text x="1460.0" y="350.0" font-size="14" font-weight="600" fill="#1f2937" text-anchor="middle" >Evidence store</text>
+<text x="1460.0" y="367.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >bất biến, chuỗi băm</text>
+<text x="1460.0" y="382.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >bằng chứng T0–T3</text>
+<rect x="1330" y="430" width="260" height="80" rx="3" fill="#fff" stroke="#1f3a5f" stroke-width="2"/>
+<text x="1460.0" y="460.0" font-size="14" font-weight="600" fill="#1f2937" text-anchor="middle" >Verdict engine</text>
+<text x="1460.0" y="477.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >quy tắc V0–V9 (hàm thuần);</text>
+<text x="1460.0" y="492.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >đánh giá độ đủ cho Planner</text>
+<rect x="1330" y="540" width="260" height="66" rx="3" fill="#eef1f5" stroke="#6b7280" stroke-width="1.2"/>
+<text x="1460.0" y="563.0" font-size="14" font-weight="600" fill="#1f2937" text-anchor="middle" >Output gate</text>
+<text x="1460.0" y="580.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >đối chiếu trích dẫn với</text>
+<text x="1460.0" y="595.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >Evidence store</text>
+<rect x="1330" y="636" width="260" height="70" rx="3" fill="#fff" stroke="#1f3a5f" stroke-width="1.2"/>
+<text x="1460.0" y="661.0" font-size="14" font-weight="600" fill="#1f2937" text-anchor="middle" >Kết luận + giải thích</text>
+<text x="1460.0" y="678.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >COMPLIANT · VIOLATION · NEEDS_REVIEW</text>
+<text x="1460.0" y="693.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >(HTML · JSON · SARIF)</text>
+<path d="M 1460 400 L 1460 430" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)"/>
+<path d="M 1460 510 L 1460 540" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)"/>
+<path d="M 1460 606 L 1460 636" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)"/>
+<path d="M 1286 358 L 1330 358" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)"/>
+<text x="1308" y="350" font-size="11" font-weight="700" fill="#1f2937" text-anchor="middle" >T3</text>
+<path d="M 406 406 L 406 430 L 1308 430 L 1308 385 L 1330 385" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)"/>
+<text x="1300" y="424" font-size="11" font-weight="700" fill="#1f2937" text-anchor="end" >T1</text>
+<path d="M 567 406 L 567 470 L 1330 470" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#h)"/>
+<rect x="170" y="760" width="150" height="70" rx="3" fill="#fff" stroke="#c2410c" stroke-width="1.8"/>
+<text x="245.0" y="792.5" font-size="14" font-weight="600" fill="#1f2937" text-anchor="middle" >Mã nguồn SUT</text>
+<text x="245.0" y="809.5" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >UNTRUSTED</text>
+<rect x="653" y="760" width="150" height="70" rx="3" fill="#fff" stroke="#6b7280" stroke-width="1.2"/>
+<text x="728.0" y="792.5" font-size="14" font-weight="600" fill="#1f2937" text-anchor="middle" >RFC</text>
+<text x="728.0" y="809.5" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >TRUSTED</text>
+<rect x="814" y="760" width="150" height="70" rx="3" fill="#fff" stroke="#6b7280" stroke-width="1.2"/>
+<text x="889.0" y="785.0" font-size="14" font-weight="600" fill="#1f2937" text-anchor="middle" >Adapter giao thức</text>
+<text x="889.0" y="802.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >TRUSTED: từ vựng,</text>
+<text x="889.0" y="817.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >mẫu, công thức SUT</text>
+<rect x="1086" y="760" width="250" height="70" rx="3" fill="#fff" stroke="#c2410c" stroke-width="1.8"/>
+<text x="1211.0" y="785.0" font-size="14" font-weight="600" fill="#1f2937" text-anchor="middle" >SUT + 2 bản tham chiếu</text>
+<text x="1211.0" y="802.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >Docker, không mạng, không khóa API</text>
+<text x="1211.0" y="817.0" font-size="11.5" font-weight="400" fill="#4b5563" text-anchor="middle" >UNTRUSTED</text>
+<path d="M 245 760 L 245 406" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)"/>
+<path d="M 728 760 L 728 406" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)"/>
+<path d="M 889 760 L 889 406" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)"/>
+<path d="M 1211 760 L 1211 406" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#h)" marker-start="url(#t)"/>
+<circle cx="665" cy="320" r="10" fill="#c2410c"/>
+<text x="665" y="324.5" font-size="12" font-weight="700" fill="#fff" text-anchor="middle" >1</text>
+<circle cx="665" cy="108" r="10" fill="#c2410c"/>
+<text x="665" y="112.5" font-size="12" font-weight="700" fill="#fff" text-anchor="middle" >2</text>
+<circle cx="826" cy="320" r="10" fill="#c2410c"/>
+<text x="826" y="324.5" font-size="12" font-weight="700" fill="#fff" text-anchor="middle" >3</text>
+<circle cx="987" cy="108" r="10" fill="#c2410c"/>
+<text x="987" y="112.5" font-size="12" font-weight="700" fill="#fff" text-anchor="middle" >4</text>
+<circle cx="987" cy="320" r="10" fill="#c2410c"/>
+<text x="987" y="324.5" font-size="12" font-weight="700" fill="#fff" text-anchor="middle" >5</text>
+<circle cx="343" cy="108" r="10" fill="#c2410c"/>
+<text x="343" y="112.5" font-size="12" font-weight="700" fill="#fff" text-anchor="middle" >6</text>
+<circle cx="1342" cy="430" r="10" fill="#c2410c"/>
+<text x="1342" y="434.5" font-size="12" font-weight="700" fill="#fff" text-anchor="middle" >7</text>
+<circle cx="1342" cy="540" r="10" fill="#c2410c"/>
+<text x="1342" y="544.5" font-size="12" font-weight="700" fill="#fff" text-anchor="middle" >8</text>
+<text x="20" y="866" font-size="12.5" font-weight="700" fill="#1f3a5f" text-anchor="start" >Luồng xử lý một yêu cầu</text>
+<text x="20" y="888" font-size="12" font-weight="400" fill="#1f2937" text-anchor="start" >① RFC gate tách câu yêu cầu (BCP 14), định danh ổn định</text>
+<text x="20" y="904" font-size="12" font-weight="400" fill="#1f2937" text-anchor="start" >② RFC Analyst dịch câu thành RBS (hai luồng, đối chiếu)</text>
+<text x="20" y="920" font-size="12" font-weight="400" fill="#1f2937" text-anchor="start" >③ Oracle compiler biên dịch RBS thành oracle và tập biến thể</text>
+<text x="20" y="936" font-size="12" font-weight="400" fill="#1f2937" text-anchor="start" >④ Tester sinh kịch bản trong DSL giới hạn</text>
+<text x="740" y="888" font-size="12" font-weight="400" fill="#1f2937" text-anchor="start" >⑤ Tool gateway kiểm tra; Test driver chạy trên SUT và hai bản tham chiếu (T3)</text>
+<text x="740" y="904" font-size="12" font-weight="400" fill="#1f2937" text-anchor="start" >⑥ Code Reader đề xuất vị trí mã; Schema gate xác nhận với chỉ mục (T1)</text>
+<text x="740" y="920" font-size="12" font-weight="400" fill="#1f2937" text-anchor="start" >⑦ Evidence store lưu bằng chứng; Verdict engine áp quy tắc V0–V9</text>
+<text x="740" y="936" font-size="12" font-weight="400" fill="#1f2937" text-anchor="start" >⑧ Report giải thích; Output gate đối chiếu trích dẫn rồi xuất kết luận</text>
+<rect x="1180" y="862" width="22" height="13" rx="2" fill="#1f3a5f"/>
+<text x="1210" y="873" font-size="11.5" font-weight="400" fill="#1f2937" text-anchor="start" >Tác tử vùng đặc quyền (LLM)</text>
+<rect x="1180" y="882" width="22" height="13" rx="2" fill="#fff" stroke="#c2410c" stroke-width="1.8"/>
+<text x="1210" y="893" font-size="11.5" font-weight="400" fill="#1f2937" text-anchor="start" >Tác tử vùng cách ly / dữ liệu không tin cậy</text>
+<rect x="1180" y="902" width="22" height="13" rx="2" fill="#eef1f5" stroke="#6b7280"/>
+<text x="1210" y="913" font-size="11.5" font-weight="400" fill="#1f2937" text-anchor="start" >Thành phần tất định (không dùng LLM)</text>
+<rect x="1180" y="922" width="22" height="13" rx="2" fill="#fff" stroke="#9ca3af" stroke-dasharray="4 3"/>
+<text x="1210" y="933" font-size="11.5" font-weight="400" fill="#1f2937" text-anchor="start" >Chưa xây / chưa có dữ liệu thật</text>
+</svg>

@@ -24,7 +24,7 @@ export function wireChartCards(root) {
 }
 
 /* Cột theo ngày (một chuỗi). data: [{label, value, tip}] */
-export function columns(data, { height = 180, color = 'var(--series-1)', yFmt = fmt.int, name = '' } = {}) {
+export function columns(data, { height = 180, color = 'var(--viz)', yFmt = fmt.int, name = '' } = {}) {
   const W = 640, padL = 36, padB = 24, padT = 10, H = height; const max = Math.max(1, ...data.map((d) => d.value));
   const { top, ticks } = niceTicks(max); const bw = (W - padL) / data.length; const barW = Math.max(3, Math.min(22, bw - 4));
   const y = (v) => padT + (H - padT - padB) * (1 - v / top);
