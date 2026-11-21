@@ -109,6 +109,27 @@ def missing_json(report: SufficiencyReport, feasible: Mapping[str, bool]) -> lis
     ]
 
 
+class _PlanGate:
+    """Chặn Planner trả `action='dispatch'` với `tasks=[]` (đo: model cỡ nhỏ/nhanh có thể trả dispatch rỗng rồi lặp tới hết ngân sách)."""
+
+    def precheck(self, inv: Investigation, output: Any, session: Any) -> Sequence[str]:
+        if not isinstance(output, PlanAction):
+            return ()
+        if output.action == "dispatch" and not output.tasks:
+            return (
+                "EMPTY_DISPATCH_TASKS: action='dispatch' bắt buộc phải điền mảng `tasks` (1–2 phần tử), "
+                'mỗi phần tử gồm `{"task_type": ..., "target_role": ..., "params": {...}}`',
+            )
+        if output.action == "stop" and output.tasks:
+            return ("STOP_WITH_TASKS: action='stop' phải để tasks=[]",)
+        return ()
+
+    async def handle(
+        self, inv: Investigation, task: TaskSpec, output: BaseModel | None, session: ToolSession, msg_id: str
+    ) -> int:
+        return 0
+
+
 class _ExplanationGate:
     """Cho `_run_role` dùng Output gate như cổng của handler: kiểm đầu ra khi agent vừa trả để agent làm lại trong ngân sách."""
 
@@ -471,7 +492,12 @@ class ExecutionLoop:
             self._log_plan_context(available, scripted, req.requirement_id, round=tracker.rounds)
             return scripted
         outcome, _ = await self._run_role(
-            self._loop.planner_role, inv, {"evidence_count": evidence_count}, available, tracker
+            self._loop.planner_role,
+            inv,
+            {"evidence_count": evidence_count},
+            available,
+            tracker,
+            handler=_PlanGate(),
         )
         if outcome.output is None or not isinstance(outcome.output, PlanAction):
             return None

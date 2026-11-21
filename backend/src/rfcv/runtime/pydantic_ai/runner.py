@@ -344,9 +344,7 @@ class PydanticAIRoleRunner:
             requirement_id=session.requirement_id,
         )
         raise ModelRetry(
-            "Cổng kiểm tra từ chối đầu ra: "
-            + ", ".join(errors)
-            + ". Đọc lại đúng các dòng sẽ dẫn, sửa vị trí/đường gọi rồi trả lại."
+            "Cổng kiểm tra từ chối đầu ra: " + "; ".join(errors) + ". Hãy sửa đúng các lỗi trên rồi trả kết quả lại."
         )
 
     def agent(self, role: str, model_key: str | None = None) -> Agent[ToolSession, Any]:

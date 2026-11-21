@@ -5,3 +5,4 @@ timestamp	branch	commit	dirty	label	ci_pass	pytest_passed	ruff_ok	pyright_ok	imp
 2026-11-20T17:28:18Z	feat/nextgen-agent-research	f99855f	1	stage3-wired-all	0	263	1	1	1	44	0.4773	16	1	43.94
 2026-11-20T17:30:30Z	feat/nextgen-agent-research	f99855f	1	stage3-wired-all	0	265	1	1	1	44	0.4773	16	1	42.44
 2026-11-20T17:34:16Z	feat/nextgen-agent-research	f99855f	1	stage3-wired-all	1	266	1	1	1	44	0.4773	16	1	47.55
+2026-11-21T08:07:53Z	feat/nextgen-agent-research	75eb065	1	tier-basic-plan-fix	0	266	1	0	1	44	0.4773	16	1	43.59

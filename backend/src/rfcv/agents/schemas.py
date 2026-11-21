@@ -106,7 +106,7 @@ def build_plan_action_model(tasks: Mapping[str, TaskDefinition], rationale_codes
         variants[0] if len(variants) == 1 else Annotated[_union(variants), Field(discriminator="task_type")]
     )
     task_list: Any = Annotated[list[task_union], Field(max_length=2)]
-    fields: dict[str, Any] = {"tasks": (task_list, Field(default_factory=list))}
+    fields: dict[str, Any] = {"tasks": (task_list, ...)}
     if rationale_codes:
         fields["rationale_code"] = (Literal[tuple(rationale_codes)], ...)
     return cast(type[PlanAction], _create("PlanAction", __base__=PlanAction, **fields))
