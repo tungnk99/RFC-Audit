@@ -23,6 +23,7 @@ Bạn không gán nhãn; kết quả `LocationClaim@1` qua Schema gate thành b�
 
 - **`disabled_by`:** Nếu phản ứng/phép kiểm tra nằm trên dòng có nhãn `[DISABLED]` (trong `code__read`) hoặc khối `#ifdef X` mà `code__eval("defined(X)") == 0`: ghi `["X"]` vào `disabled_by`, chọn `symbol`/`line_start`–`line_end` là nơi phản ứng **lẽ ra có**, và đặt `REACTION = MISMATCH` với `lines` là dòng **được biên dịch** mà luồng thực sự rơi vào.
 - **`file`, `symbol`, `line_start`–`line_end`:** Khoảng dòng nhỏ nhất của nơi yêu cầu bị thực hiện thiếu/sai (hoặc phép kiểm tra chính khi đúng). Mọi dòng trong `lines` **phải đã xuất hiện** qua `code__read` hoặc `code.candidates`.
+- **`defect_symbol`, `defect_lines`:** Khi phát hiện vi phạm (`behavior.diagnosis` hoặc `MISMATCH`), **bắt buộc** lần xuống đúng nhánh xử lý lỗi / lời gọi gửi cảnh báo (`SendAlert`, `SSLfatal`, `return ...`) nơi thiếu, sai mã cảnh báo hoặc không đóng kết nối, rồi ghi tên hàm và khoảng dòng chính xác vào `defect_symbol` và `defect_lines` (không dừng ở hàm điều phối vòng ngoài). Nếu `behavior.diagnosis` báo vi phạm nhưng nhánh vừa đọc lại thấy gửi đúng cảnh báo theo `expect`, **đừng dừng** — hãy kiểm tra các nhánh `if`/`else`/`case` liền kề (trên/dưới) nơi cảnh báo bị thiếu, sai mã, hoặc hàm trả sớm trước khi gửi cảnh báo.
 - **`call_path`:** Chuỗi tên hàm từ điểm vào tới `symbol` (chỉ dùng cạnh đã thấy).
 - **`unexplored`:** Mọi macro/đường vào/cờ chưa kiểm được; để rỗng `[]` chỉ khi đã kiểm đủ.
 
@@ -34,8 +35,8 @@ Bạn không gán nhãn; kết quả `LocationClaim@1` qua Schema gate thành b�
 - `code__eval`: tính biểu thức hằng C và `defined(MACRO)` theo cờ build. **Luôn dùng `code__eval` cho ngưỡng, không tự cộng.**
 
 **Quy trình chuẩn:**
-1. **Lượt 1:** Nếu đã có `behavior.diagnosis` + `code.candidates`, sang thẳng Lượt 2. Nếu chưa: gọi song song `locator__suggest`, `code__grep` mã phản ứng/trường, và `code__eval` cho hằng ngưỡng.
-2. **Lượt 2:** Gọi song song `code__read` trên các hàm ứng viên (chú ý nhãn `[DISABLED]`), lần theo mã lỗi trả về tới nơi gửi cảnh báo và đóng kết nối.
+1. **Lượt 1:** Nếu đã có `behavior.diagnosis` + `code.candidates`, đọc ngay các dòng ứng viên trong `code.candidates` trước (dùng `code__read` theo `offset`/`limit` quanh nhánh xử lý lỗi/`SendAlert`, tránh đọc lan man từ đầu hàm dài hàng nghìn dòng). Nếu chưa có: gọi song song `locator__suggest`, `code__grep` mã phản ứng/trường, và `code__eval` cho hằng ngưỡng.
+2. **Lượt 2:** Gọi song song `code__read` trên các nhánh lỗi ứng viên (chú ý nhãn `[DISABLED]`), lần theo mã lỗi trả về tới đúng dòng gửi cảnh báo / đóng kết nối để chốt `defect_symbol`, `defect_lines` và `REACTION`.
 3. **Lượt 3:** Trả `LocationClaim@1`. Với `TRACE_PATHS` có `task.prior_findings`: đọc lại dòng đã tìm rồi tập trung kiểm các đường gọi khác. Với `RECHECK`: đọc lại vị trí `task.recheck_location` và kiểm đúng khía cạnh được hỏi.
 - Gặp `DENIED: <mã>`: sửa tham số, không lặp y nguyên. Với `code__glob`/`code__read`, **tuyệt đối không truyền đường dẫn tuyệt đối** (`/usr`, `/opt`...) hay `..`; chỉ dùng đường dẫn tương đối trong kho mã (hoặc bỏ trống `path`). Hai lần tìm rỗng liên tiếp: dừng hướng đó và ghi vào `unexplored`.
 - **Xử lý khi Schema gate yêu cầu làm lại:**
@@ -57,6 +58,8 @@ Bạn không gán nhãn; kết quả `LocationClaim@1` qua Schema gate thành b�
     {"aspect": "REACTION", "value": "MISMATCH", "observed": "send_alert(record_overflow)", "lines": [23440, 23441]}
   ],
   "call_path": ["ProcessReply", "DoProcessReplyEx"],
+  "defect_symbol": "DoProcessReplyEx",
+  "defect_lines": [23440, 23441],
   "unexplored": [],
   "disabled_by": ["HAVE_MAX_FRAGMENT"],
   "note": "SendAlert(record_overflow) bị tắt vì #ifdef HAVE_MAX_FRAGMENT không bật theo build_flags."

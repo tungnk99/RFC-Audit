@@ -66,6 +66,12 @@ READ_KEEP_CHARS = 20_000  # tối đa ~5k token kết quả đọc cũ được 
 CLEARED_HEAD = 160  # ký tự đầu của kết quả cũ còn lại sau khi lược
 CLEAR_ABOVE = 600  # kết quả ngắn hơn mức này không đáng lược
 WRAP_UP_SHARE = 0.65  # quá tỉ lệ ngân sách token này thì nhắc agent trả kết quả ngay
+HARD_WRAP_SHARE = (
+    0.78  # quá tỉ lệ ngân sách token này thì khoá gọi thêm công cụ để ép agent nộp đầu ra trước UsageLimitExceeded
+)
+HARD_TOOL_WRAP_SHARE = (
+    0.78  # quá tỉ lệ số lời gọi công cụ này (vd 23/30) thì khoá gọi thêm, giữ đủ headroom cho M5/R14 và final_result
+)
 OUTPUT_TOOL_PREFIX = "final_result"  # tên công cụ đầu ra của PydanticAI
 _JSON_FENCE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.S)
 _INT_STR = re.compile(r"^[+-]?\d{1,18}$")
@@ -178,16 +184,22 @@ def thin_history(ctx: RunContext[ToolSession], messages: list[ModelMessage]) -> 
         part.content = f"[đã lược {len(text)} ký tự kết quả cũ] " + text[:CLEARED_HEAD]
     limit = ctx.deps.max_tokens
     used = ctx.usage.total_tokens or 0
-    if limit > 0 and used >= limit * WRAP_UP_SHARE and messages and isinstance(messages[-1], ModelRequest):
+    limit_tools = ctx.deps.max_tool_calls
+    used_tools = max(ctx.deps.tool_calls, int(getattr(ctx.usage, "tool_calls", 0) or 0))
+    near_tok = limit > 0 and used >= limit * WRAP_UP_SHARE
+    near_tools = limit_tools > 0 and used_tools >= max(1, int(limit_tools * HARD_TOOL_WRAP_SHARE))
+    if (near_tok or near_tools) and messages and isinstance(messages[-1], ModelRequest):
         last = messages[-1]
         left = max(0, limit - used)
+        left_tools = max(0, limit_tools - used_tools)
         marker = "[NGÂN SÁCH TOKEN"
         if not any(isinstance(p, UserPromptPart) and marker in str(p.content) for p in last.parts):
             last.parts = [
                 *last.parts,
                 UserPromptPart(
-                    f"{marker}: đã dùng {used}/{limit}, còn {left}] Trả kết quả tốt nhất NGAY bằng các dòng đã đọc; "
-                    "ghi phần chưa kiểm vào chỗ dành cho nó. Đừng đọc thêm."
+                    f"{marker}: đã dùng {used}/{limit} (còn {left}), công cụ {used_tools}/{limit_tools} (còn {left_tools})] "
+                    "Trả kết quả có cấu trúc NGAY BÂY GIỜ bằng các dòng đã đọc; "
+                    "ghi phần chưa kiểm vào chỗ dành cho nó. KHÔNG GỌI THÊM CÔNG CỤ."
                 ),
             ]
     return messages
@@ -302,6 +314,20 @@ class PydanticAIRoleRunner:
         gateway = self._gateway
 
         async def call(ctx: RunContext[ToolSession], **kwargs: Any) -> str:
+            # Khi đã chạm ngưỡng dừng cứng theo token hoặc số lời gọi công cụ, khoá đọc thêm công cụ để agent nộp kết quả
+            # có cấu trúc trước khi chạm UsageLimitExceeded (tránh mất trắng ngân sách và bỏ lỡ định vị T1).
+            limit_tok = ctx.deps.max_tokens
+            used_tok = ctx.usage.total_tokens or 0
+            limit_tools = ctx.deps.max_tool_calls
+            used_tools = max(ctx.deps.tool_calls, int(getattr(ctx.usage, "tool_calls", 0) or 0))
+            tok_hit = limit_tok > 0 and used_tok >= limit_tok * HARD_WRAP_SHARE
+            tool_hit = limit_tools > 0 and used_tools >= max(1, int(limit_tools * HARD_TOOL_WRAP_SHARE))
+            if tok_hit or tool_hit:
+                return (
+                    f"[NGÂN SÁCH ĐÃ CHẠM NGƯỠNG DỪNG (token {used_tok}/{limit_tok}, công cụ {used_tools}/{limit_tools})] "
+                    "KHÔNG GỌI THÊM CÔNG CỤ NỮA. Hãy trả kết quả có cấu trúc NGAY BÂY GIỜ "
+                    "dựa trên các dòng mã đã đọc (ghi phần chưa kiểm vào chỗ dành cho nó)."
+                )
             # Mô hình nhỏ hay gọi lại y hệt một lệnh cho tới khi hết ngân sách (đo: RFC Analyst gọi rfc.get_definition 9 lần cùng
             # tham số rồi hỏng). Gọi lại đúng lệnh cũ thì trả kết quả đã có, không tốn ngân sách, kèm lời nhắc dừng.
             key = spec.name + json.dumps(kwargs, sort_keys=True, default=str)
