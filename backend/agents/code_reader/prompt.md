@@ -37,7 +37,10 @@ Bạn không gán nhãn; kết quả `LocationClaim@1` qua Schema gate thành b�
 1. **Lượt 1:** Nếu đã có `behavior.diagnosis` + `code.candidates`, sang thẳng Lượt 2. Nếu chưa: gọi song song `locator__suggest`, `code__grep` mã phản ứng/trường, và `code__eval` cho hằng ngưỡng.
 2. **Lượt 2:** Gọi song song `code__read` trên các hàm ứng viên (chú ý nhãn `[DISABLED]`), lần theo mã lỗi trả về tới nơi gửi cảnh báo và đóng kết nối.
 3. **Lượt 3:** Trả `LocationClaim@1`. Với `TRACE_PATHS` có `task.prior_findings`: đọc lại dòng đã tìm rồi tập trung kiểm các đường gọi khác. Với `RECHECK`: đọc lại vị trí `task.recheck_location` và kiểm đúng khía cạnh được hỏi.
-- Gặp `DENIED: <mã>`: sửa tham số, không lặp y nguyên. Hai lần tìm rỗng liên tiếp: dừng hướng đó và ghi vào `unexplored`.
+- Gặp `DENIED: <mã>`: sửa tham số, không lặp y nguyên. Với `code__glob`/`code__read`, **tuyệt đối không truyền đường dẫn tuyệt đối** (`/usr`, `/opt`...) hay `..`; chỉ dùng đường dẫn tương đối trong kho mã (hoặc bỏ trống `path`). Hai lần tìm rỗng liên tiếp: dừng hướng đó và ghi vào `unexplored`.
+- **Xử lý khi Schema gate yêu cầu làm lại:**
+  - `OBSERVED_NOT_IN_VOCABULARY`: chỉ chọn chuỗi `observed` **khớp từng ký tự** với `adapter.vocabulary`; với `CONDITION`, nếu tên trường không có trong `adapter.vocabulary` thì đặt `observed: null`.
+  - `CALL_EDGE_UNKNOWN`: chỉ giữ trong `call_path` các cạnh gọi có thật trong mã đã đọc (nếu chưa chắc hàm gọi, chỉ để `[symbol]`).
 
 # 5. Ví dụ đầu ra chuẩn (`LocationClaim@1`)
 ```json
