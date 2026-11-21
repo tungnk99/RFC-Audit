@@ -1,0 +1,31 @@
+# Chính sách an toàn cho Meta-Agent Tự cải tiến (chống Reward Hacking & Overfit).
+# Meta-Agent CHỈ được phép sửa các tệp khớp `allowed_paths` và TUYỆT ĐỐI KHÔNG ĐƯỢC chạm `forbidden_paths`.
+
+version: 1
+budgets:
+  max_generations_per_session: 5
+  early_stop_patience: 3
+  false_compliant_max: 0
+
+allowed_paths:
+  - "backend/agents/*/prompt.md"
+  - "backend/skills/**"
+  - "backend/src/rfcv/gates/code_tools.py"
+  - "backend/src/rfcv/runtime/pydantic_ai/runner.py"
+  - "backend/src/rfcv/domains/rfc_protocol/diagnosis.py"
+  - "backend/src/rfcv/domains/rfc_protocol/multi_hypothesis.py"
+  - "backend/src/rfcv/domains/rfc_protocol/divergence_audit.py"
+  - "backend/src/rfcv/core/execution_loop.py"
+
+forbidden_paths:
+  - "backend/src/rfcv/evidence/verdict_engine.py"
+  - "backend/src/rfcv/domains/rfc_protocol/rules.py"
+  - "backend/src/rfcv/domains/rfc_protocol/schema_gate.py"
+  - "backend/src/rfcv/core/ifc.py"
+  - "backend/src/rfcv/gates/output_gate.py"
+  - "backend/src/rfcv/gates/tool_gateway.py"
+  - "backend/tests/test_invariants.py"
+  - "backend/tests/test_policy_ifc.py"
+  - "backend/tests/test_leak_scan.py"
+  - "backend/scripts/eval_score.py"
+  - "backend/eval/dataset/tiered_benchmark.yaml"
