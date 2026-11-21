@@ -1,0 +1,119 @@
+# Bộ dữ liệu Đánh giá Phân tầng RFC-Audit: Basic -> Intermediate -> Advanced (+ Held-out Freeze)
+# Quy tắc: phải đạt 100% Graduation Gate của tầng trước và xuất báo cáo sạch mới được chuyển sang tầng kế tiếp.
+# Không được tối ưu trên tập `held_out`; chỉ chạy 1 lần nghiệm thu cuối để chứng minh không overfit.
+
+version: 1
+sources:
+  mutants_r: eval/dataset/mutants/mutants.yaml
+  mutants_multi: eval/dataset/mutants/mutants_multi.yaml
+  mutants_openssl: eval/dataset/mutants/mutants_openssl.yaml
+  rbs_real: eval/dataset/real/rbs
+
+tiers:
+  basic:
+    description: "Tầng 1 (Basic): lỗi rõ ràng, mã mô phỏng khó và mutant/đối chứng tiêu biểu để xác nhận AI Agent hoạt động ổn định, không lặp lỗi, định vị trúng cao."
+    graduation_gate:
+      ci_pass: true
+      adversarial_safe: true
+      verdict_acc_min: 1.0
+      false_compliant_max: 0
+      defect_hit_min: 0.80
+      worker_first_failures_max: 0
+      skill_reloads_max: 0
+    items:
+      # 5 ca mô phỏng nhanh (không cần Docker; chạy được ở mọi vòng lặp tiến hoá)
+      - {id: e2e-faulty, kind: sim_live, script: scripts/e2e_live.py, arg: faulty, expected: VIOLATION, requires_docker: false}
+      - {id: e2e-correct, kind: sim_live, script: scripts/e2e_live.py, arg: correct, expected: COMPLIANT, requires_docker: false}
+      - {id: hard-correct, kind: sim_hard, script: scripts/e2e_hard.py, arg: correct, expected: COMPLIANT, requires_docker: false}
+      - {id: hard-wrong-alert, kind: sim_hard, script: scripts/e2e_hard.py, arg: wrong_alert, expected: VIOLATION, requires_docker: false}
+      - {id: hard-no-close, kind: sim_hard, script: scripts/e2e_hard.py, arg: no_close, expected: VIOLATION, requires_docker: false}
+      # 7 ca mã thật rõ ràng + đối chứng âm tính trên wolfSSL & OpenSSL
+      - {id: M5, kind: mutant_wolfssl, source: mutants_r, family: R, operator: DEL_ALERT_BOTH, expected: VIOLATION, requires_docker: true}
+      - {id: U2, kind: mutant_wolfssl, source: mutants_multi, family: U, operator: DEL_ALERT, expected: VIOLATION, requires_docker: true}
+      - {id: G2, kind: mutant_wolfssl, source: mutants_multi, family: G, operator: WRONG_ALERT_OTHER, expected: VIOLATION, requires_docker: true}
+      - {id: R14, kind: mutant_wolfssl, source: mutants_multi, family: R, operator: WRONG_ALERT_FULL, expected: VIOLATION, requires_docker: true}
+      - {id: OR3, kind: mutant_openssl, source: mutants_openssl, family: R, operator: WRONG_ALERT_FULL, expected: VIOLATION, requires_docker: true}
+      - {id: M6, kind: mutant_wolfssl, source: mutants_r, family: R, operator: EQUIVALENT, expected: COMPLIANT, requires_docker: true}
+      - {id: G4, kind: mutant_wolfssl, source: mutants_multi, family: G, operator: ALLOWED_ALTERNATIVE, expected: COMPLIANT, requires_docker: true}
+
+  intermediate:
+    description: "Tầng 2 (Intermediate): toàn bộ 7 mẫu lỗi thật của wolfSSL + 9 ca định vị trượt và ca phình token họ U từ out50."
+    graduation_gate:
+      ci_pass: true
+      adversarial_safe: true
+      verdict_acc_min: 0.95
+      false_compliant_max: 0
+      defect_hit_min: 0.65
+      real_bug_defect_hit_min: 0.66
+      avg_tokens_max: 220000
+    items:
+      # 7 mẫu lỗi thật wolfSSL (hiện 0/3 trúng định vị ở out50)
+      - {id: bug, kind: real_wolfssl, adapter: eval/adapters/tls13-bug, family: R, expected: VIOLATION, requires_docker: true}
+      - {id: fix, kind: real_wolfssl, adapter: eval/adapters/tls13-fix, family: R, expected: COMPLIANT, requires_docker: true}
+      - {id: head, kind: real_wolfssl, adapter: eval/adapters/tls13-head, family: R, expected: COMPLIANT, requires_docker: true}
+      - {id: P1-parent, kind: real_wolfssl, adapter: eval/adapters/tls13-24f0f95f5f2b, family: U, expected: VIOLATION, requires_docker: true}
+      - {id: P1-fix, kind: real_wolfssl, adapter: eval/adapters/tls13-4b30475a4934, family: U, expected: COMPLIANT, requires_docker: true}
+      - {id: P3-parent, kind: real_wolfssl, adapter: eval/adapters/tls13-9e0d3894d285, family: G, expected: VIOLATION, requires_docker: true}
+      - {id: P3-fix, kind: real_wolfssl, adapter: eval/adapters/tls13-d3abc288e68c, family: G, expected: COMPLIANT, requires_docker: true}
+      # 9 mutant định vị khó & ca U phình token (509k token ở out50)
+      - {id: M1, kind: mutant_wolfssl, source: mutants_r, family: R, operator: WRONG_ALERT, expected: VIOLATION, requires_docker: true}
+      - {id: M2, kind: mutant_wolfssl, source: mutants_r, family: R, operator: DEL_ALERT, expected: VIOLATION, requires_docker: true}
+      - {id: U1, kind: mutant_wolfssl, source: mutants_multi, family: U, operator: WRONG_ALERT, expected: VIOLATION, requires_docker: true}
+      - {id: U4, kind: mutant_wolfssl, source: mutants_multi, family: U, operator: WRONG_ALERT_OTHER, expected: VIOLATION, requires_docker: true}
+      - {id: G1, kind: mutant_wolfssl, source: mutants_multi, family: G, operator: WRONG_ALERT, expected: VIOLATION, requires_docker: true}
+      - {id: G3, kind: mutant_wolfssl, source: mutants_multi, family: G, operator: WRONG_ALERT_OTHER, expected: VIOLATION, requires_docker: true}
+      - {id: R10, kind: mutant_wolfssl, source: mutants_multi, family: R, operator: WRONG_ALERT_HEADER_ONLY, expected: VIOLATION, requires_docker: true}
+      - {id: OU1, kind: mutant_openssl, source: mutants_openssl, family: U, operator: WRONG_ALERT, expected: VIOLATION, requires_docker: true}
+      - {id: U7, kind: mutant_wolfssl, source: mutants_multi, family: U, operator: UNRELATED, expected: COMPLIANT, requires_docker: true}
+
+  advanced:
+    description: "Tầng 3 (Advanced): lỗi cửa sổ hẹp (M4, U5), bẫy #ifdef (M3, U3), OpenSSL đa họ khó, Prompt Injection (CT-08) và đặc tả sai (CT-26)."
+    graduation_gate:
+      ci_pass: true
+      adversarial_safe: true
+      verdict_acc_min: 0.90
+      false_compliant_max: 0
+      defect_hit_min: 0.70
+      repeats_per_item_min: 3
+    items:
+      # Challenge: bẫy #ifdef và lỗi cửa sổ hẹp (T3 tĩnh mù -> chứng minh sức mạnh AI Agent)
+      - {id: M3, kind: challenge_ifdef, source: mutants_r, family: R, operator: IFDEF_TRAP, expected: VIOLATION, requires_docker: true}
+      - {id: U3, kind: challenge_ifdef, source: mutants_multi, family: U, operator: IFDEF_TRAP, expected: VIOLATION, requires_docker: true}
+      - {id: M4, kind: challenge_narrow, source: mutants_r, family: R, operator: WRONG_ALERT_NARROW, expected: VIOLATION, requires_docker: true}
+      - {id: U5, kind: challenge_narrow, source: mutants_multi, family: U, operator: WRONG_ALERT_NARROW, expected: VIOLATION, requires_docker: true}
+      # OpenSSL khó (nhiều lớp record/extension)
+      - {id: OU2, kind: mutant_openssl, source: mutants_openssl, family: U, operator: WRONG_ALERT, expected: VIOLATION, requires_docker: true}
+      - {id: OU3, kind: mutant_openssl, source: mutants_openssl, family: U, operator: WRONG_ALERT, expected: VIOLATION, requires_docker: true}
+      - {id: OU4, kind: mutant_openssl, source: mutants_openssl, family: U, operator: DEL_ALERT, expected: VIOLATION, requires_docker: true}
+      - {id: OG1, kind: mutant_openssl, source: mutants_openssl, family: G, operator: WRONG_ALERT, expected: VIOLATION, requires_docker: true}
+      - {id: OG2, kind: mutant_openssl, source: mutants_openssl, family: G, operator: WRONG_ALERT_OTHER, expected: VIOLATION, requires_docker: true}
+      - {id: OG4, kind: mutant_openssl, source: mutants_openssl, family: G, operator: SWAP_BRANCHES, expected: VIOLATION, requires_docker: true}
+      - {id: OR1, kind: mutant_openssl, source: mutants_openssl, family: R, operator: WRONG_ALERT, expected: VIOLATION, requires_docker: true}
+      - {id: OX3, kind: mutant_openssl, source: mutants_openssl, family: U, operator: UNRELATED, expected: COMPLIANT, requires_docker: true}
+      # Adversarial & Spec-Flaw Gates (không cần Docker)
+      - {id: CT08-injection, kind: adversarial_ifc, test: tests/test_policy_ifc.py, expected: SAFE, requires_docker: false}
+      - {id: CT26-bad-rbs, kind: spec_precheck, test: tests/test_divergence_verifier.py, expected: SUSPECT_VALID_SIDE, requires_docker: false}
+
+  held_out:
+    description: "Tập đóng băng (Held-out Freeze): 19 mẫu còn lại từ out50. CẤM tối ưu theo tập này; chỉ chạy nghiệm thu cuối để chứng minh không overfit."
+    frozen: true
+    items:
+      - {id: M7, kind: mutant_wolfssl, source: mutants_r, family: R, operator: UNRELATED, expected: COMPLIANT, requires_docker: true}
+      - {id: M8, kind: mutant_wolfssl, source: mutants_r, family: R, operator: THRESHOLD_MASKED, expected: COMPLIANT, requires_docker: true}
+      - {id: U8, kind: mutant_wolfssl, source: mutants_multi, family: U, operator: UNRELATED, expected: COMPLIANT, requires_docker: true}
+      - {id: G5, kind: mutant_wolfssl, source: mutants_multi, family: G, operator: EQUIVALENT, expected: COMPLIANT, requires_docker: true}
+      - {id: G6, kind: mutant_wolfssl, source: mutants_multi, family: G, operator: UNRELATED, expected: COMPLIANT, requires_docker: true}
+      - {id: G7, kind: mutant_wolfssl, source: mutants_multi, family: G, operator: UNRELATED, expected: COMPLIANT, requires_docker: true}
+      - {id: R9, kind: mutant_wolfssl, source: mutants_multi, family: R, operator: WRONG_ALERT_FULL, expected: VIOLATION, requires_docker: true}
+      - {id: R12, kind: mutant_wolfssl, source: mutants_multi, family: R, operator: UNRELATED, expected: COMPLIANT, requires_docker: true}
+      - {id: U13, kind: mutant_wolfssl, source: mutants_multi, family: U, operator: UNRELATED, expected: COMPLIANT, requires_docker: true}
+      - {id: U14, kind: mutant_wolfssl, source: mutants_multi, family: U, operator: WRONG_ALERT_OTHER, expected: VIOLATION, requires_docker: true}
+      - {id: G8, kind: mutant_wolfssl, source: mutants_multi, family: G, operator: WRONG_ALERT_OTHER, expected: VIOLATION, requires_docker: true}
+      - {id: G9, kind: mutant_wolfssl, source: mutants_multi, family: G, operator: WRONG_ALERT_OTHER, expected: VIOLATION, requires_docker: true}
+      - {id: G11, kind: mutant_wolfssl, source: mutants_multi, family: G, operator: UNRELATED, expected: COMPLIANT, requires_docker: true}
+      - {id: G12, kind: mutant_wolfssl, source: mutants_multi, family: G, operator: WRONG_ALERT_OTHER, expected: VIOLATION, requires_docker: true}
+      - {id: R16, kind: mutant_wolfssl, source: mutants_multi, family: R, operator: EQUIVALENT, expected: COMPLIANT, requires_docker: true}
+      - {id: R17, kind: mutant_wolfssl, source: mutants_multi, family: R, operator: UNRELATED, expected: COMPLIANT, requires_docker: true}
+      - {id: OG3, kind: mutant_openssl, source: mutants_openssl, family: G, operator: ALLOWED_ALTERNATIVE, expected: COMPLIANT, requires_docker: true}
+      - {id: OX1, kind: mutant_openssl, source: mutants_openssl, family: G, operator: UNRELATED, expected: COMPLIANT, requires_docker: true}
+      - {id: OX2, kind: mutant_openssl, source: mutants_openssl, family: R, operator: UNRELATED, expected: COMPLIANT, requires_docker: true}
