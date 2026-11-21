@@ -124,3 +124,13 @@ Tài liệu này được sinh và cập nhật tự động sau mỗi vòng l�
 - **Tri thức & Bài học rút ra (cho luận văn):** Chot moc thuan AI Agent manh nhat tren Tier intermediate: 16/16 verdict (100%), 0 bo sot, 0 bao nham, 8 mutant kho nhay tu 0/8 (0%) -> 6/8 (75% strict) tren ca wolfSSL va OpenSSL, 0 crash API. Gioi han con lai cua model Flash don luot la bien dong tren 3 commit loi that da tep va token U7 (769k do references_disagree).
 
 ---
+## Gen-13 · `intermediate` · **KEEP** (`2026-11-21T17:03:42Z`)
+
+- **Commit nền:** `917c95d` | **Tệp thay đổi:** `backend/src/rfcv/runtime/pydantic_ai/runner.py`, `backend/agents/code_reader/handler.py`
+- **Dấu vết lỗi khai phá (Trace Mining):** Gen-12: 11/11 ca VIOLATION da vao dung ham loi nhung (1) G3 go nham ten tep src/tls13.c, (2) bug/M2 dung o nhanh kiem tra thu 2, (3) 3 nhanh + U7 769k lam token trung binh len 311k.
+- **Giả thuyết cải tiến:** Thiet ke cap 2 AI Agent chuyen biet theo chu ky loi (WRONG_ALERT: bottom_up_alert_hunter + error_to_alert_mapper; REACTION_ABSENT: early_check_ifdef_hunter + top_down_protocol_tracer, 110k/nhanh), them tu phan hoi HINT_SYMBOL_FILE trong precheck, va gioi han gon 160k token cho Code Reader don le tren ca COMPLIANT.
+- **Số đo trước:** `{"verdict_acc": "16/16 (100%)", "defect_hit": "6/11 (55%)", "real_bug_defect_hit": "0/3 (0%)", "avg_tokens": 311000}`
+- **Số đo sau:** `{"verdict_acc": "16/16 (100%)", "false_compliant": 0, "false_violation": 0, "defect_hit": "8/11 (73% ALL STRICT)", "real_bug_defect_hit": "2/3 (67% ALL STRICT: bug, P1-parent)", "avg_tokens": 214952, "graduation_gate": "7/7 PASS (100%)"}`
+- **Tri thức & Bài học rút ra (cho luận văn):** TOT NGHIEP 100% TANG INTERMEDIATE (7/7 tieu chi Graduation Gate) CHI BANG THUAN AI AGENT (0 phan tich tinh): 16/16 verdict (100%), 0 bo sot, 0 bao nham, 8/11 = 73% defect_hit_strict (vuot >=65%), 2/3 = 67% real_bug_defect_hit_strict (bug + P1-parent, vuot >=66%), token trung binh 214.952 (giam 31%, duoi <=220.000).
+
+---

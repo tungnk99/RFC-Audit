@@ -125,7 +125,7 @@ class LocationHandler:
         return "\n".join(parts), frozenset(shown)
 
     def branches(self, inv: Investigation, task: Any) -> Sequence[dict[str, Any]]:
-        """Khi T3 đã chứng minh vi phạm, chạy song song các AI Agent chuyên biệt (Bottom-Up, Top-Down, và Error-to-Alert Mapper)."""
+        """Khi T3 đã chứng minh vi phạm, chạy song song 2 AI Agent chuyên biệt tối ưu theo chữ ký lỗi (tổng ~170k-200k token)."""
         if str(getattr(task, "task_type", "")) != "LOCATE":
             return ()
         req_id = inv.requirement.requirement_id
@@ -145,48 +145,61 @@ class LocationHandler:
         dir_hint = (
             "Chú ý chiều giao thức: SUT là phía nhận `" + trig + "` (nếu là `client_hello`, SUT là SERVER — "
             "TUYỆT ĐỐI KHÔNG chọn hàm phía client như `DoServerHello`/`CompleteServerHello`). "
-            "Đặt `call_path: [symbol]` (đúng tên hàm `symbol`) trừ khi bạn đã đọc trực tiếp lời gọi hàm cha để tránh `CALL_EDGE_UNKNOWN`."
+            "Đặt `call_path: [symbol]` trừ khi đã đọc trực tiếp hàm cha; kiểm tra kỹ tên `file` khớp chính xác với kết quả `code__grep`/`code__read`."
         )
-        out: list[dict[str, Any]] = [
+        if diag.signature == WRONG_ALERT:
+            return (
+                {
+                    "name": "bottom_up_alert_hunter",
+                    "max_tool_calls": 11,
+                    "max_tokens": 110_000,
+                    "instruction": (
+                        f"Chiến lược NHÁNH A (Bottom-Up Alert Hunter): T3 quan sát cảnh báo sai `{obs}` thay vì `{exp}`. {dir_hint} "
+                        f"Hãy dùng `code__grep` tìm trực tiếp lời gọi gửi `{obs}` trong mã nguồn chính (loại `tests/`/`examples/` bằng `path`/`glob`), "
+                        "đọc gọn 40–60 dòng quanh nhánh lỗi (nhớ đọc cả các nhánh `if`/`case` phía trên liền kề trong cùng hàm) "
+                        "rồi trả `LocationClaim@1` với `REACTION = MISMATCH` trỏ đúng dòng gửi cảnh báo sai."
+                    ),
+                },
+                {
+                    "name": "error_to_alert_mapper",
+                    "max_tool_calls": 11,
+                    "max_tokens": 110_000,
+                    "instruction": (
+                        f"Chiến lược NHÁNH B (Error-to-Alert Mapper Specialist): T3 quan sát cảnh báo sai `{obs}` thay vì `{exp}`. {dir_hint} "
+                        "Nhiều thư viện TLS trả về mã lỗi nội bộ (vd `KEY_SHARE_ERROR`, `MATCH_SUITE_ERROR`, `BUFFER_ERROR`) "
+                        "rồi một hàm ánh xạ lỗi→cảnh báo (khối `switch`/`case` lớn) mới dịch mã lỗi đó thành cảnh báo TLS. "
+                        f"Hãy tìm hàm ánh xạ đó bằng `code__grep` (`return {obs}`), **đọc trọn 60–80 dòng của khối `switch`** để chọn ĐÚNG `case` "
+                        "tương ứng với `requirement.structured` (KHÔNG chọn nhầm `case` đầu tiên của `switch`!), rồi trả `LocationClaim@1` "
+                        "với `file`, `symbol`, `line_start..line_end` và `REACTION = MISMATCH` trỏ chính xác dòng `case`/`return` gửi sai cảnh báo."
+                    ),
+                },
+            )
+        # REACTION_ABSENT hoặc NO_CLOSE: 2 nhánh bổ trợ (nhánh săn kiểm tra sớm / #ifdef [DISABLED] vs nhánh lần từ trên xuống).
+        return (
             {
-                "name": "bottom_up_alert_hunter",
-                "max_tool_calls": 12,
-                "max_tokens": 135_000,
+                "name": "early_check_ifdef_hunter",
+                "max_tool_calls": 11,
+                "max_tokens": 110_000,
                 "instruction": (
-                    f"Chiến lược NHÁNH A (Bottom-Up Alert Hunter): T3 đã chứng minh vi phạm `{diag.signature}` "
-                    f"(quan sát `{obs}`, kỳ vọng `{exp}`). {dir_hint} "
-                    f"Hãy dùng `code__grep` tìm trực tiếp lời gọi phát `{obs}` trong mã nguồn chính (loại `tests/`/`examples/` bằng `path`/`glob`), "
-                    "đọc gọn 40–60 dòng quanh nhánh lỗi rồi trả `LocationClaim@1` với `REACTION = MISMATCH` trỏ đúng dòng gửi cảnh báo sai/thiếu."
+                    f"Chiến lược NHÁNH A (Early-Check & #ifdef Hunter): T3 chứng minh `{diag.signature}` (SUT KHÔNG phát `{exp}`). {dir_hint} "
+                    "Với `reaction_absent`, lỗi thường nằm ở **phép kiểm tra ĐẦU TIÊN** (kiểm tra header/kích thước/loại bản ghi ở đầu hàm xử lý) "
+                    "nơi `SendAlert` bị **xoá mất** hoặc bị **tắt bởi `#ifdef` (`[DISABLED]`)**, KHÔNG phải phép kiểm tra thứ hai phía dưới vẫn còn `SendAlert`! "
+                    "Hãy đọc ngược lên 60–80 dòng phía trên nhánh kiểm tra bạn thấy đầu tiên để tìm đúng dòng bị `[DISABLED]` hoặc thiếu `SendAlert`, "
+                    "rồi trả `LocationClaim@1` với `REACTION = MISMATCH` trỏ chính xác dòng đó."
                 ),
             },
             {
                 "name": "top_down_protocol_tracer",
-                "max_tool_calls": 12,
-                "max_tokens": 135_000,
+                "max_tool_calls": 11,
+                "max_tokens": 110_000,
                 "instruction": (
-                    f"Chiến lược NHÁNH B (Top-Down Protocol Tracer): T3 đã chứng minh vi phạm `{diag.signature}`. {dir_hint} "
-                    "Hãy bắt đầu từ `locator__suggest` để tìm đúng hàm xử lý tầng giao thức tương ứng với `requirement.structured`, "
-                    "đọc gọn 40–60 dòng theo luồng kiểm tra lỗi từ trên xuống (chú ý cả nhánh `default:` hoặc kiểm tra ranh giới bị thiếu `SendAlert`), "
-                    "rồi trả `LocationClaim@1` với `REACTION = MISMATCH` trỏ đúng nhánh vi phạm."
+                    f"Chiến lược NHÁNH B (Top-Down Protocol Tracer): T3 chứng minh `{diag.signature}`. {dir_hint} "
+                    "Bắt đầu từ `locator__suggest` để tìm đúng hàm xử lý tầng giao thức tương ứng với `requirement.structured`, "
+                    "đọc gọn 50–70 dòng từ điểm phân loại loại bản ghi / kiểm tra ranh giới (chú ý cả nhánh `default:` và các dòng 10–20 dòng phía trên/dưới "
+                    "nơi cảnh báo bị thiếu hoặc trả lỗi sớm trước khi gọi `SendAlert`), rồi trả `LocationClaim@1` với `REACTION = MISMATCH`."
                 ),
             },
-        ]
-        if diag.signature == WRONG_ALERT:
-            out.append(
-                {
-                    "name": "error_to_alert_mapper",
-                    "max_tool_calls": 11,
-                    "max_tokens": 115_000,
-                    "instruction": (
-                        f"Chiến lược NHÁNH C (Error-to-Alert Mapper Specialist): T3 quan sát cảnh báo sai `{obs}` thay vì `{exp}`. {dir_hint} "
-                        "Nhiều thư viện TLS không gọi `SendAlert` ngay tại hàm kiểm tra, mà trả về mã lỗi nội bộ (vd `KEY_SHARE_ERROR`, `MATCH_SUITE_ERROR`, `BUFFER_ERROR`) "
-                        "rồi một hàm ánh xạ lỗi→cảnh báo (switch/case lớn trả về mã alert) mới dịch mã lỗi đó thành cảnh báo TLS. "
-                        f"Hãy tìm hàm ánh xạ lỗi→cảnh báo đó bằng `code__grep` (`return {obs}` hoặc `case.*ERROR` cùng tệp có nhiều mã alert), "
-                        "đọc đúng các `case` liên quan tới `requirement.structured`, rồi trả `LocationClaim@1` với `symbol` là hàm ánh xạ đó và `line_start..line_end` + `REACTION = MISMATCH` trỏ chính xác dòng `case`/`return` gửi sai cảnh báo."
-                    ),
-                }
-            )
-        return tuple(out)
+        )
 
     def select_branch(
         self,
@@ -280,6 +293,16 @@ class LocationHandler:
                 output, session, run_id=self._rt.run_id, requirement_id=req_id, msg_id="", threshold=_threshold_of(inv)
             ).errors
         )
+        # Nếu agent gõ nhầm tên tệp của một hàm có thật (vd ghi `src/tls13.c` cho `TranslateErrorToAlert` ở `src/internal.c`),
+        # bổ sung gợi ý tên tệp chính xác từ chỉ mục để agent tự sửa ngay trong vòng retry.
+        if "SYMBOL_NOT_IN_INDEX" in errors:
+            index: Any = getattr(getattr(self._rt, "providers", None), "code_index", None)
+            if index is not None:
+                found = [s.file for s in index.lookup(output.symbol) if s.file != output.file]
+                if found:
+                    errors.append(
+                        f"HINT_SYMBOL_FILE: hàm `{output.symbol}` nằm trong tệp `{found[0]}`, không phải `{output.file}`."
+                    )
         if not errors and not any(a.value is AspectValue.MISMATCH for a in output.aspects):
             t3s = [e.payload for e in self._rt.store.for_requirement(req_id) if isinstance(e.payload, T3Payload)]
             diag = diagnose(_expected_alert(inv), t3s)

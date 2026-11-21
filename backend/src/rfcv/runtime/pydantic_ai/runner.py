@@ -410,8 +410,14 @@ class PydanticAIRoleRunner:
         key = model_key or role
         agent = self.agent(role, model_key)
         if session.max_tokens <= 0:
-            session.max_tokens = budget.tokens
-        effective_tools = session.max_tool_calls if session.max_tool_calls > 0 else budget.tool_calls
+            # Với Code Reader chạy đơn lẻ (vd vòng kiểm chứng COMPLIANT có references_disagree), giới hạn gọn 160k token
+            # thay vì 400k để tránh phình 600k-760k token trên các ca đối chứng mà vẫn giữ nguyên độ chính xác.
+            session.max_tokens = min(budget.tokens, 160_000) if role == "code_reader" else budget.tokens
+        effective_tools = (
+            session.max_tool_calls
+            if session.max_tool_calls > 0
+            else (min(budget.tool_calls, 14) if role == "code_reader" else budget.tool_calls)
+        )
         effective_tokens = session.max_tokens
         # Chỉ skill agent khai báo trong role.yaml, lọc tất định theo kiểu nhiệm vụ.
         task_type = envelope.body.get("task_type")
