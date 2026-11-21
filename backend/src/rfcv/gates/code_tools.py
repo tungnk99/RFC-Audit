@@ -12,6 +12,7 @@ không đủ, `explore` bị cổng từ chối 26%, `callees` gần như rỗng
 
 from __future__ import annotations
 
+import fnmatch
 import re
 from collections.abc import Sequence
 from typing import Any, Literal, Self
@@ -269,8 +270,49 @@ def build_cc_tools(
             f"tool=grep {p.pattern!r}" + (f" path={p.path}" if p.path else "") + (f" glob={p.glob}" if p.glob else "")
         )
         if out.startswith(EXECUTOR_NOTE):
-            return _result(header, out)
-        lines = out.splitlines()
+            # Fallback thuần Python trên CodeIndex khi môi trường không có ripgrep (vd NoExec ở e2e_hard/e2e_live).
+            flags = re.IGNORECASE if p.ignore_case else 0
+            if p.multiline:
+                flags |= re.DOTALL | re.MULTILINE
+            try:
+                rx = re.compile(p.pattern, flags)
+            except re.error:
+                return _result(header, out)
+            fallback_lines: list[str] = []
+            for f in sorted(known_files):
+                if p.path and not (f == p.path or f.startswith(p.path.rstrip("/") + "/")):
+                    continue
+                if p.glob and not fnmatch.fnmatch(f, p.glob) and not fnmatch.fnmatch(f.rsplit("/", 1)[-1], p.glob):
+                    continue
+                if p.type == "c" and not f.endswith((".c", ".h")):
+                    continue
+                total_f = line_count(f) or 0
+                if total_f <= 0:
+                    continue
+                src_lines = list(index.lines(f, 1, total_f))
+                matched_idx = [i for i, row in enumerate(src_lines) if rx.search(row)]
+                if not matched_idx:
+                    continue
+                if p.output_mode == "files_with_matches":
+                    fallback_lines.append(f)
+                elif p.output_mode == "count":
+                    fallback_lines.append(f"{f}:{len(matched_idx)}")
+                else:
+                    b_ctx = p.context or p.before
+                    a_ctx = p.context or p.after
+                    emitted: set[int] = set()
+                    for mi in matched_idx:
+                        lo = max(0, mi - b_ctx)
+                        hi = min(len(src_lines) - 1, mi + a_ctx)
+                        for j in range(lo, hi + 1):
+                            if j in emitted:
+                                continue
+                            emitted.add(j)
+                            sep = ":" if j in matched_idx else "-"
+                            fallback_lines.append(f"{f}{sep}{j + 1}{sep}{src_lines[j]}")
+            lines = fallback_lines
+        else:
+            lines = out.splitlines()
         if not lines:
             return _result(header, "(không có kết quả)")
         if p.output_mode != "content":
@@ -325,8 +367,20 @@ def build_cc_tools(
         out = _strip_dot(await executor.run([argv], timeout_s=COMMAND_TIMEOUT_S))
         header = f"tool=glob {p.pattern}" + (f" path={p.path}" if p.path else "")
         if out.startswith(EXECUTOR_NOTE):
-            return _result(header, out)
-        files = sorted(line for line in out.splitlines() if line)
+            # Fallback thuần Python trên CodeIndex khi không có ripgrep.
+            pat = p.pattern
+            files = sorted(
+                f
+                for f in known_files
+                if (not p.path or f == p.path or f.startswith(p.path.rstrip("/") + "/"))
+                and (
+                    fnmatch.fnmatch(f, pat)
+                    or fnmatch.fnmatch(f, pat.removeprefix("**/"))
+                    or fnmatch.fnmatch(f.rsplit("/", 1)[-1], pat.removeprefix("**/"))
+                )
+            )
+        else:
+            files = sorted(line for line in out.splitlines() if line)
         if not files:
             return _result(header, "(không có tệp khớp)")
         page = files[: p.head_limit]
