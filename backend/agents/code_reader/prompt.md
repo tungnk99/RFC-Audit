@@ -42,6 +42,8 @@ Bạn không gán nhãn; kết quả `LocationClaim@1` qua Schema gate thành b�
 - **Xử lý khi Schema gate yêu cầu làm lại:**
   - `OBSERVED_NOT_IN_VOCABULARY`: chỉ chọn chuỗi `observed` **khớp từng ký tự** với `adapter.vocabulary`; với `CONDITION`, nếu tên trường không có trong `adapter.vocabulary` thì đặt `observed: null`.
   - `CALL_EDGE_UNKNOWN`: chỉ giữ trong `call_path` các cạnh gọi có thật trong mã đã đọc (nếu chưa chắc hàm gọi, chỉ để `[symbol]`).
+  - `LINES_NOT_SHOWN`: mọi khoảng `[a, b]` trong `line_start..line_end`, `defect_lines`, `aspects[].lines` phải chỉ dùng số dòng đã xuất hiện trong `code__read` hoặc `code.candidates`.
+  - `LINES_NOT_COMPILED`: không đưa dòng có nhãn `[DISABLED]` vào `aspects[].lines` (chỉ trỏ dòng được biên dịch; ghi tên macro tắt vào `disabled_by`).
 
 # 5. Ví dụ đầu ra chuẩn (`LocationClaim@1`)
 ```json

@@ -54,3 +54,23 @@ Tài liệu này được sinh và cập nhật tự động sau mỗi vòng l�
 - **Tri thức & Bài học rút ra (cho luận văn):** Cat cong cu o 0.65 (19/30) dua UsageLimitExceeded ve 0/7 va giam ~37% token, NHUNG cat qua som khien M5 (can 23 tool calls) va OR3 chua kip doc toi dong loi (OR3 doan dong -> LINES_NOT_SHOWN). Da REVERT HARD_TOOL_WRAP_SHARE ve 0.78 (giu Gen-4 la moc tot nhat) de bao ve defect_hit va chong suy giam.
 
 ---
+## Gen-6 · `basic` · **KEEP** (`2026-11-21T13:09:29Z`)
+
+- **Commit nền:** `a7aca3e` | **Tệp thay đổi:** `backend/src/rfcv/domains/rfc_protocol/diagnosis.py`, `backend/agents/code_reader/handler.py`
+- **Dấu vết lỗi khai phá (Trace Mining):** Gen-4: OR3 (OpenSSL) co code.candidates.shown=0 vi grep phan biet hoa thuong khong khop SSL_AD_*; WRONG_ALERT (G2, OR3, R14) khong grep observed_alerts.
+- **Giả thuyết cải tiến:** Bo sung candidate_patterns() khong phan biet hoa thuong, uu tien observed_alerts truoc expected_alert, va bo chu do dai hardcode trong diagnose().
+- **Số đo trước:** `{"or3_shown": 0, "or3_defect_hit": false, "docker_verdict_acc": "7/7"}`
+- **Số đo sau:** `{"or3_shown": 411, "or3_defect_hit": true, "or3_tool_calls": 12, "docker_verdict_acc": "7/7", "defect_hit": "1/5", "r14_usage_limit": 1}`
+- **Tri thức & Bài học rút ra (cho luận văn):** Regex C-identifier khong phan biet hoa thuong da dua OR3 (OpenSSL) tu 0 shown / UsageLimitExceeded len defect_hit_strict=true chi trong 12 tool calls. Nhung context=5, head_limit=20 lam phinh code.candidates len 264-411 dong khien R14 can token som.
+
+---
+## Gen-7 · `basic` · **KEEP** (`2026-11-21T13:09:29Z`)
+
+- **Commit nền:** `a7aca3e` | **Tệp thay đổi:** `backend/agents/code_reader/handler.py`, `backend/agents/code_reader/prompt.md`
+- **Dấu vết lỗi khai phá (Trace Mining):** Gen-6: code.candidates phinh 264-411 dong (R14 UsageLimitExceeded o 14 tool calls); G2 bi gate_reject LINES_NOT_SHOWN/LINES_NOT_COMPILED.
+- **Giả thuyết cải tiến:** Thu gon code.candidates (context=2, head_limit=10/15) de giam ~4x token ban dau va bo sung 2 dong xu ly LINES_NOT_SHOWN/LINES_NOT_COMPILED trong code_reader/prompt.md.
+- **Số đo trước:** `{"docker_verdict_acc": "7/7", "defect_hit": "1/5", "gate_rejects": 2, "usage_limit_exceeded": 1}`
+- **Số đo sau:** `{"docker_verdict_acc": "7/7", "tier_basic_verdict_acc": "12/12", "false_compliant": 0, "defect_hit": "2/5 (R14, OR3 strict)", "t1_accepted": "5/5", "gate_rejects": 0, "usage_limit_exceeded": 0, "worker_first_failures": 0}`
+- **Tri thức & Bài học rút ra (cho luận văn):** Dat moc sach loi tuyet doi tren toan bo 12/12 ca Tier basic (100% verdict, 0% false_compliant, 0 gate_rejects, 0 UsageLimitExceeded, 0 worker_first_failures, 5/5 T1 duoc SchemaGate chap nhan, ca wolfSSL R14 va OpenSSL OR3 deu defect_hit_strict=true).
+
+---

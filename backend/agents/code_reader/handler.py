@@ -15,7 +15,14 @@ from agents.common import RBS_KEY
 from rfcv.core.execution_loop import Investigation
 from rfcv.core.ifc import Labeled, TrustLabel
 from rfcv.domains.rfc_protocol.coverage_linker import link_pending
-from rfcv.domains.rfc_protocol.diagnosis import NO_CLOSE, NONE, REACTION_ABSENT, WRONG_ALERT, diagnose
+from rfcv.domains.rfc_protocol.diagnosis import (
+    NO_CLOSE,
+    NONE,
+    REACTION_ABSENT,
+    WRONG_ALERT,
+    candidate_patterns,
+    diagnose,
+)
 from rfcv.domains.rfc_protocol.payloads import Producer, T2SuspiciousPayload, T3Payload, Tier
 from rfcv.domains.rfc_protocol.schema_gate import SchemaGate
 from rfcv.domains.rfc_protocol.suspicious import canonical_values, scan_symbols
@@ -70,10 +77,10 @@ class LocationHandler:
         context["behavior.diagnosis"] = Labeled(diagnosis.to_json(), TrustLabel.DERIVED)
         if (
             diagnosis.signature in (REACTION_ABSENT, WRONG_ALERT, NO_CLOSE)
-            and expected
+            and (expected or diagnosis.observed_alerts)
             and {"code.grep", "code.eval"} <= set(self._tools)
         ):
-            text, shown = await self._candidates(expected, req_id)
+            text, shown = await self._candidates(expected, diagnosis.observed_alerts, req_id)
             if text:
                 context["code.candidates"] = Labeled(text, TrustLabel.UNTRUSTED)
         self._rt.trace.append(
@@ -85,21 +92,30 @@ class LocationHandler:
         )
         return context, shown
 
-    async def _candidates(self, alert: str, req_id: str) -> tuple[str, frozenset[tuple[str, int]]]:
+    async def _candidates(
+        self, expected: str | None, observed_alerts: Sequence[str], req_id: str
+    ) -> tuple[str, frozenset[tuple[str, int]]]:
         from rfcv.gates.code_tools import EvalParams, GrepParams
 
+        patterns = candidate_patterns(expected, observed_alerts)
+        if not patterns:
+            return "", frozenset()
         session = ToolSession(self._rt.run_id, "code_reader", req_id, max_tool_calls=0)
-        grep = await self._tools["code.grep"].handler(
-            GrepParams(pattern=rf"\b{re.escape(alert)}\b", type="c", context=5, head_limit=30), session
-        )
-        parts = [grep.text]
-        shown = set(grep.shown_lines)
+        parts: list[str] = []
+        shown: set[tuple[str, int]] = set()
         guards: list[str] = []
-        for line in grep.text.splitlines():
-            row = _ROW.match(line)
-            m = _GUARD.match(row.group("text")) if row else None
-            if m:
-                guards += [n for n in _MACRO.findall(m.group(1)) if n not in ("defined",) and n not in guards]
+        per_pattern_limit = 10 if len(patterns) > 1 else 15
+        for pat in patterns:
+            grep = await self._tools["code.grep"].handler(
+                GrepParams(pattern=pat, type="c", context=2, head_limit=per_pattern_limit), session
+            )
+            parts.append(grep.text)
+            shown |= set(grep.shown_lines)
+            for line in grep.text.splitlines():
+                row = _ROW.match(line)
+                m = _GUARD.match(row.group("text")) if row else None
+                if m:
+                    guards += [n for n in _MACRO.findall(m.group(1)) if n not in ("defined",) and n not in guards]
         for name in guards[:MAX_GUARD_MACROS]:
             res = await self._tools["code.eval"].handler(EvalParams(expr=f"defined({name})"), session)
             parts.append(res.text)

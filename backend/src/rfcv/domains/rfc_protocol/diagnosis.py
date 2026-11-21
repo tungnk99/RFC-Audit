@@ -8,6 +8,7 @@ giả thuyết thay vì mò từ đầu. Đây chỉ là gợi ý hướng đọ
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 
@@ -68,25 +69,40 @@ def diagnose(expected_alert: str | None, t3s: Sequence[T3Payload]) -> Diagnosis:
         if not passes:
             return make(
                 REACTION_ABSENT,
-                f"SUT không phát cảnh báo nào ở MỌI ca vượt ngưỡng, kể cả xa ngưỡng: phản ứng `{code}` không chạy. Ngưỡng sai chỉ làm "
-                "phản ứng đến sớm hay muộn, không làm nó biến mất, nên nguyên nhân thường là phản ứng thiếu, bị biên dịch bỏ, hoặc nằm "
-                "sau một điều kiện không bao giờ đúng.",
-                f"Tìm mọi nơi phát `{code}` (grep), đọc điều kiện bảo vệ từng nơi (`#ifdef`/`#if`), kiểm `defined()` của macro bảo vệ "
-                "bằng `code__eval`; đọc luồng khi phép kiểm tra thất bại để xem nó rơi vào đâu. Vị trí lỗi là nơi phản ứng lẽ ra có.",
+                f"SUT không phát cảnh báo nào ở MỌI ca kích hoạt: phản ứng `{code}` không chạy. "
+                "Nguyên nhân thường là phản ứng bị thiếu, bị biên dịch bỏ (`#ifdef`), hoặc nằm sau điều kiện không bao giờ đúng.",
+                f"Tìm mọi nơi phát `{code}` (grep không phân biệt hoa thường), đọc điều kiện bảo vệ từng nơi (`#ifdef`/`#if`), "
+                "kiểm `defined()` của macro bảo vệ bằng `code__eval`; đọc luồng khi phép kiểm tra thất bại để xem nó rơi vào đâu. "
+                "Vị trí lỗi là nơi phản ứng lẽ ra có.",
             )
         return make(
             THRESHOLD_OFF,
-            "SUT có phản ứng ở một số độ dài vượt ngưỡng nhưng không có ở các độ dài khác: ngưỡng hiệu lực lớn hơn ngưỡng yêu cầu.",
-            "Tìm phép so sánh độ dài quyết định phản ứng, khai triển ngưỡng bằng `code__eval`, so với giá trị trong `where`.",
+            "SUT có phản ứng ở một số ca kích hoạt nhưng không có ở các ca khác: ngưỡng hoặc điều kiện kiểm tra lệch so với yêu cầu.",
+            "Tìm phép so sánh quyết định phản ứng, khai triển hằng/ngưỡng bằng `code__eval`, so với giá trị trong `where`.",
         )
     if expected_alert is not None and expected_alert not in alerts:
+        observed = ", ".join(a for a in alerts if a != "none")
         return make(
             WRONG_ALERT,
             f"SUT có phát cảnh báo nhưng không phải `{code}` (quan sát: {', '.join(alerts)}).",
-            f"Tìm lời gọi gửi {', '.join(a for a in alerts if a != 'none')} trên đường xử lý lỗi độ dài và so với `{code}`.",
+            f"Ưu tiên kiểm tra các lời gọi gửi `{observed}` trong `code.candidates` trên đường xử lý yêu cầu tương ứng và so với `{code}`.",
         )
     return make(
         NO_CLOSE,
         f"SUT phát `{code}` nhưng ca vẫn FAIL: kết nối không được đóng hay đóng quá chậm.",
         "Đọc nơi gửi cảnh báo: sau đó luồng có dừng xử lý hoặc đóng kết nối không.",
     )
+
+
+def candidate_patterns(expected_alert: str | None, observed_alerts: Sequence[str] = ()) -> list[str]:
+    """Sinh mẫu regex không phân biệt hoa thường cho `code.grep` (khớp cả `record_overflow`, `SSL_AD_RECORD_OVERFLOW`, `GNUTLS_A_...`).
+
+    Khi SUT phát cảnh báo sai (`WRONG_ALERT`), ưu tiên tìm `observed_alerts` trước vì dòng lỗi thực tế gọi mã cảnh báo sai đó."""
+    ordered: list[str] = []
+    for raw in (*observed_alerts, expected_alert):
+        if not raw or raw == "none":
+            continue
+        term = raw.strip()
+        if term and term not in ordered:
+            ordered.append(term)
+    return [rf"(?i)\b[A-Za-z0-9_]*{re.escape(term)}\b" for term in ordered]
