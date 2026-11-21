@@ -144,17 +144,32 @@ def evaluate(expr: str, lookup: Lookup, *, depth: int = 0, res: Resolution | Non
 
 
 def _apply(op: str, a: int, b: int) -> int:
-    if op in ("/", "%") and b == 0:
-        raise EvalError("chia cho 0")
-    return {
-        "+": a + b,
-        "-": a - b,
-        "*": a * b,
-        "/": a // b,
-        "%": a % b,
-        "<<": a << b,
-        ">>": a >> b,
-        "&": a & b,
-        "|": a | b,
-        "^": a ^ b,
-    }[op]
+    if op == "+":
+        return a + b
+    if op == "-":
+        return a - b
+    if op == "*":
+        return a * b
+    if op == "/":
+        if b == 0:
+            raise EvalError("chia cho 0")
+        return a // b
+    if op == "%":
+        if b == 0:
+            raise EvalError("chia cho 0")
+        return a % b
+    if op == "<<":
+        if b < 0:
+            raise EvalError("dịch bit âm")
+        return a << b
+    if op == ">>":
+        if b < 0:
+            raise EvalError("dịch bit âm")
+        return a >> b
+    if op == "&":
+        return a & b
+    if op == "|":
+        return a | b
+    if op == "^":
+        return a ^ b
+    raise EvalError(f"toán tử '{op}' không hỗ trợ")
