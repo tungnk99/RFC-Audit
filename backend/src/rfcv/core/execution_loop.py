@@ -20,7 +20,7 @@ import json
 import time
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from pydantic import BaseModel
 
@@ -649,10 +649,108 @@ class ExecutionLoop:
         if enrich is not None:
             extra, seed_shown = await enrich(inv, task)
             available = {**available, **extra}
+        # Handler có thể kích hoạt giải đấu đa giả thuyết song song (k AI Agent độc lập, chiến lược bổ trợ nhau).
+        branches_fn: Any = getattr(handler, "branches", None)
+        select_fn: Any = getattr(handler, "select_branch", None)
+        branch_specs: list[Mapping[str, Any]] = list(branches_fn(inv, task)) if branches_fn is not None else []
+        if len(branch_specs) >= 2 and select_fn is not None:
+            return await self._run_tournament(
+                role,
+                inv,
+                body,
+                available,
+                tracker,
+                handler=handler,
+                task=task,
+                seed_shown=seed_shown,
+                branch_specs=branch_specs,
+                select_fn=select_fn,
+            )
         outcome, new = await self._run_role(
             role, inv, body, available, tracker, handler=handler, task=task, seed_shown=seed_shown
         )
         return outcome, new
+
+    async def _run_tournament(
+        self,
+        role: str,
+        inv: Investigation,
+        body: dict[str, Any],
+        available: Mapping[str, Labeled[Any]],
+        tracker: BudgetTracker,
+        *,
+        handler: TaskHandler,
+        task: TaskSpec,
+        seed_shown: frozenset[tuple[str, int]],
+        branch_specs: Sequence[Mapping[str, Any]],
+        select_fn: Any,
+    ) -> tuple[RoleOutcome, int]:
+        """Chạy song song k nhánh AI Agent độc lập (Best-of-K), chấm tất định và chỉ ghi bằng chứng của nhánh thắng."""
+
+        async def _run_one(spec: Mapping[str, Any]) -> tuple[str, RoleOutcome, ToolSession, str]:
+            bname = str(spec.get("name", "branch"))
+            bbody = {**body, "strategy": bname, "strategy_instruction": str(spec.get("instruction", ""))}
+            bavail = dict(available)
+            bavail["task.focus"] = Labeled(bbody, TrustLabel.DERIVED)
+            env = self._envelope(inv, role, bbody, tracker)
+            self._trace_envelope(env)
+            context = self._ctx.build(role, bavail)
+            profile = self._policy.profile(role)
+            max_tools = int(spec.get("max_tool_calls") or profile.budget_per_task.tool_calls)
+            max_toks = int(spec.get("max_tokens") or profile.budget_per_task.tokens)
+            session = ToolSession(self.run_id, role, inv.requirement.requirement_id, max_tool_calls=max_tools)
+            session.max_tokens = max_toks
+            session.shown_lines |= seed_shown
+            precheck: Any = getattr(handler, "precheck", None)
+            if precheck is not None:
+                session.output_check = lambda out: precheck(inv, out, session)
+            started = time.monotonic()
+            outcome = await self._runner.run(env, context, session)
+            duration_ms = int((time.monotonic() - started) * 1000)
+            tracker.charge_tokens(outcome.tokens)
+            tracker.charge_tool_calls(session.tool_calls)
+            output = outcome.output
+            self._log(
+                "role_run",
+                {
+                    "msg_id": env.msg_id,
+                    "role": role,
+                    "branch": bname,
+                    "task_type": body.get("task_type"),
+                    "duration_ms": duration_ms,
+                    "tokens": outcome.tokens,
+                    "tool_calls": session.tool_calls,
+                    "output_retries": session.output_rejections,
+                    "ok": output is not None,
+                    "failure": outcome.failure,
+                    "schema": type(output).__name__ if output is not None else None,
+                    "output": _clip(output.model_dump(mode="json")) if output is not None else None,
+                },
+                inv.requirement.requirement_id,
+                round=tracker.rounds,
+            )
+            if outcome.failure is not None or outcome.output is None:
+                self._log_role_failure(inv, role, outcome, env.msg_id, round=tracker.rounds)
+            return bname, outcome, session, env.msg_id
+
+        results: list[tuple[str, RoleOutcome, ToolSession, str]] = list(
+            await asyncio.gather(*(_run_one(s) for s in branch_specs))
+        )
+        raw_idx, raw_summary = select_fn(inv, task, [(n, o.output, s) for n, o, s, _ in results])
+        win_idx = int(raw_idx)
+        summary: dict[str, Any] = (
+            dict(cast("Mapping[str, Any]", raw_summary)) if isinstance(raw_summary, Mapping) else {}
+        )
+        self._log(
+            "tournament",
+            {"role": role, "task_type": body.get("task_type"), "winner_index": win_idx, **summary},
+            inv.requirement.requirement_id,
+            round=tracker.rounds,
+        )
+        _, win_outcome, win_session, win_msg_id = results[win_idx]
+        new = await handler.handle(inv, task, win_outcome.output, win_session, win_msg_id)
+        self._log_task_result(inv, task, new, round=tracker.rounds, msg_id=win_msg_id)
+        return win_outcome, new
 
     async def _run_role(
         self,

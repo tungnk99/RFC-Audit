@@ -409,7 +409,10 @@ class PydanticAIRoleRunner:
         model_key = model_key or session.model_key
         key = model_key or role
         agent = self.agent(role, model_key)
-        session.max_tokens = budget.tokens
+        if session.max_tokens <= 0:
+            session.max_tokens = budget.tokens
+        effective_tools = session.max_tool_calls if session.max_tool_calls > 0 else budget.tool_calls
+        effective_tokens = session.max_tokens
         # Chỉ skill agent khai báo trong role.yaml, lọc tất định theo kiểu nhiệm vụ.
         task_type = envelope.body.get("task_type")
         task = str(task_type) if task_type else None
@@ -446,17 +449,30 @@ class PydanticAIRoleRunner:
         with capture_run_messages() as captured:
             streamer = asyncio.create_task(stream_steps())
             try:
-                result = await agent.run(
-                    ContextBuilder.render(envelope, context),
-                    deps=session,
-                    instructions=static_instructions,
-                    capabilities=[ProcessHistory(thin_history), *([capability] if capability is not None else [])],
-                    usage_limits=UsageLimits(
-                        request_limit=budget.llm_calls,
-                        tool_calls_limit=budget.tool_calls,
-                        total_tokens_limit=budget.tokens,
-                    ),
-                )
+                result: Any = None
+                for attempt in range(3):
+                    try:
+                        result = await agent.run(
+                            ContextBuilder.render(envelope, context),
+                            deps=session,
+                            instructions=static_instructions,
+                            capabilities=[
+                                ProcessHistory(thin_history),
+                                *([capability] if capability is not None else []),
+                            ],
+                            usage_limits=UsageLimits(
+                                request_limit=budget.llm_calls,
+                                tool_calls_limit=effective_tools,
+                                total_tokens_limit=effective_tokens,
+                            ),
+                        )
+                        break
+                    except ModelAPIError as api_exc:
+                        # Lỗi mạng/kết nối tạm thời của API (vd ModelConnectionError): thử lại tối đa 2 lần trước khi bỏ cuộc.
+                        if attempt < 2 and "Connection" in type(api_exc).__name__:
+                            await asyncio.sleep(1.5 * (attempt + 1))
+                            continue
+                        raise
             except (UsageLimitExceeded, UnexpectedModelBehavior, ModelAPIError) as exc:
                 transcript = _dump(captured)
                 spent = _tokens(captured)

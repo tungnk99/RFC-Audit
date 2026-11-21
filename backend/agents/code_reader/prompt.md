@@ -30,7 +30,7 @@ Bạn không gán nhãn; kết quả `LocationClaim@1` qua Schema gate thành b�
 # 4. Công cụ & Nhịp làm việc (mục tiêu 2–3 lượt, ≤ 12 lời gọi)
 - `locator__suggest`: gợi ý hàm ứng viên ban đầu.
 - `code__grep`: tìm regex (kèm hàm chứa); gọi nhiều mẫu song song trong 1 lượt.
-- `code__read`: đọc tệp (`file`, `offset`, `limit`) hoặc nguyên hàm (`symbol`). Dòng bị tắt theo `adapter.build_flags` được gắn nhãn **`[DISABLED]`**.
+- `code__read`: đọc tệp (`file`, `offset`, `limit` **40–80 dòng** quanh điểm cần kiểm để tiết kiệm token và tránh trôi ngữ cảnh) hoặc nguyên hàm ngắn (`symbol`). Dòng bị tắt theo `adapter.build_flags` được gắn nhãn **`[DISABLED]`**.
 - `code__glob`: kiểm tra đúng đường dẫn tệp.
 - `code__eval`: tính biểu thức hằng C và `defined(MACRO)` theo cờ build. **Luôn dùng `code__eval` cho ngưỡng, không tự cộng.**
 
@@ -42,7 +42,8 @@ Bạn không gán nhãn; kết quả `LocationClaim@1` qua Schema gate thành b�
 - **Xử lý khi Schema gate yêu cầu làm lại:**
   - `OBSERVED_NOT_IN_VOCABULARY`: chỉ chọn chuỗi `observed` **khớp từng ký tự** với `adapter.vocabulary`; với `CONDITION`, nếu tên trường không có trong `adapter.vocabulary` thì đặt `observed: null`.
   - `CALL_EDGE_UNKNOWN`: chỉ giữ trong `call_path` các cạnh gọi có thật trong mã đã đọc (nếu chưa chắc hàm gọi, chỉ để `[symbol]`).
-  - `LINES_NOT_SHOWN`: mọi khoảng `[a, b]` trong `line_start..line_end`, `defect_lines`, `aspects[].lines` phải chỉ dùng số dòng đã xuất hiện trong `code__read` hoặc `code.candidates`.
+  - `LINES_NOT_SHOWN`: mọi khoảng `[a, b]` trong `line_start..line_end` và `aspects[].lines` phải chỉ dùng số dòng đã xuất hiện trong `code__read` hoặc `code.candidates`.
+  - `LINES_OUTSIDE_SYMBOL`: `line_start..line_end` và `aspects[].lines` phải nằm gọn trong thân hàm `symbol` (nếu dòng lỗi ở hàm khác, đổi `symbol` sang đúng hàm chứa dòng lỗi đó).
   - `LINES_NOT_COMPILED`: không đưa dòng có nhãn `[DISABLED]` vào `aspects[].lines` (chỉ trỏ dòng được biên dịch; ghi tên macro tắt vào `disabled_by`).
 
 # 5. Ví dụ đầu ra chuẩn (`LocationClaim@1`)

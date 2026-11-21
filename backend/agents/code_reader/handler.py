@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from agents.code_reader.schema import LocationClaim
 from agents.common import RBS_KEY
+from agents.locator.service import requirement_keywords
 from rfcv.core.execution_loop import Investigation
 from rfcv.core.ifc import Labeled, TrustLabel
 from rfcv.domains.rfc_protocol.coverage_linker import link_pending
@@ -23,7 +24,8 @@ from rfcv.domains.rfc_protocol.diagnosis import (
     candidate_patterns,
     diagnose,
 )
-from rfcv.domains.rfc_protocol.payloads import Producer, T2SuspiciousPayload, T3Payload, Tier
+from rfcv.domains.rfc_protocol.multi_hypothesis import score_claim
+from rfcv.domains.rfc_protocol.payloads import AspectName, AspectValue, Producer, T2SuspiciousPayload, T3Payload, Tier
 from rfcv.domains.rfc_protocol.schema_gate import SchemaGate
 from rfcv.domains.rfc_protocol.suspicious import canonical_values, scan_symbols
 from rfcv.evidence.models import EvidenceDraft
@@ -122,14 +124,171 @@ class LocationHandler:
             shown |= set(res.shown_lines)
         return "\n".join(parts), frozenset(shown)
 
+    def branches(self, inv: Investigation, task: Any) -> Sequence[dict[str, Any]]:
+        """Khi T3 đã chứng minh vi phạm, chạy song song các AI Agent chuyên biệt (Bottom-Up, Top-Down, và Error-to-Alert Mapper)."""
+        if str(getattr(task, "task_type", "")) != "LOCATE":
+            return ()
+        req_id = inv.requirement.requirement_id
+        t3s = [e.payload for e in self._rt.store.for_requirement(req_id) if isinstance(e.payload, T3Payload)]
+        diag = diagnose(_expected_alert(inv), t3s)
+        if diag.signature not in (REACTION_ABSENT, WRONG_ALERT, NO_CLOSE):
+            return ()
+        obs = ", ".join(a for a in diag.observed_alerts if a != "none") or str(_expected_alert(inv) or "")
+        exp = str(_expected_alert(inv) or "")
+        rbs = inv.domain_state.get(RBS_KEY)
+        trig = (
+            str(getattr(getattr(rbs, "trigger", None), "name", ""))
+            + "("
+            + ",".join(str(a) for a in getattr(getattr(rbs, "trigger", None), "args", ()))
+            + ")"
+        )
+        dir_hint = (
+            "Chú ý chiều giao thức: SUT là phía nhận `" + trig + "` (nếu là `client_hello`, SUT là SERVER — "
+            "TUYỆT ĐỐI KHÔNG chọn hàm phía client như `DoServerHello`/`CompleteServerHello`). "
+            "Đặt `call_path: [symbol]` (đúng tên hàm `symbol`) trừ khi bạn đã đọc trực tiếp lời gọi hàm cha để tránh `CALL_EDGE_UNKNOWN`."
+        )
+        out: list[dict[str, Any]] = [
+            {
+                "name": "bottom_up_alert_hunter",
+                "max_tool_calls": 12,
+                "max_tokens": 135_000,
+                "instruction": (
+                    f"Chiến lược NHÁNH A (Bottom-Up Alert Hunter): T3 đã chứng minh vi phạm `{diag.signature}` "
+                    f"(quan sát `{obs}`, kỳ vọng `{exp}`). {dir_hint} "
+                    f"Hãy dùng `code__grep` tìm trực tiếp lời gọi phát `{obs}` trong mã nguồn chính (loại `tests/`/`examples/` bằng `path`/`glob`), "
+                    "đọc gọn 40–60 dòng quanh nhánh lỗi rồi trả `LocationClaim@1` với `REACTION = MISMATCH` trỏ đúng dòng gửi cảnh báo sai/thiếu."
+                ),
+            },
+            {
+                "name": "top_down_protocol_tracer",
+                "max_tool_calls": 12,
+                "max_tokens": 135_000,
+                "instruction": (
+                    f"Chiến lược NHÁNH B (Top-Down Protocol Tracer): T3 đã chứng minh vi phạm `{diag.signature}`. {dir_hint} "
+                    "Hãy bắt đầu từ `locator__suggest` để tìm đúng hàm xử lý tầng giao thức tương ứng với `requirement.structured`, "
+                    "đọc gọn 40–60 dòng theo luồng kiểm tra lỗi từ trên xuống (chú ý cả nhánh `default:` hoặc kiểm tra ranh giới bị thiếu `SendAlert`), "
+                    "rồi trả `LocationClaim@1` với `REACTION = MISMATCH` trỏ đúng nhánh vi phạm."
+                ),
+            },
+        ]
+        if diag.signature == WRONG_ALERT:
+            out.append(
+                {
+                    "name": "error_to_alert_mapper",
+                    "max_tool_calls": 11,
+                    "max_tokens": 115_000,
+                    "instruction": (
+                        f"Chiến lược NHÁNH C (Error-to-Alert Mapper Specialist): T3 quan sát cảnh báo sai `{obs}` thay vì `{exp}`. {dir_hint} "
+                        "Nhiều thư viện TLS không gọi `SendAlert` ngay tại hàm kiểm tra, mà trả về mã lỗi nội bộ (vd `KEY_SHARE_ERROR`, `MATCH_SUITE_ERROR`, `BUFFER_ERROR`) "
+                        "rồi một hàm ánh xạ lỗi→cảnh báo (switch/case lớn trả về mã alert) mới dịch mã lỗi đó thành cảnh báo TLS. "
+                        f"Hãy tìm hàm ánh xạ lỗi→cảnh báo đó bằng `code__grep` (`return {obs}` hoặc `case.*ERROR` cùng tệp có nhiều mã alert), "
+                        "đọc đúng các `case` liên quan tới `requirement.structured`, rồi trả `LocationClaim@1` với `symbol` là hàm ánh xạ đó và `line_start..line_end` + `REACTION = MISMATCH` trỏ chính xác dòng `case`/`return` gửi sai cảnh báo."
+                    ),
+                }
+            )
+        return tuple(out)
+
+    def select_branch(
+        self,
+        inv: Investigation,
+        task: Any,
+        candidates: Sequence[tuple[str, BaseModel | None, ToolSession]],
+    ) -> tuple[int, dict[str, Any]]:
+        """Chấm điểm tất định các nhánh AI Agent: SchemaGate + đối chiếu T3 + phù hợp chiều giao thức & từ khoá yêu cầu."""
+        req_id = inv.requirement.requirement_id
+        t3s = [e.payload for e in self._rt.store.for_requirement(req_id) if isinstance(e.payload, T3Payload)]
+        diag = diagnose(_expected_alert(inv), t3s)
+        obs_alerts = {a for a in diag.observed_alerts if a and a != "none"}
+        rbs = inv.domain_state.get(RBS_KEY)
+        raw_kws = requirement_keywords(rbs) if rbs is not None else ()
+        atoms = {
+            tok
+            for kw in raw_kws
+            for tok in re.findall(r"[a-z0-9]+", kw.lower())
+            if len(tok) >= 3 and tok not in {"send", "receive", "alert", "close", "valid", "none"}
+        }
+        trig_args = {str(a).lower() for a in getattr(getattr(rbs, "trigger", None), "args", ())}
+        is_server_ch = "client_hello" in trig_args
+
+        best_idx = 0
+        best_key: tuple[int, ...] | None = None
+        board: list[dict[str, Any]] = []
+        for idx, (bname, output, session) in enumerate(candidates):
+            if not isinstance(output, LocationClaim):
+                board.append({"branch": bname, "accepted": False, "reason": "NO_OUTPUT"})
+                continue
+            res = self._gate.check_location(
+                output, session, run_id=self._rt.run_id, requirement_id=req_id, msg_id="", threshold=_threshold_of(inv)
+            )
+            sc = score_claim(output, res.errors)
+            has_mismatch = int(any(a.value is AspectValue.MISMATCH for a in output.aspects))
+            matches_obs = int(
+                any(
+                    a.aspect is AspectName.REACTION
+                    and a.observed is not None
+                    and any(o in str(a.observed) for o in obs_alerts)
+                    for a in output.aspects
+                )
+            )
+            sym_low = output.symbol.lower()
+            note_low = (output.note or "").lower()
+            # Phạt nặng nếu yêu cầu phía SERVER (`receive(client_hello)`) nhưng nhánh lại trỏ nhầm hàm phía CLIENT (`ServerHello`).
+            wrong_dir = int(is_server_ch and "serverhello" in sym_low and "clienthello" not in sym_low)
+            # Thưởng mức phù hợp ngữ nghĩa giữa (symbol + note) và từ khoá RBS hoặc hàm dịch lỗi→cảnh báo.
+            kw_hits = sum(1 for tok in atoms if tok in sym_low or tok in note_low)
+            is_mapper = int(
+                diag.signature == WRONG_ALERT
+                and ("translate" in sym_low or ("alert" in sym_low and "send" not in sym_low))
+            )
+            sem_score = kw_hits + 3 * is_mapper - 5 * wrong_dir
+
+            key: tuple[int, ...] = (
+                int(res.accepted),
+                -wrong_dir,
+                matches_obs,
+                has_mismatch,
+                is_mapper,
+                sem_score,
+                *sc.rank_key,
+            )
+            board.append(
+                {
+                    "branch": bname,
+                    "accepted": res.accepted,
+                    "symbol": output.symbol,
+                    "file": output.file,
+                    "lines": [output.line_start, output.line_end],
+                    "matches_obs": bool(matches_obs),
+                    "has_mismatch": bool(has_mismatch),
+                    "sem_score": sem_score,
+                    "wrong_dir": bool(wrong_dir),
+                    "errors": list(res.errors),
+                }
+            )
+            if best_key is None or key > best_key:
+                best_key = key
+                best_idx = idx
+        return best_idx, {"winner": candidates[best_idx][0], "branches": board}
+
     def precheck(self, inv: Investigation, output: BaseModel, session: ToolSession) -> Sequence[str]:
         """Chạy Schema gate (không ghi) khi agent vừa trả kết quả, để agent sửa trong ngân sách (tối đa hai lần)."""
         if not isinstance(output, LocationClaim):
             return ()
         req_id = inv.requirement.requirement_id
-        return self._gate.check_location(
-            output, session, run_id=self._rt.run_id, requirement_id=req_id, msg_id="", threshold=_threshold_of(inv)
-        ).errors
+        errors = list(
+            self._gate.check_location(
+                output, session, run_id=self._rt.run_id, requirement_id=req_id, msg_id="", threshold=_threshold_of(inv)
+            ).errors
+        )
+        if not errors and not any(a.value is AspectValue.MISMATCH for a in output.aspects):
+            t3s = [e.payload for e in self._rt.store.for_requirement(req_id) if isinstance(e.payload, T3Payload)]
+            diag = diagnose(_expected_alert(inv), t3s)
+            if diag.signature in (REACTION_ABSENT, WRONG_ALERT, NO_CLOSE):
+                errors.append(
+                    f"MISMATCH_REQUIRED_ON_VIOLATION: T3 đã chứng minh vi phạm ({diag.signature}); "
+                    "hãy đặt khía cạnh sai (vd REACTION) thành MISMATCH với `lines` trỏ đúng dòng gửi cảnh báo sai/thiếu."
+                )
+        return errors
 
     async def handle(
         self, inv: Investigation, task: Any, output: BaseModel | None, session: ToolSession, msg_id: str

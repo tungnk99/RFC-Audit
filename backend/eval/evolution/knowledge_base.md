@@ -74,3 +74,53 @@ Tài liệu này được sinh và cập nhật tự động sau mỗi vòng l�
 - **Tri thức & Bài học rút ra (cho luận văn):** Dat moc sach loi tuyet doi tren toan bo 12/12 ca Tier basic (100% verdict, 0% false_compliant, 0 gate_rejects, 0 UsageLimitExceeded, 0 worker_first_failures, 5/5 T1 duoc SchemaGate chap nhan, ca wolfSSL R14 va OpenSSL OR3 deu defect_hit_strict=true).
 
 ---
+## Gen-8 · `intermediate` · **REVERT** (`2026-11-21T16:38:04Z`)
+
+- **Commit nền:** `2e17015` | **Tệp thay đổi:** `backend/src/rfcv/domains/rfc_protocol/diagnosis.py`, `backend/agents/code_reader/handler.py`
+- **Dấu vết lỗi khai phá (Trace Mining):** Tier intermediate baseline (7 ca loi that wolfSSL): verdict 7/7 (100%), bug strict hit (1/3), P1-parent va P3-parent truot do rg head_limit cat cut.
+- **Giả thuyết cải tiến:** Thu rank_grep_blocks (loc tests/examples + xep hang grep theo tu khoa RBS).
+- **Số đo trước:** `{"real_bug_verdict": "7/7", "real_bug_defect_hit": "1/3"}`
+- **Số đo sau:** `{"real_bug_verdict": "3/3", "real_bug_defect_hit": "0/3", "read_ground_truth": "3/3"}`
+- **Tri thức & Bài học rút ra (cho luận văn):** Code Reader da doc trung ca 3/3 dong loi that (23440, 26453, 38434) nhung bo trong defect_lines va vuong LINES_OUTSIDE_SYMBOL. Sau do da REVERT toan bo phan tich tinh theo dinh huong luan van: tap trung 100% vao kien truc thuan AI Agent truoc.
+
+---
+## Gen-9 · `intermediate` · **KEEP** (`2026-11-21T16:38:04Z`)
+
+- **Commit nền:** `2e17015` | **Tệp thay đổi:** `backend/agents/code_reader/prompt.md`
+- **Dấu vết lỗi khai phá (Trace Mining):** Gen-8: Code Reader doc trung dong loi nhung bo trong MISMATCH/defect_lines va doc qua dai 120-200 dong/lan.
+- **Giả thuyết cải tiến:** Gioi han code__read 40-80 dong/lan va bo sung quy tac LINES_OUTSIDE_SYMBOL trong code_reader/prompt.md; do du 16/16 ca Tier intermediate lam baseline don-agent.
+- **Số đo trước:** `{"real_bug_defect_hit": "1/3"}`
+- **Số đo sau:** `{"inter_verdict_acc": "16/16 (100%)", "false_compliant": 0, "real_bug_defect_hit": "2/3 (67%)", "hard_mutants_defect_hit": "0/8 (0%)", "total_defect_hit": "2/11 (18%)"}`
+- **Tri thức & Bài học rút ra (cho luận văn):** Don-agent (k=1) dat 16/16 verdict (100%) va 2/3 loi that (bug, P3-parent), nhung 0/8 tren 8 mutant kho do hieu ung duong ham (tunnel vision) va ngon 350k-480k token/ca.
+
+---
+## Gen-10 · `intermediate` · **KEEP** (`2026-11-21T16:38:04Z`)
+
+- **Commit nền:** `2e17015` | **Tệp thay đổi:** `backend/src/rfcv/core/execution_loop.py`, `backend/src/rfcv/runtime/pydantic_ai/runner.py`, `backend/agents/code_reader/handler.py`, `backend/agents/code_reader/prompt.md`
+- **Dấu vết lỗi khai phá (Trace Mining):** Gen-9: don-agent bi ket nhanh (0/8 mutant kho) va thuong nop REACTION=MATCH mau thuan T3=VIOLATION.
+- **Giả thuyết cải tiến:** Buoc nhay kien truc thuan AI Agent (0 phan tich tinh): Giai dau da gia thuyet song song Best-of-2 (Nhanh A Bottom-Up Alert Hunter vs Nhanh B Top-Down Protocol Tracer, ngan sach gon 14 tools / 160k token moi nhanh) + tu sua loi MISMATCH_REQUIRED_ON_VIOLATION trong precheck.
+- **Số đo trước:** `{"six_mutants_defect_hit": "0/6 (0%)", "nine_viol_defect_hit": "2/9 (22%)", "avg_viol_tokens": 396000}`
+- **Số đo sau:** `{"verdict_acc": "9/9 (100%)", "six_mutants_defect_hit": "4/6 (67% strict)", "nine_viol_defect_hit": "5/9 (56% strict)", "avg_viol_tokens": 282000}`
+- **Tri thức & Bài học rút ra (cho luận văn):** Buoc nhay vuot troi thuan AI Agent: 6 mutant kho nhay tu 0/6 -> 4/6 strict (M1, U1, R10, OU1 OpenSSL), ho R dat 3/3 (100%), giam 29% token trung binh va chay nhanh hon du chay 2 agent song song.
+
+---
+## Gen-11 · `intermediate` · **KEEP** (`2026-11-21T16:38:04Z`)
+
+- **Commit nền:** `2e17015` | **Tệp thay đổi:** `backend/agents/code_reader/handler.py`
+- **Dấu vết lỗi khai phá (Trace Mining):** Gen-10: ho G (0/3) do agent doc nham ham phia client (DoServerHello/CompleteServerHello) va trong tai chon nham nhanh du Nhanh B da tim toi TranslateErrorToAlert va P1-parent:25842.
+- **Giả thuyết cải tiến:** Nang len Giai dau Best-of-3 chuyen biet (them Nhanh C error_to_alert_mapper cho WRONG_ALERT) + Trong tai nhan biet chieu giao thuc server/client va tu khoa RBS.
+- **Số đo trước:** `{"family_g_defect_hit": "0/3 (0%)", "six_mutants_defect_hit": "4/6 (67%)"}`
+- **Số đo sau:** `{"probe_g1_g3": "2/2 (100% strict)", "full16_verdict_acc": "16/16 (100%)", "full16_defect_hit": "6/11 (55%)", "p1_parent_line_hit": 26453}`
+- **Tri thức & Bài học rút ra (cho luận văn):** Nhanh C error_to_alert_mapper dua G1 va G3 len defect_hit_strict=true (hoan tat 6/6 = 100% strict tren nhom 6 mutant kho). Full 16 ca dat 6/11 (gap 3x Gen-9), P1-parent cham dung dong 26453 (chi vuong CALL_EDGE_UNKNOWN).
+
+---
+## Gen-12 · `intermediate` · **KEEP** (`2026-11-21T16:38:04Z`)
+
+- **Commit nền:** `2e17015` | **Tệp thay đổi:** `backend/src/rfcv/runtime/pydantic_ai/runner.py`, `backend/agents/code_reader/handler.py`
+- **Dấu vết lỗi khai phá (Trace Mining):** Gen-11 full16: bug bi rot ket noi API (ModelConnectionError, 0 token), G3 hoa diem trong tai (TranslateErrorToAlert thua DoHandShakeMsgType), P1-parent/OU1 cham tran 115k/100k.
+- **Giả thuyết cải tiến:** Them retry tu dong cho ModelConnectionError trong runner.py + uu tien is_mapper khi hoa diem WRONG_ALERT + khoi phuc ngan sach thoang 135k/115k moi nhanh.
+- **Số đo trước:** `{"hard_mutants_defect_hit": "5/8 (63%)", "p1_fix_tokens": 722125}`
+- **Số đo sau:** `{"full16_verdict_acc": "16/16 (100%)", "false_compliant": 0, "hard_mutants_defect_hit": "6/8 (75% strict: M1, U1, U4, G1, R10, OU1)", "full16_defect_hit": "6/11 (55% strict)", "p1_fix_tokens": 345280, "api_crashes": 0}`
+- **Tri thức & Bài học rút ra (cho luận văn):** Chot moc thuan AI Agent manh nhat tren Tier intermediate: 16/16 verdict (100%), 0 bo sot, 0 bao nham, 8 mutant kho nhay tu 0/8 (0%) -> 6/8 (75% strict) tren ca wolfSSL va OpenSSL, 0 crash API. Gioi han con lai cua model Flash don luot la bien dong tren 3 commit loi that da tep va token U7 (769k do references_disagree).
+
+---
