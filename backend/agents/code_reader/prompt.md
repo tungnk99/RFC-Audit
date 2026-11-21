@@ -15,7 +15,7 @@ Bạn không gán nhãn; kết quả `LocationClaim@1` qua Schema gate thành b�
 
 | Khía cạnh | Ý nghĩa & Quy tắc đánh giá | Kiểu `observed` |
 |---|---|---|
-| `CONDITION` | Kiểm đúng đại lượng (ciphertext vs plaintext) và đúng hướng (`>` / `<`). Sai đại lượng hoặc hướng → `MISMATCH`. | Tên trường/đại lượng (từ vựng adapter) |
+| `CONDITION` | Kiểm đúng đại lượng (ciphertext vs plaintext) và đúng hướng (`>` / `<`). Sai đại lượng hoặc hướng → `MISMATCH`. | **`null`** (trừ khi tên trường có nguyên văn trong `adapter.vocabulary`) |
 | `THRESHOLD` | Giá trị số của ngưỡng quyết định hành vi sau khi khai triển hết macro bằng `code__eval`. Bằng `where` → `MATCH`; lệch gây chấp nhận sai hoặc từ chối nhầm → `MISMATCH`. | **Số nguyên (`int`)** |
 | `REACTION` | Hành động khi kiểm tra thất bại (lần tới lời gọi gửi cảnh báo/mã lỗi + đóng kết nối). Khớp `expect` và **được biên dịch** → `MATCH`; sai mã, thiếu đóng, hoặc bị tắt `[DISABLED]` → `MISMATCH`. | Chuỗi trong `adapter.vocabulary` (vd `send_alert(record_overflow)`) |
 | `ORDER_STATE` | Kiểm tra trạng thái/thứ tự thông điệp trước khi xử lý. | Trạng thái trong `adapter.vocabulary` |
@@ -52,7 +52,7 @@ Bạn không gán nhãn; kết quả `LocationClaim@1` qua Schema gate thành b�
   "check_kind": "LENGTH_BOUND",
   "finding": "PRESENT",
   "aspects": [
-    {"aspect": "CONDITION", "value": "MATCH", "observed": "record.length", "lines": [23426, 23428]},
+    {"aspect": "CONDITION", "value": "MATCH", "observed": null, "lines": [23426, 23428]},
     {"aspect": "THRESHOLD", "value": "MATCH", "observed": 16640, "lines": [23426, 23428]},
     {"aspect": "REACTION", "value": "MISMATCH", "observed": "send_alert(record_overflow)", "lines": [23440, 23441]}
   ],

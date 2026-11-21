@@ -7,10 +7,19 @@ Ngày đo: 2026-11-21 · Nhánh: `feat/nextgen-agent-research` · Mô hình: `De
 
 ## 1. Kết luận Cổng Tốt nghiệp (Graduation Gate — Tầng `basic`)
 
-> [!WARNING]
-> **Trạng thái Tầng `basic`: CHƯA TỐT NGHIỆP (5/5 ca không Docker ĐÚNG NHÃN, còn 2 điểm chặn rõ ràng).**
-> 1. Trên 3 ca `e2e_hard.py`, nhãn đạt **3/3 đúng** (sau khi phát hiện và vá lỗi `PlanAction` thiếu `tasks` bắt buộc), nhưng `Code Reader` vẫn ra `T1 = 0` do bị `BAD_PARAMS` lặp ở `code.glob` trên môi trường `NoExec` → chưa đạt ngưỡng `defect_hit >= 80%`.
-> 2. **7 ca Docker thật** (`M5`, `U2`, `G2`, `R14`, `OR3`, `M6`, `G4`) chưa chạy được vì Docker Desktop trên máy đang tắt.
+> [!TIP]
+> **Trạng thái Tầng `basic` (sau 2 vòng tiến hoá Meta-Agent `Gen-1` → `Gen-2`):**
+> - **5/5 ca không Docker ĐẠT 100% ĐÚNG NHÃN, 0% `false_compliant`, 0 `gate_rejects`, 0 `Code Reader UsageLimitExceeded`, 0 `skill_reloads`.**
+> - `hard-correct` nâng từ `V6 (BEHAVIORAL, T1=0)` → **`V5 (LINKED, T1=1, REACTION đúng 1/1)`**, token Code Reader giảm từ **538k → 297k (-45%)**, trung bình 3 ca `e2e_hard` giảm từ **342k → 99k (-71%)**.
+> - **Điểm còn chờ duy nhất để đóng 100% Tầng `basic`:** bật Docker Desktop để chạy nốt 7 ca Docker thật (`M5`, `U2`, `G2`, `R14`, `OR3`, `M6`, `G4`).
+
+### Tiến trình tự cải tiến Meta-Agent (`Gen-0` → `Gen-2`, lưu tại [knowledge_base.md](../../backend/eval/evolution/knowledge_base.md))
+
+| Thế hệ | Thay đổi (100% Whitelist) | Đúng nhãn | `hard-correct` | `gate_rejects` | `code.glob BAD_PARAMS` | `CR UsageLimitExceeded` | Token CR TB (3 ca `e2e_hard`) | Quyết định |
+|---|---|---|---|---|---|---|---|---|
+| **Gen-0** | Trước khi sửa `code_reader/prompt.md` | 3/3 | `V6 (T1=0)` | 3 | 12 | 2 | 341.686 | Baseline |
+| **Gen-1** | Thêm 4 dòng xử lý mã lỗi SchemaGate & cấm path tuyệt đối | 3/3 | **`V5 LINKED (T1=1)`** | 2 | 2 (-83%) | 1 | 332.909 | **KEEP** |
+| **Gen-2** | Sửa ví dụ `CONDITION.observed` từ `"record.length"` → `null` | **3/3** | **`V5 LINKED (T1=1)`** | **0 (-100%)** | **1 (-92%)** | **0 (-100%)** | **99.113 (-71%)** | **KEEP** |
 
 | Tiêu chí Graduation Gate (`basic`) | Ngưỡng | Kết quả đo thật | Trạng thái |
 |---|---|---|---|
