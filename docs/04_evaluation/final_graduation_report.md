@@ -61,3 +61,29 @@ Bộ dữ liệu phân tầng: [tiered_benchmark.yaml](../../backend/eval/datase
    - **Tool `code.find_alert_sites`** ([code_tools.py](../../backend/src/rfcv/gates/code_tools.py)) + **Skill `locate-alert-sites`** ([SKILL.md](../../backend/skills/core/locate-alert-sites/SKILL.md)): quét toàn kho mã C/H không bị cắt cụt `head_limit`, xếp hạng theo từ khoá RBS, gắn `[symbol]` & `[DISABLED]`, nén gọn `cap=6144` byte để tối ưu cho cả tệp đơn 48k dòng (`wolfSSL`) lẫn kiến trúc đa hình 15+ tệp (`OpenSSL 3.x`), đồng thời giữ nguyên 100% ranh giới bảo mật IFC (`TrustLabel.UNTRUSTED`) và `SchemaGate`.
 3. **Cổng Phản hồi Tự sửa (`precheck()`) & Kiểm chứng Mã nguồn Tất định (`obs_in_source`):**
    - Phát hiện tức thời các sai lệch có hệ thống (`MISMATCH_REQUIRED_ON_VIOLATION`, `WRONG_PROTOCOL_DIRECTION`, `WRONG_RECORD_STAGE`, `WRONG_OBSERVED_ALERT`, `HINT_SYMBOL_FILE`, `HINT_ENCLOSING_SYMBOL`) và kiểm chứng trực tiếp nguồn C tại trọng tài `select_branch()` (`obs_in_source`), nâng OpenSSL 3.x từ `29% → 85,7% ALL STRICT` (ổn định 3 lượt liên tiếp) và `held_out` đạt **`100,0% ALL STRICT`**.
+
+---
+
+## 4. Thực nghiệm Đối chứng Đối đầu: `B1` (Test-only) vs `B2` (Single-Agent LLM) vs `C0` (`RFC-Audit`)
+
+Để kiểm chứng đóng góp thực sự của kiến trúc `RFC-Audit` (Giả thuyết H1 & H2 trong [evaluation_design.md](evaluation_design.md)), chúng tôi chạy đối chứng trực tiếp **`B2`** ([run_b2_baseline.py](../../backend/scripts/run_b2_baseline.py), kết quả lưu tại `backend/runs/real/b2_baseline_adv_heldout_v3`) trên **cùng mô hình `DeepSeek-V4-Flash` (`temperature=0`)** và **cùng 27 ca thật** (**8 ca OpenSSL 3.x `advanced`** + **19 ca đóng băng `held_out`**):
+- **`B1` (Chỉ kiểm thử hành vi — tương đương `TLS-Anvil`/`tlsfuzzer`):** chạy bộ test hộp đen T3, không có AI Agent đọc mã.
+- **`B2` (Single-Agent LLM tự gán nhãn — tương đương `RFCAudit`/ReAct thuần tĩnh):** trang bị 3 công cụ đọc mã tổng quát (`list_files`, `grep`, `read_file`, ngân sách 12 tool calls / 250k token + cảnh báo chốt kết quả để tránh tràn vòng lặp), tự kết luận `COMPLIANT`/`VIOLATION` và vị trí mã lỗi mà không có `VerdictEngine`, `SchemaGate`, T3, Tournament hay `code.find_alert_sites`.
+- **`C0` (`RFC-Audit` đầy đủ — `Gen-28..33`):** kiến trúc đầy đủ với T3-guided Diagnosis, Best-of-2 Specialist Tournament, Tool `code.find_alert_sites` + Skill `locate-alert-sites`, `obs_in_source`, `SchemaGate`, `VerdictEngine` và IFC.
+
+### Bảng so sánh đối đầu trên 27 ca thật (`8` OpenSSL `advanced` + `19` `held_out`)
+
+| Chỉ số | `B1` Test-only *(hộp đen)* | `B2` Single-Agent LLM *(cùng `Flash`)* | `C0` **`RFC-Audit`** *(cùng `Flash`)* | Mức vượt trội của `RFC-Audit` |
+|---|---|---|---|---|
+| **Verdict Accuracy (27 ca)** | `27/27 (100,0%)` | `15/27 (55,6%)` | **`27/27 (100,0%)`** | **`+44,4` điểm %** so với `B2` |
+| **Bỏ sót lỗi (`false_compliant`)** | `0/12 (0,0%)` | **`9/12 (75,0%)`** | **`0/12 (0,0%)`** | Triệt tiêu **100%** lỗi bỏ sót chí tử (F1) của LLM |
+| **Báo nhầm (`false_violation`)** | `0/15 (0,0%)` | `2/15 (13,3%)` | **`0/15 (0,0%)`** | Triệt tiêu **100%** báo nhầm (`M7`, `M8`) |
+| **Recall `VIOLATION`** | `12/12 (100,0%)` | `3/12 (25,0%)` | **`12/12 (100,0%)`** | **Gấp 4,0 lần** `B2` |
+| **Định vị lỗi `defect_hit_strict` (12 `VIOLATION`)** | `0/12 (0,0%)` | `2/12 (16,7%)` | **`11/12 (91,7% ALL STRICT)`** | **Gấp 5,5 lần** `B2` (`+75,0` điểm %) & vượt tuyệt đối `B1` |
+| ↳ Riêng **OpenSSL 3.x `advanced` (7 `VIOLATION`)** | `0/7 (0,0%)` | `1/7 (14,3%)` (`OG2`) | **`6/7 (85,7% ALL STRICT)`** | **Gấp 6,0 lần** `B2` |
+| ↳ Riêng **Tập đóng băng `held_out` (5 `VIOLATION`)** | `0/5 (0,0%)` | `1/5 (20,0%)` (`U14`) | **`5/5 (100,0% ALL STRICT)`** | **Gấp 5,0 lần** `B2` |
+
+> [!TIP]
+> **Kết luận thực nghiệm đối chứng (chứng minh H1 & H2):**
+> 1. Dùng LLM thuần tự gán nhãn (`B2`, dù cùng `DeepSeek-V4-Flash` và có công cụ đọc mã đầy đủ) dẫn tới **75% bỏ sót lỗi (`false_compliant`)**, **13,3% báo nhầm** và chỉ định vị trúng **16,7%** — quá rủi ro cho kiểm chứng an toàn giao thức.
+> 2. Kiến trúc `RFC-Audit` (`C0`) loại bỏ hoàn toàn rủi ro ảo giác nhãn (**`0%` bỏ sót, `0%` báo nhầm**), đồng thời nâng độ chính xác định vị dòng mã lỗi lên **`91,7% ALL STRICT`** (**gấp 5,5 lần `B2`**) trên cùng một mô hình nền.
