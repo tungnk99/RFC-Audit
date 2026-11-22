@@ -64,26 +64,29 @@ Bộ dữ liệu phân tầng: [tiered_benchmark.yaml](../../backend/eval/datase
 
 ---
 
-## 4. Thực nghiệm Đối chứng Đối đầu: `B1` (Test-only) vs `B2` (Single-Agent LLM) vs `C0` (`RFC-Audit`)
+## 4. Thực nghiệm Đối chứng Đối đầu: `B1` vs `B2-Flash` vs `B2-Pro` (`deepseek-v4-pro` Reasoning) vs `C0` (`RFC-Audit`)
 
-Để kiểm chứng đóng góp thực sự của kiến trúc `RFC-Audit` (Giả thuyết H1 & H2 trong [evaluation_design.md](evaluation_design.md)), chúng tôi chạy đối chứng trực tiếp **`B2`** ([run_b2_baseline.py](../../backend/scripts/run_b2_baseline.py), kết quả lưu tại `backend/runs/real/b2_baseline_adv_heldout_v3`) trên **cùng mô hình `DeepSeek-V4-Flash` (`temperature=0`)** và **cùng 27 ca thật** (**8 ca OpenSSL 3.x `advanced`** + **19 ca đóng băng `held_out`**):
+Để kiểm chứng đóng góp thực sự của kiến trúc `RFC-Audit` (Giả thuyết H1 & H2 trong [evaluation_design.md](evaluation_design.md)) và chứng minh luận điểm **`System > Model`** (hệ đa tác tử + harness tất định chạy trên mô hình gọn/rẻ vượt trội hơn Single-Agent chạy trên flagship Reasoning model), chúng tôi chạy đối chứng trực tiếp **`B2`** ([run_b2_baseline.py](../../backend/scripts/run_b2_baseline.py)) trên **2 cấp mô hình** và **cùng 27 ca thật** (**8 ca OpenSSL 3.x `advanced`** + **19 ca đóng băng `held_out`**):
 - **`B1` (Chỉ kiểm thử hành vi — tương đương `TLS-Anvil`/`tlsfuzzer`):** chạy bộ test hộp đen T3, không có AI Agent đọc mã.
-- **`B2` (Single-Agent LLM tự gán nhãn — tương đương `RFCAudit`/ReAct thuần tĩnh):** trang bị 3 công cụ đọc mã tổng quát (`list_files`, `grep`, `read_file`, ngân sách 12 tool calls / 250k token + cảnh báo chốt kết quả để tránh tràn vòng lặp), tự kết luận `COMPLIANT`/`VIOLATION` và vị trí mã lỗi mà không có `VerdictEngine`, `SchemaGate`, T3, Tournament hay `code.find_alert_sites`.
-- **`C0` (`RFC-Audit` đầy đủ — `Gen-28..33`):** kiến trúc đầy đủ với T3-guided Diagnosis, Best-of-2 Specialist Tournament, Tool `code.find_alert_sites` + Skill `locate-alert-sites`, `obs_in_source`, `SchemaGate`, `VerdictEngine` và IFC.
+- **`B2-Flash` (`DeepSeek-V4-Flash`, `runs/real/b2_baseline_adv_heldout_v3`):** Single-Agent LLM cùng mô hình nền với `RFC-Audit`, trang bị 3 công cụ đọc mã tổng quát (`list_files`, `grep`, `read_file`), tự kết luận không có `VerdictEngine`/`SchemaGate`/T3.
+- **`B2-Pro` (`deepseek-v4-pro` bật full Thinking/Reasoning mode, `runs/real/b2_baseline_deepseek_v4_pro`, `0/27 ERROR`):** đối thủ mạnh hơn hẳn — flagship Reasoning model của DeepSeek chạy cùng bộ công cụ đọc mã tổng quát.
+- **`C0` (`RFC-Audit` đầy đủ — `Gen-28..33`, chỉ dùng `DeepSeek-V4-Flash`):** kiến trúc đầy đủ với T3-guided Diagnosis, Best-of-2 Specialist Tournament, Tool `code.find_alert_sites` + Skill `locate-alert-sites`, `obs_in_source`, `SchemaGate`, `VerdictEngine` và IFC.
 
 ### Bảng so sánh đối đầu trên 27 ca thật (`8` OpenSSL `advanced` + `19` `held_out`)
 
-| Chỉ số | `B1` Test-only *(hộp đen)* | `B2` Single-Agent LLM *(cùng `Flash`)* | `C0` **`RFC-Audit`** *(cùng `Flash`)* | Mức vượt trội của `RFC-Audit` |
-|---|---|---|---|---|
-| **Verdict Accuracy (27 ca)** | `27/27 (100,0%)` | `15/27 (55,6%)` | **`27/27 (100,0%)`** | **`+44,4` điểm %** so với `B2` |
-| **Bỏ sót lỗi (`false_compliant`)** | `0/12 (0,0%)` | **`9/12 (75,0%)`** | **`0/12 (0,0%)`** | Triệt tiêu **100%** lỗi bỏ sót chí tử (F1) của LLM |
-| **Báo nhầm (`false_violation`)** | `0/15 (0,0%)` | `2/15 (13,3%)` | **`0/15 (0,0%)`** | Triệt tiêu **100%** báo nhầm (`M7`, `M8`) |
-| **Recall `VIOLATION`** | `12/12 (100,0%)` | `3/12 (25,0%)` | **`12/12 (100,0%)`** | **Gấp 4,0 lần** `B2` |
-| **Định vị lỗi `defect_hit_strict` (12 `VIOLATION`)** | `0/12 (0,0%)` | `2/12 (16,7%)` | **`11/12 (91,7% ALL STRICT)`** | **Gấp 5,5 lần** `B2` (`+75,0` điểm %) & vượt tuyệt đối `B1` |
-| ↳ Riêng **OpenSSL 3.x `advanced` (7 `VIOLATION`)** | `0/7 (0,0%)` | `1/7 (14,3%)` (`OG2`) | **`6/7 (85,7% ALL STRICT)`** | **Gấp 6,0 lần** `B2` |
-| ↳ Riêng **Tập đóng băng `held_out` (5 `VIOLATION`)** | `0/5 (0,0%)` | `1/5 (20,0%)` (`U14`) | **`5/5 (100,0% ALL STRICT)`** | **Gấp 5,0 lần** `B2` |
+| Chỉ số | `B1` Test-only *(hộp đen)* | `B2-Flash` (`DeepSeek-V4-Flash`) | `B2-Pro` (**`deepseek-v4-pro` Reasoning**) | `C0` **`RFC-Audit`** *(chỉ dùng `Flash`)* | Vượt trội của `RFC-Audit` vs `B2-Pro` |
+|---|---|---|---|---|---|
+| **Verdict Accuracy (27 ca)** | `27/27 (100,0%)` | `15/27 (55,6%)` | `20/27 (74,1%)` | **`27/27 (100,0%)`** | **`+25,9` điểm %** |
+| **Bỏ sót lỗi (`false_compliant`)** | `0/12 (0,0%)` | `9/12 (75,0%)` | **`4/12 (33,3%)`** (`OU2, OU3, OU4, G8`) | **`0/12 (0,0%)`** | Triệt tiêu **100%** bỏ sót lỗi |
+| **Báo nhầm (`false_violation`)** | `0/15 (0,0%)` | `2/15 (13,3%)` | **`3/15 (20,0%)`** (`G11, R17, OG3`) | **`0/15 (0,0%)`** | Triệt tiêu **100%** báo nhầm |
+| **Recall `VIOLATION`** | `12/12 (100,0%)` | `3/12 (25,0%)` | `8/12 (66,7%)` | **`12/12 (100,0%)`** | **`+33,3` điểm %** |
+| **Định vị `defect_hit_strict` (12 `VIOLATION`)** | `0/12 (0,0%)` | `2/12 (16,7%)` | `5/12 (41,7%)` | **`11/12 (91,7% ALL STRICT)`** | **`+50,0` điểm % (gấp 2,2 lần!)** |
+| ↳ Riêng **OpenSSL 3.x `advanced` (7 `VIOLATION`)** | `0/7 (0,0%)` | `1/7 (14,3%)` | `4/7 (57,1%)` (`OG1, OG2, OG4, OR1`) | **`6/7 (85,7% ALL STRICT)`** | **`+28,6` điểm %** |
+| ↳ Riêng **Tập đóng băng `held_out` (5 `VIOLATION`)** | `0/5 (0,0%)` | `1/5 (20,0%)` | `1/5 (20,0%)` (`U14`) | **`5/5 (100,0% ALL STRICT)`** | **`+80,0` điểm % (gấp 5,0 lần!)** |
+| **Thời gian TB / ca (`held_out`)** | ~35s | `10,1s` | `81,3s` *(suy luận Thinking)* | **`37,9s`** | **Nhanh gấp 2,1 lần** |
 
 > [!TIP]
-> **Kết luận thực nghiệm đối chứng (chứng minh H1 & H2):**
-> 1. Dùng LLM thuần tự gán nhãn (`B2`, dù cùng `DeepSeek-V4-Flash` và có công cụ đọc mã đầy đủ) dẫn tới **75% bỏ sót lỗi (`false_compliant`)**, **13,3% báo nhầm** và chỉ định vị trúng **16,7%** — quá rủi ro cho kiểm chứng an toàn giao thức.
-> 2. Kiến trúc `RFC-Audit` (`C0`) loại bỏ hoàn toàn rủi ro ảo giác nhãn (**`0%` bỏ sót, `0%` báo nhầm**), đồng thời nâng độ chính xác định vị dòng mã lỗi lên **`91,7% ALL STRICT`** (**gấp 5,5 lần `B2`**) trên cùng một mô hình nền.
+> **Kết luận thực nghiệm đối chứng (chứng minh `System > Model`, H1 & H2):**
+> 1. Nâng cấp mô hình nền lên flagship Reasoning (`B2-Flash` → `B2-Pro`) cải thiện mạnh độ chính xác (`55,6% → 74,1%` verdict; `16,7% → 41,7%` defect_hit), chứng tỏ `B2-Pro` là một đối chứng mạnh và công bằng (`0/27 ERROR`).
+> 2. Tuy nhiên, ngay cả **`deepseek-v4-pro` bật full Thinking** khi chạy đơn lẻ không có bằng chứng động và harness tất định vẫn **bỏ sót `33,3%` lỗi** (bỏ sót toàn bộ `OU2, OU3, OU4` vì nhầm sang `tls13_validate_record_header`), **báo nhầm `20,0%`** (`OG3`, `G11`, `R17`), và chỉ định vị đúng **`41,7%`** (`20,0%` trên `held_out`).
+> 3. **`RFC-Audit` (`C0`) dù chỉ dùng mô hình gọn `DeepSeek-V4-Flash`** vẫn áp đảo toàn diện `B2-Pro` trên mọi chỉ số (**`100%` verdict, `0%` bỏ sót, `0%` báo nhầm, `91,7%` định vị strict — `100%` trên `held_out`**, và nhanh gấp **2,1 lần**).

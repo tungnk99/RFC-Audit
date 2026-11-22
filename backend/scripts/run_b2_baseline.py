@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, RunContext, UsageLimits
+from pydantic_ai import Agent, PromptedOutput, RunContext, UsageLimits
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
@@ -93,11 +93,14 @@ def _hit_truth(file_rel: str, a: int, b: int, truth: dict[str, list[tuple[int, i
     return False
 
 
-def _make_agent(model: OpenAIChatModel) -> Agent[B2Deps, B2Verdict]:
+def _make_agent(model: OpenAIChatModel, *, disable_thinking: bool = True) -> Agent[B2Deps, B2Verdict]:
+    settings: dict[str, object] = {"temperature": 0}
+    if disable_thinking:
+        settings["extra_body"] = {"thinking": {"type": "disabled"}}
     agent: Agent[B2Deps, B2Verdict] = Agent(
         model=model,
         deps_type=B2Deps,
-        output_type=B2Verdict,
+        output_type=PromptedOutput(B2Verdict),
         system_prompt=(
             "You are a TLS 1.3 protocol conformance auditor. Given an RFC requirement specification and access to "
             "a C codebase via `list_files`, `grep`, and `read_file`, determine whether the implementation is "
@@ -105,7 +108,7 @@ def _make_agent(model: OpenAIChatModel) -> Agent[B2Deps, B2Verdict]:
             "and `line_end` of the defect. You have at most 12 tool calls — investigate efficiently and submit "
             "`B2Verdict` before running out of tool calls."
         ),
-        model_settings={"temperature": 0, "extra_body": {"thinking": {"type": "disabled"}}},
+        model_settings=settings,  # type: ignore[arg-type]
     )
 
     @agent.tool
@@ -283,17 +286,27 @@ async def main() -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--items", nargs="*", default=DEFAULT_ITEMS)
     ap.add_argument("--concurrency", type=int, default=3)
+    ap.add_argument("--provider", choices=["fpt", "deepseek"], default="fpt")
+    ap.add_argument("--model", default="DeepSeek-V4-Flash")
+    ap.add_argument("--enable-thinking", action="store_true", help="Do not pass thinking=disabled extra_body.")
     args = ap.parse_args()
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    api_key = os.environ.get("FPT_API_KEY", "")
-    if not api_key:
-        raise RuntimeError("FPT_API_KEY not set (run with `uv run --env-file .env ...`)")
+    if args.provider == "deepseek":
+        api_key = os.environ.get("DEEPSEEK_API_KEY", "")
+        base_url = "https://api.deepseek.com"
+        if not api_key:
+            raise RuntimeError("DEEPSEEK_API_KEY not set")
+    else:
+        api_key = os.environ.get("FPT_API_KEY", "")
+        base_url = "https://mkp-api.fptcloud.com/v1"
+        if not api_key:
+            raise RuntimeError("FPT_API_KEY not set")
 
-    provider = OpenAIProvider(base_url="https://mkp-api.fptcloud.com/v1", api_key=api_key)
-    model = OpenAIChatModel("DeepSeek-V4-Flash", provider=provider)
-    agent = _make_agent(model)
+    provider = OpenAIProvider(base_url=base_url, api_key=api_key)
+    model = OpenAIChatModel(args.model, provider=provider)
+    agent = _make_agent(model, disable_thinking=not args.enable_thinking)
 
     all_items = {it.id: it for it in (*rrm.real_items(""), *rrm.pair_items(), *rrm.mutant_items())}
     selected = [all_items[i] for i in args.items if i in all_items]
