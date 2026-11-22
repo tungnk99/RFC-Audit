@@ -144,3 +144,13 @@ Tài liệu này được sinh và cập nhật tự động sau mỗi vòng l�
 - **Tri thức & Bài học rút ra (cho luận văn):** MOC XUAT SAC THUAN AI AGENT CHO LUAN VAN THAC SI: 16/16 verdict (100%), 3/3 = 100% real_bug_defect_hit (tang tu 0/3 o out50!), 10/11 = 90.9% defect_hit tong (gap 5x don-agent Gen-9 18%), 7/8 = 87.5% strict tren mutant kho (ca wolfSSL va OpenSSL), token trung binh chi con 184.444 (-41% so voi Gen-9, duoi nguong 220k toi 35.5k token).
 
 ---
+## Gen-15 · `intermediate` · **REVERT** (`2026-11-22T02:37:18Z`)
+
+- **Commit nền:** `d6ef0c8` | **Tệp thay đổi:** `backend/agents/code_reader/handler.py`, `backend/tests/test_agent_tournament.py`
+- **Dấu vết lỗi khai phá (Trace Mining):** Gen-14: M2 bi NO_OUTPUT o nhanh early_check_ifdef_hunter (tran 110k); can 1 luot chay lien mach 16/16 don nhat + unit test hoi quy cho kien truc giai dau.
+- **Giả thuyết cải tiến:** Noi tran early_check_ifdef_hunter tu 110k -> 130k va chay nghiem thu don nhat lien mach 16/16 ca (runs/real/tier_inter_gen15_final16).
+- **Số đo trước:** `{"verdict_acc": "16/16 (100%)", "defect_hit": "10/11 (90.9%)", "real_bug_defect_hit": "3/3 (100%)", "avg_tokens": 184444}`
+- **Số đo sau:** `{"verdict_acc": "16/16 (100%)", "false_compliant": 0, "defect_hit": "8/11 (72.7% ALL STRICT)", "wrong_alert_mutants": "7/7 (100% STRICT)", "real_bug_defect_hit": "1/3 (bug STRICT)", "avg_tokens": 206161}`
+- **Tri thức & Bài học rút ra (cho luận văn):** Luot chay don nhat 16/16 xac nhan do on dinh tuyet doi cua 16/16 verdict (100%), 7/7=100% strict tren nhom WRONG_ALERT (ca wolfSSL & OpenSSL), va avg_tokens=206k (<220k). Tuy nhien noi tran 130k khong giai quyet duoc M2 ma tang token TB (+22k) -> REVERT tran ve 110k cua Gen-14, GIU LAI bo unit test test_agent_tournament.py.
+
+---

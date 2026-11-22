@@ -65,3 +65,14 @@ Nguồn chạy đồng nhất trên đúng bản `Gen-14`: `runs/real/tier_inter
    - `HINT_SYMBOL_FILE` (sửa lỗi gõ nhầm tên tệp),
    - `WRONG_PROTOCOL_DIRECTION` (chặn lỗi ngược chiều server/client như `DoServerHello` khi SUT là server nhận `ClientHello`).
 3. **Hiệu quả chi phí vượt trội:** giảm **41%** token trung bình (`314k → 184k`), riêng `U7` giảm **76%** (`769k → 183k`), chứng minh mô hình gọn `DeepSeek-V4-Flash` hoàn toàn có thể đạt chất lượng luận văn cao nhờ thiết kế kiến trúc đa-agent chuyên biệt.
+
+---
+
+## 4. Kiểm định tái lập trên 1 lượt chạy đơn nhất liền mạch (`Gen-15`, `runs/real/tier_inter_gen15_final16`)
+
+Để báo cáo trung thực cả độ ổn định lẫn biến động ngẫu nhiên của LLM cho hội đồng luận văn, đã chạy thêm 1 lượt đơn nhất liền mạch đủ 16/16 ca (`runs/real/tier_inter_gen15_final16`) và bổ sung bộ unit test hồi quy [test_agent_tournament.py](../../backend/tests/test_agent_tournament.py):
+- **Verdict:** **`16/16 = 100%`** (0 bỏ sót, 0 báo nhầm — tái lập tuyệt đối 100% qua mọi đợt chạy).
+- **Nhóm 7 mutant `WRONG_ALERT` (`M1, U1, U4, G1, G3, R10, OU1` OpenSSL):** **`7/7 = 100% strict`** (tái lập 100% cả 2 lượt `Gen-14` & `Gen-15`!).
+- **Tổng `defect_hit`:** **`8/11 = 72,7%` (cả 8/8 `strict`, vượt ngưỡng `>= 65%`, gồm `bug` `strict`)**; token trung bình **`206.161`** (`<= 220.000`).
+- **Quyết định Meta-Agent:** thử nghiệm nới trần `110k → 130k` ở `Gen-15` không cải thiện thêm `M2` mà làm tăng `+22k` token/ca nên đã **`REVERT`** về cấu hình tối ưu **`Gen-14` (`110k`)**, đồng thời **giữ lại** bộ unit test hồi quy `test_agent_tournament.py`.
+
