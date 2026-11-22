@@ -148,16 +148,19 @@ class LocationHandler:
             "Đặt `call_path: [symbol]` trừ khi đã đọc trực tiếp hàm cha; kiểm tra kỹ tên `file` khớp chính xác với kết quả `code__grep`/`code__read`."
         )
         if diag.signature == WRONG_ALERT:
+            obs_pat = "|".join(re.escape(a) for a in diag.observed_alerts if a and a != "none") or re.escape(obs)
             return (
                 {
                     "name": "bottom_up_alert_hunter",
                     "max_tool_calls": 11,
                     "max_tokens": 110_000,
                     "instruction": (
-                        f"Chiến lược NHÁNH A (Bottom-Up Alert Hunter): T3 quan sát cảnh báo sai `{obs}` thay vì `{exp}`. {dir_hint} "
-                        f"Hãy dùng `code__grep` tìm trực tiếp lời gọi gửi `{obs}` trong mã nguồn chính (loại `tests/`/`examples/` bằng `path`/`glob`), "
-                        "đọc gọn 40–60 dòng quanh nhánh lỗi (nhớ đọc cả các nhánh `if`/`case` phía trên liền kề trong cùng hàm) "
-                        "rồi trả `LocationClaim@1` với `REACTION = MISMATCH` trỏ đúng dòng gửi cảnh báo sai."
+                        f"Chiến lược NHÁNH A (Cross-Library Bottom-Up Alert Hunter): T3 quan sát cảnh báo sai `{obs}` thay vì `{exp}`. {dir_hint} "
+                        f"Hãy dùng `code__grep` KHÔNG phân biệt hoa thường với mẫu `(?i)({obs_pat})` (`head_limit=25`, trong `src/` hoặc `ssl/`, loại `tests/`/`examples/`) "
+                        "để tìm trực tiếp lời gọi phát cảnh báo sai (`SendAlert`, `SSLfatal(..., SSL_AD_...)`, `RLAYERfatal`, `return ...`). "
+                        f"QUAN TRỌNG: nếu nhánh bạn đọc KHÔNG phát `{obs}` (vd vẫn phát `{exp}` hoặc là hàm chỉ chạy sau mã hoá như `tls13_validate_record_header` "
+                        "trong khi bản ghi rõ lúc mới nối đi qua `rec_layer_*`), TUYỆT ĐỐI KHÔNG dừng ở đó — phải tìm đúng nhánh thực sự phát cảnh báo sai! "
+                        "Đọc gọn 40–60 dòng quanh lời gọi đó rồi trả `LocationClaim@1` với `REACTION = MISMATCH` và `observed` khớp cảnh báo sai."
                     ),
                 },
                 {
@@ -165,14 +168,14 @@ class LocationHandler:
                     "max_tool_calls": 11,
                     "max_tokens": 110_000,
                     "instruction": (
-                        f"Chiến lược NHÁNH B (2-Step Error-to-Alert Mapper): T3 quan sát cảnh báo sai `{obs}` thay vì `{exp}`. {dir_hint} "
-                        "Thực hiện đúng 2 bước: "
-                        "(1) Dùng `code__grep` theo từ khoá của `requirement.structured` (vd `key_share`, `supported_group`, `content_type`, `record`) "
-                        "để tìm mã lỗi nội bộ trả về khi kiểm tra thất bại (vd `KEY_SHARE_ERROR`, `MATCH_SUITE_ERROR`, `BUFFER_ERROR`) — "
-                        "BỎ QUA các hàm không liên quan tới yêu cầu (như `Resumption`, `SendFatalAlertOnly`, hàm phía client). "
-                        f"(2) Dùng `code__grep` tìm chính mã lỗi nội bộ đó (hoặc `return {obs}`) trong hàm có khối `switch`/`case` lớn ánh xạ mã lỗi sang cảnh báo TLS, "
-                        "đọc trọn 60–80 dòng của khối `switch` để chọn ĐÚNG `case` tương ứng, rồi trả `LocationClaim@1` với `file`, `symbol`, `line_start..line_end` "
-                        "và `REACTION = MISMATCH` trỏ chính xác dòng `case`/`return` gửi sai cảnh báo."
+                        f"Chiến lược NHÁNH B (2-Step Error-to-Alert & Subsystem Specialist): T3 quan sát cảnh báo sai `{obs}` thay vì `{exp}`. {dir_hint} "
+                        "Thực hiện đúng 2 bước (dùng `head_limit=20` cho mỗi `code__grep` để không tràn ngữ cảnh): "
+                        "(1) Dùng `code__grep` theo từ khoá của `requirement.structured` (vd `key_share`, `supported_group`, `shared_group`, `content_type`, `record`) "
+                        "trong đúng thư mục giao thức (`src/`, `ssl/statem/`, `ssl/record/` — chú ý `ssl/statem/extensions.c` cho extension/nhóm và `ssl/record/rec_layer_s3.c` cho bản ghi rõ lúc mới nối; BỎ QUA `Resumption`, `SendFatalAlertOnly`, hàm phía client) "
+                        "để tìm đúng nhánh gọi trực tiếp `SSLfatal`/`RLAYERfatal`/`SendAlert` với `(?i){obs}` HOẶC trả mã lỗi nội bộ `*_ERROR`. "
+                        f"(2) Nếu hàm kiểm tra chỉ trả mã lỗi nội bộ (như `KEY_SHARE_ERROR`, `MATCH_SUITE_ERROR`), dùng `code__grep` tìm mã lỗi đó hoặc `(?i)return\\s+.*({obs_pat})` "
+                        "trong hàm `switch`/`case` ánh xạ mã lỗi sang cảnh báo, đọc trọn 60–80 dòng khối `switch` để chọn đúng `case`, "
+                        "rồi trả `LocationClaim@1` với `REACTION = MISMATCH` và `observed` là cảnh báo sai."
                     ),
                 },
             )
@@ -184,12 +187,13 @@ class LocationHandler:
                 "max_tokens": 110_000,
                 "instruction": (
                     f"Chiến lược NHÁNH A (Early-Check & #ifdef Hunter): T3 chứng minh `{diag.signature}` (SUT KHÔNG phát `{exp}`). {dir_hint} "
-                    f"QUAN TRỌNG: một nhánh có `SendAlert({exp})` đang hoạt động (không bị `[DISABLED]`) KHÔNG PHẢI là chỗ lỗi! "
-                    "Chỗ lỗi thực sự là một phép kiểm tra sớm hơn nằm phía trên trong cùng hàm (trước đó 40–100 dòng, nơi kiểm tra header/kích thước thô "
-                    "và `return` mã lỗi nhưng `SendAlert` đã bị xoá mất hoặc bị tắt `[DISABLED]`). "
-                    "BẮT BUỘC chọn dòng `SendAlert` có **số dòng NHỎ NHẤT** trong hàm xử lý, rồi gọi `code__read` với "
-                    "`offset = (số dòng nhỏ nhất đó - 100), limit = 100` để đọc ngược lên đoạn phía trên, "
-                    "tìm đúng nhánh kiểm tra sớm trả lỗi mà thiếu `SendAlert` (hoặc bị `[DISABLED]`), rồi trả `LocationClaim@1` với `REACTION = MISMATCH` trỏ chính xác dòng đó."
+                    f"QUAN TRỌNG: một nhánh có lời gọi gửi cảnh báo `{exp}` (`SendAlert`/`SSLfatal`/`RLAYERfatal`) đang hoạt động (không bị `[DISABLED]`) KHÔNG PHẢI là chỗ lỗi! "
+                    "Với `record.content_type` gửi rõ lúc mới nối, kiểm tra cả lớp đọc bản ghi rõ (`ssl/record/rec_layer_s3.c` / `DoProcessReplyEx`) thay vì chỉ dừng ở hàm sau mã hoá (`tls13_validate_record_header`). "
+                    "BẮT BUỘC dùng `code__grep` không phân biệt hoa thường `(?i)"
+                    + re.escape(exp)
+                    + "` (`head_limit=25`) tìm vị trí gửi cảnh báo có số dòng NHỎ NHẤT trong hàm xử lý, "
+                    "rồi gọi `code__read` với `offset = (số dòng nhỏ nhất đó - 100), limit = 100` để đọc ngược lên đoạn phía trên, "
+                    "tìm đúng nhánh kiểm tra sớm trả lỗi mà thiếu cảnh báo (hoặc bị `[DISABLED]`), rồi trả `LocationClaim@1` với `REACTION = MISMATCH`."
                 ),
             },
             {
@@ -328,14 +332,29 @@ class LocationHandler:
                 f"WRONG_PROTOCOL_DIRECTION: yêu cầu là phía SERVER nhận `client_hello`, nhưng `{output.symbol}` là hàm phía CLIENT. "
                 "Hãy tìm đúng hàm xử lý ClientHello / extension / ánh xạ lỗi→cảnh báo phía server."
             )
-        if not errors and not any(a.value is AspectValue.MISMATCH for a in output.aspects):
+        if not errors:
             t3s = [e.payload for e in self._rt.store.for_requirement(req_id) if isinstance(e.payload, T3Payload)]
-            diag = diagnose(_expected_alert(inv), t3s)
-            if diag.signature in (REACTION_ABSENT, WRONG_ALERT, NO_CLOSE):
-                errors.append(
-                    f"MISMATCH_REQUIRED_ON_VIOLATION: T3 đã chứng minh vi phạm ({diag.signature}); "
-                    "hãy đặt khía cạnh sai (vd REACTION) thành MISMATCH với `lines` trỏ đúng dòng gửi cảnh báo sai/thiếu."
-                )
+            exp_alert = _expected_alert(inv)
+            diag = diagnose(exp_alert, t3s)
+            if not any(a.value is AspectValue.MISMATCH for a in output.aspects):
+                if diag.signature in (REACTION_ABSENT, WRONG_ALERT, NO_CLOSE):
+                    errors.append(
+                        f"MISMATCH_REQUIRED_ON_VIOLATION: T3 đã chứng minh vi phạm ({diag.signature}); "
+                        "hãy đặt khía cạnh sai (vd REACTION) thành MISMATCH với `lines` trỏ đúng dòng gửi cảnh báo sai/thiếu."
+                    )
+            elif diag.signature == WRONG_ALERT:
+                wrong_obs = [a for a in diag.observed_alerts if a and a != "none" and a != exp_alert]
+                if wrong_obs and not any(
+                    a.aspect is AspectName.REACTION
+                    and a.observed is not None
+                    and any(o in str(a.observed) for o in wrong_obs)
+                    for a in output.aspects
+                ):
+                    errors.append(
+                        f"WRONG_OBSERVED_ALERT: T3 quan sát cảnh báo sai là `{', '.join(wrong_obs)}`, "
+                        "nhưng `REACTION.observed` bạn nộp không khớp. Nhánh vừa đọc KHÔNG PHẢI là nhánh thực thi khi lỗi — "
+                        f"hãy dùng `code__grep` tìm đúng dòng thực sự phát `(?i)({'|'.join(wrong_obs)})` trong tệp/hàm xử lý."
+                    )
         return errors
 
     async def handle(

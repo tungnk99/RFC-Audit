@@ -184,3 +184,33 @@ Tài liệu này được sinh và cập nhật tự động sau mỗi vòng l�
 - **Tri thức & Bài học rút ra (cho luận văn):** MOC DINH CAO DON NHAT 16/16 CA TANG INTERMEDIATE (100% THUAN AI AGENT): 16/16 = 100% verdict, 10/11 = 90.9% ALL STRICT defect_hit (vuot xa >85%!), 8/8 = 100% STRICT mutant kho (2 luot lien tiep!), token trung binh chi con 191.414 (-39% so voi don-agent Gen-9, TB 46.4s/ca).
 
 ---
+## Gen-19 · `advanced` · **KEEP** (`2026-11-22T05:57:26Z`)
+
+- **Commit nền:** `ed4267d` | **Tệp thay đổi:** `backend/agents/code_reader/handler.py`, `backend/src/rfcv/core/execution_loop.py`
+- **Dấu vết lỗi khai phá (Trace Mining):** Tier advanced baseline (8 ca OpenSSL): verdict 8/8 (100%), nhung defect_hit chi 2/7 (29%) do prompt Gen-18 mang dau an wolfSSL (SendAlert/return chu thuong) thay vi SSLfatal/SSL_AD_* cua OpenSSL.
+- **Giả thuyết cải tiến:** Chuyen prompt sang da thu vien khong phan biet hoa thuong (?i) cho ca SSLfatal/RLAYERfatal/SendAlert va mo rong Adaptive Rescue cho ca bottom_up_alert_hunter.
+- **Số đo trước:** `{"openssl_verdict": "8/8 (100%)", "openssl_defect_hit": "2/7 (29%: OU3, OG4)"}`
+- **Số đo sau:** `{"openssl_verdict": "8/8 (100%)", "openssl_defect_hit": "3/7 (43% strict: OG1, OG4, OR1)"}`
+- **Tri thức & Bài học rút ra (cho luận văn):** OG1 va OR1 nhay len defect_hit_strict=true (OR1 giam 44% token), nhung cau uu tien tls13_* khien OU2/OU3/OU4 dung nham o tls13_validate_record_header.
+
+---
+## Gen-20 · `advanced` · **KEEP** (`2026-11-22T05:57:26Z`)
+
+- **Commit nền:** `ed4267d` | **Tệp thay đổi:** `backend/agents/code_reader/handler.py`
+- **Dấu vết lỗi khai phá (Trace Mining):** Gen-19: OU2/OU3/OU4 dung nham o ham sau ma hoa tls13_meth.c thay vi lop ban ghi ro rec_layer_s3.c; OG2 tran ngu canh grep decode_error.
+- **Giả thuyết cải tiến:** Bo sung quy tac RFC 8446 tach ban ghi ro (rec_layer_s3.c) vs sau ma hoa + gioi han head_limit=20/25 cho code__grep.
+- **Số đo trước:** `{"openssl_g_family": "2/3"}`
+- **Số đo sau:** `{"openssl_verdict": "8/8 (100%)", "openssl_g_family": "3/3 (100% strict: OG1, OG2, OG4)", "openssl_defect_hit": "3/7 (43% strict)"}`
+- **Tri thức & Bài học rút ra (cho luận văn):** Toan bo ho G cua OpenSSL (OG1, OG2, OG4) dat 3/3 = 100% STRICT; OU2/OU3 da chuyen dung sang rec_layer_s3.c nhung dung o 1068 thay vi 855.
+
+---
+## Gen-21 · `advanced` · **KEEP** (`2026-11-22T05:57:26Z`)
+
+- **Commit nền:** `ed4267d` | **Tệp thay đổi:** `backend/src/rfcv/domains/rfc_protocol/diagnosis.py`, `backend/agents/code_reader/handler.py`
+- **Dấu vết lỗi khai phá (Trace Mining):** Gen-20: OR1 bi diagnose() nhan nham la NO_CLOSE khi alerts co ca record_overflow lan decode_error; OU2 nop nhanh khong phat decode_error (matches_obs=False).
+- **Giả thuyết cải tiến:** Sua diagnose() phat hien WRONG_ALERT khi co bat ky canh bao sai nao khac expected_alert + them tu phan hoi WRONG_OBSERVED_ALERT trong precheck().
+- **Số đo trước:** `{"ou2_defect_hit": false, "ou2_tokens": 534340}`
+- **Số đo sau:** `{"openssl_verdict": "8/8 (100%, 32/32 qua 4 luot)", "ou2_defect_hit": true, "ou2_tokens": 205767, "distinct_openssl_strict": "6/7 (85.7%)", "single_pass_openssl": "2/7-3/7 (29-43%)"}`
+- **Tri thức & Bài học rút ra (cho luận văn):** WRONG_OBSERVED_ALERT ha guc OU2 ngay lap tuc (strict hit, giam 62% token: 534k -> 205k), dua tong so ca OpenSSL kho da dat strict hit len 6/7 (85.7%). Tuy nhien tren kien truc da hinh 15+ tep cua OpenSSL 3.x, thuan AI Agent model Flash cham tran don luot o 29-43% -> diem chuyen giao khoa hoc sang nghien cuu ket hop (Hybrid) hoac mo hinh suy luan manh hon.
+
+---

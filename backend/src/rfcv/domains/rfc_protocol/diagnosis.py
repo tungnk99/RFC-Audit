@@ -80,11 +80,12 @@ def diagnose(expected_alert: str | None, t3s: Sequence[T3Payload]) -> Diagnosis:
             "SUT có phản ứng ở một số ca kích hoạt nhưng không có ở các ca khác: ngưỡng hoặc điều kiện kiểm tra lệch so với yêu cầu.",
             "Tìm phép so sánh quyết định phản ứng, khai triển hằng/ngưỡng bằng `code__eval`, so với giá trị trong `where`.",
         )
-    if expected_alert is not None and expected_alert not in alerts:
-        observed = ", ".join(a for a in alerts if a != "none")
+    wrong = tuple(a for a in alerts if a != "none" and a != expected_alert)
+    if expected_alert is not None and wrong:
+        observed = ", ".join(wrong)
         return make(
             WRONG_ALERT,
-            f"SUT có phát cảnh báo nhưng không phải `{code}` (quan sát: {', '.join(alerts)}).",
+            f"SUT có phát cảnh báo sai khác `{code}` (quan sát: {', '.join(alerts)}).",
             f"Ưu tiên kiểm tra các lời gọi gửi `{observed}` trong `code.candidates` trên đường xử lý yêu cầu tương ứng và so với `{code}`.",
         )
     return make(
