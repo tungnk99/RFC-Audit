@@ -470,8 +470,14 @@ def build_cc_tools(
                         annotated.append(raw_line)
                 body = "\n".join(annotated)
         total = line_count(file)
+        enclosing = index.containing_symbol(file, (start + last) // 2) or index.containing_symbol(file, start)
+        sym_note = (
+            f" [symbol: {enclosing.name} ({enclosing.line_start}–{enclosing.line_end})]"
+            if enclosing is not None
+            else ""
+        )
         disabled_note = f" ({disabled_seen} dòng [DISABLED] bị tắt bởi cờ build)" if disabled_seen else ""
-        head = f"tool=read {file} lines {start}–{last}" + (f" of {total}" if total else "") + disabled_note
+        head = f"tool=read {file} lines {start}–{last}" + (f" of {total}" if total else "") + sym_note + disabled_note
         more = ""
         nxt = last + 1 - base + 1
         if last < min(end, limit_end):

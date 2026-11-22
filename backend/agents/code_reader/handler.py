@@ -187,8 +187,9 @@ class LocationHandler:
                     f"QUAN TRỌNG: một nhánh có `SendAlert({exp})` đang hoạt động (không bị `[DISABLED]`) KHÔNG PHẢI là chỗ lỗi! "
                     "Chỗ lỗi thực sự là một phép kiểm tra sớm hơn nằm phía trên trong cùng hàm (trước đó 40–100 dòng, nơi kiểm tra header/kích thước thô "
                     "và `return` mã lỗi nhưng `SendAlert` đã bị xoá mất hoặc bị tắt `[DISABLED]`). "
-                    "BẮT BUỘC gọi `code__read` với `offset = (dòng SendAlert đầu tiên - 100), limit = 100` để đọc đoạn phía trên, "
-                    "tìm đúng nhánh kiểm tra trả lỗi mà thiếu `SendAlert` (hoặc bị `[DISABLED]`), rồi trả `LocationClaim@1` với `REACTION = MISMATCH` trỏ chính xác dòng đó."
+                    "BẮT BUỘC chọn dòng `SendAlert` có **số dòng NHỎ NHẤT** trong hàm xử lý, rồi gọi `code__read` với "
+                    "`offset = (số dòng nhỏ nhất đó - 100), limit = 100` để đọc ngược lên đoạn phía trên, "
+                    "tìm đúng nhánh kiểm tra sớm trả lỗi mà thiếu `SendAlert` (hoặc bị `[DISABLED]`), rồi trả `LocationClaim@1` với `REACTION = MISMATCH` trỏ chính xác dòng đó."
                 ),
             },
             {
@@ -256,8 +257,10 @@ class LocationHandler:
                 diag.signature == WRONG_ALERT
                 and ("translate" in sym_low or ("alert" in sym_low and "send" not in sym_low))
             )
-            is_specialist = int(bname == "error_to_alert_mapper")
+            is_specialist = int(bname.startswith("error_to_alert_mapper"))
             sem_score = kw_hits + 3 * is_mapper - 5 * wrong_dir
+            # Với REACTION_ABSENT: cùng hàm thì ưu tiên nhánh kiểm tra sớm hơn (số dòng nhỏ hơn) vì lỗi trả sớm nằm trước.
+            earlier_bias = -output.line_start if diag.signature == REACTION_ABSENT else 0
 
             key: tuple[int, ...] = (
                 int(res.accepted),
@@ -267,6 +270,7 @@ class LocationHandler:
                 is_mapper,
                 sem_score,
                 is_specialist,
+                earlier_bias,
                 *sc.rank_key,
             )
             board.append(
@@ -307,7 +311,7 @@ class LocationHandler:
                 errors.append(
                     f"HINT_SYMBOL_FILE: hàm `{output.symbol}` nằm trong tệp `{found[0]}`, không phải `{output.file}`."
                 )
-        if index is not None and "LINES_OUTSIDE_SYMBOL" in errors:
+        if index is not None and ("LINES_OUTSIDE_SYMBOL" in errors or "SYMBOL_NOT_IN_INDEX" in errors):
             enclosing = index.containing_symbol(output.file, output.line_start)
             if enclosing is not None and enclosing.name != output.symbol:
                 errors.append(

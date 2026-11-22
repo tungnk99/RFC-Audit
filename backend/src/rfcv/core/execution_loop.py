@@ -736,6 +736,33 @@ class ExecutionLoop:
         results: list[tuple[str, RoleOutcome, ToolSession, str]] = list(
             await asyncio.gather(*(_run_one(s) for s in branch_specs))
         )
+        # Cứu hộ thích nghi (Adaptive Rescue): chỉ kích hoạt khi KHÔNG có nhánh nào hợp lệ qua trọng tài ban đầu
+        # và có nhánh chuyên gia bị NO_OUTPUT — tránh lãng phí token trên các ca nhánh còn lại đã thành công.
+        _, pre_summary = select_fn(inv, task, [(n, o.output, s) for n, o, s, _ in results])
+        pre_map: dict[str, Any] = (
+            dict(cast("Mapping[str, Any]", pre_summary)) if isinstance(pre_summary, Mapping) else {}
+        )
+        raw_branches = pre_map.get("branches")
+        pre_branches: list[Any] = (
+            list(cast("Sequence[Any]", raw_branches)) if isinstance(raw_branches, Sequence) else []
+        )
+        any_clean = any(
+            isinstance(b, Mapping)
+            and bool(cast("Mapping[str, Any]", b).get("accepted"))
+            and bool(cast("Mapping[str, Any]", b).get("has_mismatch"))
+            and not bool(cast("Mapping[str, Any]", b).get("wrong_dir"))
+            for b in pre_branches
+        )
+        if not any_clean:
+            for idx, (spec, (bname, outcome, _, _)) in enumerate(zip(branch_specs, results, strict=True)):
+                if outcome.output is None and bname in ("error_to_alert_mapper", "early_check_ifdef_hunter"):
+                    rescue_spec = {
+                        **spec,
+                        "name": f"{bname}_rescue",
+                        "max_tool_calls": max(13, int(spec.get("max_tool_calls") or 11) + 2),
+                        "max_tokens": max(145_000, int(spec.get("max_tokens") or 110_000) + 35_000),
+                    }
+                    results[idx] = await _run_one(rescue_spec)
         raw_idx, raw_summary = select_fn(inv, task, [(n, o.output, s) for n, o, s, _ in results])
         win_idx = int(raw_idx)
         summary: dict[str, Any] = (

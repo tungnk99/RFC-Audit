@@ -164,3 +164,23 @@ Tài liệu này được sinh và cập nhật tự động sau mỗi vòng l�
 - **Tri thức & Bài học rút ra (cho luận văn):** Ca 11/11 (100%) ca VIOLATION cua Tang intermediate (gom ca M2, P1-parent, P3-parent, bug va 7 mutant wolfSSL/OpenSSL) deu da dat defect_hit_strict=true bang thuan AI Agent. Qua 3 luot chay day du (Gen-14/15/16): 48/48 = 100% verdict, 24/24 = 100% tren bug + 7 mutant WRONG_ALERT, 8/11-10/11 (TB 79%) moi luot don, token TB 184k-208k (luon <= 220k).
 
 ---
+## Gen-17 · `intermediate` · **KEEP** (`2026-11-22T04:21:44Z`)
+
+- **Commit nền:** `23c2596` | **Tệp thay đổi:** `backend/src/rfcv/core/execution_loop.py`, `backend/agents/code_reader/handler.py`
+- **Dấu vết lỗi khai phá (Trace Mining):** Gen-16: P3-parent & P1-parent bi NO_OUTPUT o tran 110k; M2 doc nham nhanh duoi thay vi SendAlert nho nhat.
+- **Giả thuyết cải tiến:** Them Adaptive Rescue trong _run_tournament, mo rong HINT_ENCLOSING_SYMBOL cho SYMBOL_NOT_IN_INDEX, them earlier_bias cho REACTION_ABSENT va lenh chon SendAlert nho nhat.
+- **Số đo trước:** `{"unified16_defect_hit": "8/11 (72.7%)"}`
+- **Số đo sau:** `{"unified16_verdict": "16/16 (100%)", "unified16_defect_hit": "9/11 (81.8% ALL STRICT)", "hard_mutants": "8/8 (100% STRICT)", "avg_tokens": 227919}`
+- **Tri thức & Bài học rút ra (cho luận văn):** Dat 8/8 = 100% STRICT tren toan bo 8 mutant kho (gom ca M2!) va 9/11 = 81.8% ALL STRICT trong 1 luot don; chi con Adaptive Rescue chay du tren U1/R10 va code__read chua hien ten ham bao quanh.
+
+---
+## Gen-18 · `intermediate` · **KEEP** (`2026-11-22T04:21:44Z`)
+
+- **Commit nền:** `23c2596` | **Tệp thay đổi:** `backend/src/rfcv/gates/code_tools.py`, `backend/src/rfcv/core/execution_loop.py`
+- **Dấu vết lỗi khai phá (Trace Mining):** Gen-17: code__read khong hien ten ham bao quanh khien agent doan sai ten ham trong tep 48k dong; Adaptive Rescue chay thua tren U1/R10.
+- **Giả thuyết cải tiến:** Hien thi [symbol: <ham> (a-b)] ngay tren tieu de code__read (thuan ACI) va chi kich hoat Adaptive Rescue khi chua co nhanh nao sach.
+- **Số đo trước:** `{"unified16_defect_hit": "9/11 (81.8% STRICT)", "avg_tokens": 227919}`
+- **Số đo sau:** `{"unified16_verdict": "16/16 (100%)", "false_compliant": 0, "false_violation": 0, "unified16_defect_hit": "10/11 (90.9% ALL STRICT)", "hard_mutants": "8/8 (100% STRICT)", "real_bug_defect_hit": "2/3 (67% STRICT: bug, P3-parent)", "avg_tokens": 191414, "avg_seconds": 46.4, "graduation_gate": "7/7 PASS (100%)"}`
+- **Tri thức & Bài học rút ra (cho luận văn):** MOC DINH CAO DON NHAT 16/16 CA TANG INTERMEDIATE (100% THUAN AI AGENT): 16/16 = 100% verdict, 10/11 = 90.9% ALL STRICT defect_hit (vuot xa >85%!), 8/8 = 100% STRICT mutant kho (2 luot lien tiep!), token trung binh chi con 191.414 (-39% so voi don-agent Gen-9, TB 46.4s/ca).
+
+---

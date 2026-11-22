@@ -16,3 +16,4 @@ timestamp	branch	commit	dirty	label	ci_pass	pytest_passed	ruff_ok	pyright_ok	imp
 2026-11-22T01:19:58Z	feat/nextgen-agent-research	f53949f	1	gen14-tier-intermediate-100real	1	266	1	1	1	44	0.4773	16	1	36.14
 2026-11-22T02:38:02Z	feat/nextgen-agent-research	d6ef0c8	1	gen15-tier-intermediate-final	1	266	1	1	1	44	0.4773	16	1	39.24
 2026-11-22T03:09:18Z	feat/nextgen-agent-research	687972e	1	gen16-tier-intermediate-complete	1	266	1	1	1	44	0.4773	16	1	39.38
+2026-11-22T04:22:28Z	feat/nextgen-agent-research	23c2596	1	gen18-tier-intermediate-91strict	1	266	1	1	1	44	0.4773	16	1	39.38
