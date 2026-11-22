@@ -154,3 +154,13 @@ Tài liệu này được sinh và cập nhật tự động sau mỗi vòng l�
 - **Tri thức & Bài học rút ra (cho luận văn):** Luot chay don nhat 16/16 xac nhan do on dinh tuyet doi cua 16/16 verdict (100%), 7/7=100% strict tren nhom WRONG_ALERT (ca wolfSSL & OpenSSL), va avg_tokens=206k (<220k). Tuy nhien noi tran 130k khong giai quyet duoc M2 ma tang token TB (+22k) -> REVERT tran ve 110k cua Gen-14, GIU LAI bo unit test test_agent_tournament.py.
 
 ---
+## Gen-16 · `intermediate` · **KEEP** (`2026-11-22T03:08:35Z`)
+
+- **Commit nền:** `687972e` | **Tệp thay đổi:** `backend/agents/code_reader/handler.py`, `backend/tests/test_agent_tournament.py`
+- **Dấu vết lỗi khai phá (Trace Mining):** Gen-15: P3-parent hoa diem trong tai (thua index 0), P1-parent ghi nham symbol ProcessReply cho dong 25835 (LINES_OUTSIDE_SYMBOL), M2 chua doc nguoc len doan 100 dong phia tren SendAlert.
+- **Giả thuyết cải tiến:** Bo sung is_specialist tiebreaker cho error_to_alert_mapper, HINT_ENCLOSING_SYMBOL trong precheck(), va lenh doc nguoc 100 dong cho early_check_ifdef_hunter.
+- **Số đo trước:** `{"m2_ever_hit": false, "distinct_strict_hits": "10/11"}`
+- **Số đo sau:** `{"probe_m2_p3": "M2 STRICT + P3-parent STRICT", "distinct_strict_hits": "11/11 (100% ALL STRICT)", "unified16_verdict": "16/16 (100%)", "unified16_defect_hit": "8/11 (72.7% ALL STRICT)", "wrong_alert_3run_consistency": "24/24 (100%)", "unified16_avg_tokens": 208496}`
+- **Tri thức & Bài học rút ra (cho luận văn):** Ca 11/11 (100%) ca VIOLATION cua Tang intermediate (gom ca M2, P1-parent, P3-parent, bug va 7 mutant wolfSSL/OpenSSL) deu da dat defect_hit_strict=true bang thuan AI Agent. Qua 3 luot chay day du (Gen-14/15/16): 48/48 = 100% verdict, 24/24 = 100% tren bug + 7 mutant WRONG_ALERT, 8/11-10/11 (TB 79%) moi luot don, token TB 184k-208k (luon <= 220k).
+
+---

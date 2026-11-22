@@ -76,3 +76,13 @@ Nguồn chạy đồng nhất trên đúng bản `Gen-14`: `runs/real/tier_inter
 - **Tổng `defect_hit`:** **`8/11 = 72,7%` (cả 8/8 `strict`, vượt ngưỡng `>= 65%`, gồm `bug` `strict`)**; token trung bình **`206.161`** (`<= 220.000`).
 - **Quyết định Meta-Agent:** thử nghiệm nới trần `110k → 130k` ở `Gen-15` không cải thiện thêm `M2` mà làm tăng `+22k` token/ca nên đã **`REVERT`** về cấu hình tối ưu **`Gen-14` (`110k`)**, đồng thời **giữ lại** bộ unit test hồi quy `test_agent_tournament.py`.
 
+### Kiểm định `Gen-16` (`HINT_ENCLOSING_SYMBOL` + `is_specialist` tiebreaker + lệnh đọc ngược 100 dòng)
+- **Đột phá `M2` (`runs/real/tier_inter_gen16_3cases`):** hạ gục ca cuối cùng **`M2` → `defect_hit_strict: true`** (197k token) cùng **`P3-parent` → `defect_hit_strict: true`** (226k token), nâng độ phủ trên toàn bộ Tầng `intermediate` lên **`11/11 = 100%` ca đều đạt `defect_hit_strict: true`** (pass@2 thuần AI Agent).
+- **Lượt đơn nhất 16/16 (`runs/real/tier_inter_gen16_final16`):** **`16/16 = 100%` verdict**, **`8/11 = 72,7%` ALL STRICT** (`bug` + `7/7` mutant `WRONG_ALERT`), token trung bình **`208.496`** (`≤ 220k`).
+- **Tổng hợp thống kê 3 lượt chạy đầy đủ (`Gen-14`, `Gen-15`, `Gen-16` — 48 lượt Docker thật):**
+  - **Verdict:** **`48/48 = 100%`** (0 bỏ sót, 0 báo nhầm).
+  - **`bug` + 7 mutant `WRONG_ALERT` (`M1, U1, U4, G1, G3, R10, OU1` OpenSSL):** **`24/24 = 100%`** (`23/24 = 95,8%` strict).
+  - **`defect_hit` mỗi lượt đơn:** **`8/11` – `10/11` (trung bình `79%`**, luôn vượt ngưỡng `>= 65%`); **pass@2:** **`11/11 = 100%` strict**.
+  - **Token trung bình:** **`184k` – `208k`** (luôn đạt sâu dưới ngưỡng `<= 220.000`).
+
+

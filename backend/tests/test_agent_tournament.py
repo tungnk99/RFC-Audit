@@ -153,3 +153,17 @@ def test_precheck_catches_wrong_direction_missing_mismatch_and_file_typo() -> No
     h2 = LocationHandler(rt, _FakeGate({"TranslateErrorToAlert": ("SYMBOL_NOT_IN_INDEX",)}))  # type: ignore[arg-type]
     errs_file = h2.precheck(inv, _claim("TranslateErrorToAlert", file="src/tls13.c"), sess)
     assert any("HINT_SYMBOL_FILE" in e and "src/internal.c" in e for e in errs_file)
+
+    # 4. Dòng nằm ngoài thân hàm symbol -> trả HINT_ENCLOSING_SYMBOL
+    index_enc = InMemoryCodeIndex(
+        sources={"src/internal.c": ["line"] * 120},
+        symbols=[SymbolInfo("src/internal.c", "DoProcessReplyEx", "function", 90, 120)],
+    )
+    rt_enc = SimpleNamespace(
+        store=_FakeStore([_make_t3_fail("none")]),
+        run_id="r1",
+        providers=SimpleNamespace(code_index=index_enc),
+    )
+    h3 = LocationHandler(rt_enc, _FakeGate({"ProcessReply": ("LINES_OUTSIDE_SYMBOL",)}))  # type: ignore[arg-type]
+    errs_enc = h3.precheck(inv, _claim("ProcessReply", file="src/internal.c"), sess)
+    assert any("HINT_ENCLOSING_SYMBOL" in e and "DoProcessReplyEx" in e for e in errs_enc)

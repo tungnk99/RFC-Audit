@@ -184,10 +184,11 @@ class LocationHandler:
                 "max_tokens": 110_000,
                 "instruction": (
                     f"Chiến lược NHÁNH A (Early-Check & #ifdef Hunter): T3 chứng minh `{diag.signature}` (SUT KHÔNG phát `{exp}`). {dir_hint} "
-                    "Với `reaction_absent`, lỗi thường nằm ở **phép kiểm tra ĐẦU TIÊN** (kiểm tra header/kích thước/loại bản ghi trước khi giải mã) "
-                    "nơi `SendAlert` bị **xoá mất** hoặc bị **tắt bởi `#ifdef` (`[DISABLED]`)**, KHÔNG phải phép kiểm tra thứ hai phía dưới vẫn còn `SendAlert`! "
-                    "Hãy đọc ngược lên **80–120 dòng** phía trên nhánh `SendAlert` đầu tiên bạn thấy để kiểm tra phép kiểm tra sớm hơn, "
-                    "rồi trả `LocationClaim@1` với `REACTION = MISMATCH` trỏ chính xác dòng bị `[DISABLED]` hoặc thiếu `SendAlert`."
+                    f"QUAN TRỌNG: một nhánh có `SendAlert({exp})` đang hoạt động (không bị `[DISABLED]`) KHÔNG PHẢI là chỗ lỗi! "
+                    "Chỗ lỗi thực sự là một phép kiểm tra sớm hơn nằm phía trên trong cùng hàm (trước đó 40–100 dòng, nơi kiểm tra header/kích thước thô "
+                    "và `return` mã lỗi nhưng `SendAlert` đã bị xoá mất hoặc bị tắt `[DISABLED]`). "
+                    "BẮT BUỘC gọi `code__read` với `offset = (dòng SendAlert đầu tiên - 100), limit = 100` để đọc đoạn phía trên, "
+                    "tìm đúng nhánh kiểm tra trả lỗi mà thiếu `SendAlert` (hoặc bị `[DISABLED]`), rồi trả `LocationClaim@1` với `REACTION = MISMATCH` trỏ chính xác dòng đó."
                 ),
             },
             {
@@ -255,6 +256,7 @@ class LocationHandler:
                 diag.signature == WRONG_ALERT
                 and ("translate" in sym_low or ("alert" in sym_low and "send" not in sym_low))
             )
+            is_specialist = int(bname == "error_to_alert_mapper")
             sem_score = kw_hits + 3 * is_mapper - 5 * wrong_dir
 
             key: tuple[int, ...] = (
@@ -264,6 +266,7 @@ class LocationHandler:
                 has_mismatch,
                 is_mapper,
                 sem_score,
+                is_specialist,
                 *sc.rank_key,
             )
             board.append(
@@ -295,16 +298,23 @@ class LocationHandler:
                 output, session, run_id=self._rt.run_id, requirement_id=req_id, msg_id="", threshold=_threshold_of(inv)
             ).errors
         )
-        # Nếu agent gõ nhầm tên tệp của một hàm có thật (vd ghi `src/tls13.c` cho `TranslateErrorToAlert` ở `src/internal.c`),
-        # bổ sung gợi ý tên tệp chính xác từ chỉ mục để agent tự sửa ngay trong vòng retry.
-        if "SYMBOL_NOT_IN_INDEX" in errors:
-            index: Any = getattr(getattr(self._rt, "providers", None), "code_index", None)
-            if index is not None:
-                found = [s.file for s in index.lookup(output.symbol) if s.file != output.file]
-                if found:
-                    errors.append(
-                        f"HINT_SYMBOL_FILE: hàm `{output.symbol}` nằm trong tệp `{found[0]}`, không phải `{output.file}`."
-                    )
+        # Nếu agent gõ nhầm tên tệp hoặc tên hàm bao quanh (vd ghi `ProcessReply` thay vì `DoProcessReplyEx` cho dòng 25835),
+        # bổ sung gợi ý tên tệp / tên hàm chính xác từ chỉ mục để agent tự sửa ngay trong vòng retry.
+        index: Any = getattr(getattr(self._rt, "providers", None), "code_index", None)
+        if index is not None and "SYMBOL_NOT_IN_INDEX" in errors:
+            found = [s.file for s in index.lookup(output.symbol) if s.file != output.file]
+            if found:
+                errors.append(
+                    f"HINT_SYMBOL_FILE: hàm `{output.symbol}` nằm trong tệp `{found[0]}`, không phải `{output.file}`."
+                )
+        if index is not None and "LINES_OUTSIDE_SYMBOL" in errors:
+            enclosing = index.containing_symbol(output.file, output.line_start)
+            if enclosing is not None and enclosing.name != output.symbol:
+                errors.append(
+                    f"HINT_ENCLOSING_SYMBOL: các dòng {output.line_start}–{output.line_end} trong `{output.file}` "
+                    f"thuộc thân hàm `{enclosing.name}` (không phải `{output.symbol}`). "
+                    f"Hãy đổi `symbol` và `call_path` sang `{enclosing.name}`."
+                )
         # Chặn sớm lỗi nhầm chiều giao thức (vd SUT là SERVER nhận ClientHello nhưng agent trỏ vào DoServerHello của client).
         rbs = inv.domain_state.get(RBS_KEY)
         trig_args = {str(a).lower() for a in getattr(getattr(rbs, "trigger", None), "args", ())}
