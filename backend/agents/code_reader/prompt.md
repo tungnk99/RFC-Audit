@@ -29,6 +29,7 @@ Bạn không gán nhãn; kết quả `LocationClaim@1` qua Schema gate thành b�
 
 # 4. Công cụ & Nhịp làm việc (mục tiêu 2–3 lượt, ≤ 12 lời gọi)
 - `locator__suggest`: gợi ý hàm ứng viên ban đầu.
+- `code__find_alert_sites`: quét tĩnh toàn cục & xếp hạng điểm phát cảnh báo theo từ khoá yêu cầu (kèm `symbol` và `[DISABLED]`, tránh cắt cụt trên kho mã đa tệp).
 - `code__grep`: tìm regex (kèm hàm chứa); gọi nhiều mẫu song song trong 1 lượt.
 - `code__read`: đọc tệp (`file`, `offset`, `limit` **40–80 dòng** quanh điểm cần kiểm để tiết kiệm token và tránh trôi ngữ cảnh) hoặc nguyên hàm ngắn (`symbol`). Dòng bị tắt theo `adapter.build_flags` được gắn nhãn **`[DISABLED]`**.
 - `code__glob`: kiểm tra đúng đường dẫn tệp.

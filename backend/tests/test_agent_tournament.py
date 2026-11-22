@@ -167,3 +167,52 @@ def test_precheck_catches_wrong_direction_missing_mismatch_and_file_typo() -> No
     h3 = LocationHandler(rt_enc, _FakeGate({"ProcessReply": ("LINES_OUTSIDE_SYMBOL",)}))  # type: ignore[arg-type]
     errs_enc = h3.precheck(inv, _claim("ProcessReply", file="src/internal.c"), sess)
     assert any("HINT_ENCLOSING_SYMBOL" in e and "DoProcessReplyEx" in e for e in errs_enc)
+
+    # 5. Bản ghi rõ ở trạng thái initial (`record.content_type` trong variants) nhưng trỏ nhầm tls13_validate_record_header
+    inv_rec = _make_inv(trigger_arg="record", expected_alert="unexpected_message")
+    inv_rec.domain_state[RBS_KEY] = SimpleNamespace(
+        state="initial",
+        trigger=SimpleNamespace(args=("record",)),
+        where=None,
+        variants=(SimpleNamespace(field="record.content_type"),),
+        expect=(SimpleNamespace(name="send_alert", args=("unexpected_message",)),),
+    )
+    rt_rec = SimpleNamespace(store=_FakeStore([_make_t3_fail("decode_error")]), run_id="r1", providers=None)
+    h4 = LocationHandler(rt_rec, _FakeGate())  # type: ignore[arg-type]
+    errs_stage = h4.precheck(
+        inv_rec, _claim("tls13_validate_record_header", file="ssl/record/methods/tls13_meth.c"), sess
+    )
+    assert any("WRONG_RECORD_STAGE" in e for e in errs_stage)
+
+
+def test_select_branch_prefers_claim_whose_source_lines_emit_observed_alert() -> None:
+    inv = _make_inv(trigger_arg="record", expected_alert="unexpected_message")
+    lines = ["/* pad */"] * 1100
+    lines[854] = "    SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_WRONG_VERSION_NUMBER);"
+    lines[1076] = "    SSLfatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_UNEXPECTED_RECORD);"
+    index = InMemoryCodeIndex(
+        sources={"ssl/record/rec_layer_s3.c": lines},
+        symbols=[SymbolInfo("ssl/record/rec_layer_s3.c", "ssl3_read_bytes", "function", 622, 1100)],
+    )
+    rt = SimpleNamespace(
+        store=_FakeStore([_make_t3_fail("decode_error")]),
+        run_id="r1",
+        providers=SimpleNamespace(code_index=index),
+    )
+    handler = LocationHandler(rt, _FakeGate())  # type: ignore[arg-type]
+    sess = ToolSession("r1", "code_reader", "TLS13-TEST", max_tool_calls=12)
+
+    c_early = _claim("ssl3_read_bytes", file="ssl/record/rec_layer_s3.c", observed="send_alert(decode_error)")
+    c_early = c_early.model_copy(update={"line_start": 846, "line_end": 857})
+    c_late = _claim("ssl3_read_bytes", file="ssl/record/rec_layer_s3.c", observed="send_alert(decode_error)")
+    c_late = c_late.model_copy(update={"line_start": 1068, "line_end": 1078})
+
+    win_idx, summary = handler.select_branch(
+        inv,
+        SimpleNamespace(task_type="LOCATE"),
+        [("bottom_up_alert_hunter", c_early, sess), ("error_to_alert_mapper", c_late, sess)],
+    )
+    assert win_idx == 0
+    assert summary["winner"] == "bottom_up_alert_hunter"
+    assert summary["branches"][0]["obs_in_source"] is True
+    assert summary["branches"][1]["obs_in_source"] is False

@@ -153,20 +153,19 @@ class LocationHandler:
                 {
                     "name": "bottom_up_alert_hunter",
                     "max_tool_calls": 11,
-                    "max_tokens": 110_000,
+                    "max_tokens": 130_000,
                     "instruction": (
-                        f"Chiến lược NHÁNH A (Cross-Library Bottom-Up Alert Hunter): T3 quan sát cảnh báo sai `{obs}` thay vì `{exp}`. {dir_hint} "
-                        f"Hãy dùng `code__grep` KHÔNG phân biệt hoa thường với mẫu `(?i)({obs_pat})` (`head_limit=25`, trong `src/` hoặc `ssl/`, loại `tests/`/`examples/`) "
-                        "để tìm trực tiếp lời gọi phát cảnh báo sai (`SendAlert`, `SSLfatal(..., SSL_AD_...)`, `RLAYERfatal`, `return ...`). "
-                        f"QUAN TRỌNG: nếu nhánh bạn đọc KHÔNG phát `{obs}` (vd vẫn phát `{exp}` hoặc là hàm chỉ chạy sau mã hoá như `tls13_validate_record_header` "
-                        "trong khi bản ghi rõ lúc mới nối đi qua `rec_layer_*`), TUYỆT ĐỐI KHÔNG dừng ở đó — phải tìm đúng nhánh thực sự phát cảnh báo sai! "
-                        "Đọc gọn 40–60 dòng quanh lời gọi đó rồi trả `LocationClaim@1` với `REACTION = MISMATCH` và `observed` khớp cảnh báo sai."
+                        f"Chiến lược NHÁNH A (Agentic Alert-Site Hunter): T3 quan sát cảnh báo sai `{obs}` thay vì `{exp}`. {dir_hint} "
+                        f'BƯỚC 1: Gọi ngay công cụ `code__find_alert_sites(alert="{obs}", keywords=[...])` (truyền các từ khoá từ `requirement.structured`) '
+                        "để quét & xếp hạng toàn bộ điểm phát cảnh báo sai trên toàn kho mã (không bị cắt cụt trên OpenSSL đa tệp hay wolfSSL 48k dòng). "
+                        f"BƯỚC 2: Kiểm tra top ứng viên `#1..#8` (đọc thêm 40–60 dòng quanh ứng viên khớp yêu cầu bằng `code__read` nếu cần xác nhận điều kiện `if`/`switch`), "
+                        f"KHÔNG dừng ở nhánh không phát `{obs}`. Trả `LocationClaim@1` với `REACTION = MISMATCH` và `observed` khớp cảnh báo sai."
                     ),
                 },
                 {
                     "name": "error_to_alert_mapper",
                     "max_tool_calls": 11,
-                    "max_tokens": 110_000,
+                    "max_tokens": 130_000,
                     "instruction": (
                         f"Chiến lược NHÁNH B (2-Step Error-to-Alert & Subsystem Specialist): T3 quan sát cảnh báo sai `{obs}` thay vì `{exp}`. {dir_hint} "
                         "Thực hiện đúng 2 bước (dùng `head_limit=20` cho mỗi `code__grep` để không tràn ngữ cảnh): "
@@ -184,14 +183,16 @@ class LocationHandler:
             {
                 "name": "early_check_ifdef_hunter",
                 "max_tool_calls": 11,
-                "max_tokens": 110_000,
+                "max_tokens": 130_000,
                 "instruction": (
                     f"Chiến lược NHÁNH A (Early-Check & #ifdef Hunter): T3 chứng minh `{diag.signature}` (SUT KHÔNG phát `{exp}`). {dir_hint} "
                     f"QUAN TRỌNG: một nhánh có lời gọi gửi cảnh báo `{exp}` (`SendAlert`/`SSLfatal`/`RLAYERfatal`) đang hoạt động (không bị `[DISABLED]`) KHÔNG PHẢI là chỗ lỗi! "
-                    "Với `record.content_type` gửi rõ lúc mới nối, kiểm tra cả lớp đọc bản ghi rõ (`ssl/record/rec_layer_s3.c` / `DoProcessReplyEx`) thay vì chỉ dừng ở hàm sau mã hoá (`tls13_validate_record_header`). "
-                    "BẮT BUỘC dùng `code__grep` không phân biệt hoa thường `(?i)"
+                    "Với `record.content_type` gửi rõ lúc mới nối (chưa mã hoá), TUYỆT ĐỐI KHÔNG dừng ở hàm chỉ chạy sau mã hoá (`tls13_validate_record_header`) — "
+                    "hãy đọc trực tiếp hàm đọc bản ghi rõ (`ssl3_read_bytes` trong `ssl/record/rec_layer_s3.c` hoặc `DoProcessReplyEx` trong `src/internal.c`) "
+                    "để tìm nhánh xử lý loại bản ghi lạ bị xoá mất `SSLfatal`/`SendAlert` hoặc trả sớm! "
+                    "BẮT BUỘC dùng `code__find_alert_sites` (hoặc `code__grep` `(?i)"
                     + re.escape(exp)
-                    + "` (`head_limit=25`) tìm vị trí gửi cảnh báo có số dòng NHỎ NHẤT trong hàm xử lý, "
+                    + "`) tìm vị trí gửi cảnh báo có số dòng NHỎ NHẤT trong hàm xử lý, "
                     "rồi gọi `code__read` với `offset = (số dòng nhỏ nhất đó - 100), limit = 100` để đọc ngược lên đoạn phía trên, "
                     "tìm đúng nhánh kiểm tra sớm trả lỗi mà thiếu cảnh báo (hoặc bị `[DISABLED]`), rồi trả `LocationClaim@1` với `REACTION = MISMATCH`."
                 ),
@@ -231,6 +232,14 @@ class LocationHandler:
         trig_args = {str(a).lower() for a in getattr(getattr(rbs, "trigger", None), "args", ())}
         is_server_ch = "client_hello" in trig_args
 
+        index: Any = getattr(getattr(self._rt, "providers", None), "code_index", None)
+        wrong_obs = [a for a in diag.observed_alerts if a and a != "none" and a != _expected_alert(inv)]
+        fn_counts: dict[tuple[str, str], int] = {}
+        for _, out_c, _ in candidates:
+            if isinstance(out_c, LocationClaim):
+                k = (out_c.file, out_c.symbol)
+                fn_counts[k] = fn_counts.get(k, 0) + 1
+
         best_idx = 0
         best_key: tuple[int, ...] | None = None
         board: list[dict[str, Any]] = []
@@ -251,6 +260,12 @@ class LocationHandler:
                     for a in output.aspects
                 )
             )
+            # Kiểm chứng tất định: các dòng nguồn mà agent nộp có THỰC SỰ chứa tên cảnh báo sai T3 quan sát không
+            # (chặn tình huống agent điền `observed: decode_error` cho một nhánh thực tế gửi `unexpected_message`).
+            obs_in_source = 0
+            if index is not None and wrong_obs:
+                src_blob = "\n".join(index.lines(output.file, output.line_start, output.line_end)).lower()
+                obs_in_source = int(any(o.lower() in src_blob for o in wrong_obs))
             sym_low = output.symbol.lower()
             note_low = (output.note or "").lower()
             # Phạt nặng nếu yêu cầu phía SERVER (`receive(client_hello)`) nhưng nhánh lại trỏ nhầm hàm phía CLIENT (`ServerHello`).
@@ -261,14 +276,23 @@ class LocationHandler:
                 diag.signature == WRONG_ALERT
                 and ("translate" in sym_low or ("alert" in sym_low and "send" not in sym_low))
             )
-            is_specialist = int(bname.startswith("error_to_alert_mapper"))
-            sem_score = kw_hits + 3 * is_mapper - 5 * wrong_dir
-            # Với REACTION_ABSENT: cùng hàm thì ưu tiên nhánh kiểm tra sớm hơn (số dòng nhỏ hơn) vì lỗi trả sớm nằm trước.
-            earlier_bias = -output.line_start if diag.signature == REACTION_ABSENT else 0
+            # Chỉ ưu tiên tiebreaker cho error_to_alert_mapper khi nó thực sự ở hàm ánh xạ cảnh báo (tránh đè kết quả
+            # từ code__find_alert_sites của bottom_up_alert_hunter ở các ca rec_layer như OU2).
+            is_specialist = int(bname.startswith("error_to_alert_mapper") and bool(is_mapper))
+            # Với bản ghi gửi rõ lúc mới nối (`record.content_type`), ưu tiên nhẹ lớp đọc bản ghi rõ (`rec_layer` / `read_bytes`)
+            # hơn hàm chỉ chạy sau mã hoá (`tls13_validate_record_header`).
+            is_plaintext_ct = "content" in atoms and "type" in atoms
+            enc_only_penalty = int(is_plaintext_ct and "tls13_validate_record_header" in sym_low)
+            sem_score = kw_hits + 3 * is_mapper - 5 * wrong_dir - 2 * enc_only_penalty
+            # Cùng một (file, symbol) thì nhánh kiểm tra sớm hơn (số dòng nhỏ hơn) thực thi trước trong luồng C từ trên xuống.
+            same_fn = fn_counts.get((output.file, output.symbol), 0) > 1
+            earlier_bias = -output.line_start if (same_fn or diag.signature == REACTION_ABSENT) else 0
 
             key: tuple[int, ...] = (
                 int(res.accepted),
                 -wrong_dir,
+                -enc_only_penalty,
+                obs_in_source,
                 matches_obs,
                 has_mismatch,
                 is_mapper,
@@ -284,10 +308,12 @@ class LocationHandler:
                     "symbol": output.symbol,
                     "file": output.file,
                     "lines": [output.line_start, output.line_end],
+                    "obs_in_source": bool(obs_in_source),
                     "matches_obs": bool(matches_obs),
                     "has_mismatch": bool(has_mismatch),
                     "sem_score": sem_score,
                     "wrong_dir": bool(wrong_dir),
+                    "wrong_stage": bool(enc_only_penalty),
                     "errors": list(res.errors),
                 }
             )
@@ -323,14 +349,27 @@ class LocationHandler:
                     f"thuộc thân hàm `{enclosing.name}` (không phải `{output.symbol}`). "
                     f"Hãy đổi `symbol` và `call_path` sang `{enclosing.name}`."
                 )
-        # Chặn sớm lỗi nhầm chiều giao thức (vd SUT là SERVER nhận ClientHello nhưng agent trỏ vào DoServerHello của client).
+        # Chặn sớm lỗi nhầm chiều giao thức (vd SUT là SERVER nhận ClientHello nhưng agent trỏ vào DoServerHello của client)
+        # hoặc nhầm giai đoạn bản ghi (bản ghi rõ lúc mới nối `record.content_type` nhưng trỏ vào hàm chỉ chạy sau mã hoá).
         rbs = inv.domain_state.get(RBS_KEY)
         trig_args = {str(a).lower() for a in getattr(getattr(rbs, "trigger", None), "args", ())}
+        rbs_state = str(getattr(rbs, "state", "")).lower()
+        where_field = str(getattr(getattr(rbs, "where", None), "field", "")).lower()
+        variant_fields = {str(getattr(v, "field", "")).lower() for v in getattr(rbs, "variants", ())}
+        is_plaintext_record = rbs_state == "initial" and (
+            where_field == "record.content_type" or "record.content_type" in variant_fields
+        )
         sym_low = output.symbol.lower()
         if not errors and "client_hello" in trig_args and "serverhello" in sym_low and "clienthello" not in sym_low:
             errors.append(
                 f"WRONG_PROTOCOL_DIRECTION: yêu cầu là phía SERVER nhận `client_hello`, nhưng `{output.symbol}` là hàm phía CLIENT. "
                 "Hãy tìm đúng hàm xử lý ClientHello / extension / ánh xạ lỗi→cảnh báo phía server."
+            )
+        if not errors and is_plaintext_record and "tls13_validate_record_header" in sym_low:
+            errors.append(
+                "WRONG_RECORD_STAGE: yêu cầu `record.content_type` ở trạng thái `initial` gửi bản ghi rõ lúc mới nối (chưa mã hoá), "
+                "còn `tls13_validate_record_header` chỉ chạy cho bản ghi đã mã hoá. "
+                "Hãy gọi `code__find_alert_sites` tìm lớp đọc bản ghi rõ (`rec_layer` / `ssl3_read_bytes` / `DoProcessReplyEx`) và tìm nhánh gửi cảnh báo khi chưa chọn phiên bản."
             )
         if not errors:
             t3s = [e.payload for e in self._rt.store.for_requirement(req_id) if isinstance(e.payload, T3Payload)]

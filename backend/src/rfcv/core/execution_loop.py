@@ -751,11 +751,12 @@ class ExecutionLoop:
             and bool(cast("Mapping[str, Any]", b).get("accepted"))
             and bool(cast("Mapping[str, Any]", b).get("has_mismatch"))
             and not bool(cast("Mapping[str, Any]", b).get("wrong_dir"))
+            and not bool(cast("Mapping[str, Any]", b).get("wrong_stage"))
             for b in pre_branches
         )
         if not any_clean:
             for idx, (spec, (bname, outcome, _, _)) in enumerate(zip(branch_specs, results, strict=True)):
-                if outcome.output is None and bname in (
+                if (outcome.output is None or outcome.failure is not None) and bname in (
                     "bottom_up_alert_hunter",
                     "error_to_alert_mapper",
                     "early_check_ifdef_hunter",

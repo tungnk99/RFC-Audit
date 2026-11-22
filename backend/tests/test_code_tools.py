@@ -185,3 +185,20 @@ async def test_eval_answers_defined_from_build_flags_and_definitions(
     assert "giá trị: 2" in yes.text
     no = await gw.call(session(), "code.eval", {"expr": "defined(HAVE_MAX_FRAGMENT)"})
     assert "giá trị: 0" in no.text and "không có -D" in no.text
+
+
+async def test_find_alert_sites_ranks_keywords_and_marks_shown_lines(
+    policy: PolicyStore, trace: TraceLog, index: InMemoryCodeIndex
+) -> None:
+    index.sources["src/internal.c"][810] = "    SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_UNKNOWN_CONTENT_TYPE);"
+    s = session()
+    gw = gateway(policy, trace, index, RecordingExecutor())
+    r = await gw.call(
+        s,
+        "code.find_alert_sites",
+        {"alert": "decode_error", "keywords": ["record", "content_type"], "limit": 5, "window": 2},
+    )
+    assert r.label.name == "UNTRUSTED"
+    assert "GetRecordHeader" in r.text
+    assert "SSL_AD_DECODE_ERROR" in r.text
+    assert ("src/internal.c", 811) in s.shown_lines

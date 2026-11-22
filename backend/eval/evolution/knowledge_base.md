@@ -214,3 +214,20 @@ Tài liệu này được sinh và cập nhật tự động sau mỗi vòng l�
 - **Tri thức & Bài học rút ra (cho luận văn):** WRONG_OBSERVED_ALERT ha guc OU2 ngay lap tuc (strict hit, giam 62% token: 534k -> 205k), dua tong so ca OpenSSL kho da dat strict hit len 6/7 (85.7%). Tuy nhien tren kien truc da hinh 15+ tep cua OpenSSL 3.x, thuan AI Agent model Flash cham tran don luot o 29-43% -> diem chuyen giao khoa hoc sang nghien cuu ket hop (Hybrid) hoac mo hinh suy luan manh hon.
 
 ---
+
+## Gen-22 → Gen-28 · `advanced` (OpenSSL 3.x — Agentic Tool + Skill Architecture) · **KEEP** (`2026-11-22T08:56:41Z`)
+
+- **Bước ngoặt kiến trúc (theo chỉ đạo luận văn):** Thay vì chạy lát cắt tĩnh ẩn ngoài vòng lặp (Hybrid), đóng gói phân tích tĩnh thành **Công cụ chỉ-đọc (`code.find_alert_sites`) + Kỹ năng (`backend/skills/core/locate-alert-sites/SKILL.md`)** để AI Agent chủ động triệu gọi trong vòng lặp công cụ (mọi kết quả gắn nhãn `TrustLabel.UNTRUSTED` qua `ToolGateway` & ghi nhận `shown_lines` cho `SchemaGate`).
+- **Tệp thay đổi:** `backend/src/rfcv/gates/code_tools.py`, `backend/skills/core/locate-alert-sites/SKILL.md`, `backend/agents/code_reader/role.yaml`, `backend/agents/code_reader/prompt.md`, `backend/agents/code_reader/handler.py`, `backend/src/rfcv/core/execution_loop.py`, `backend/src/rfcv/runtime/pydantic_ai/runner.py`, `backend/tests/test_code_tools.py`, `backend/tests/test_agent_tournament.py`.
+- **Chuỗi tiến hoá trên 8 ca OpenSSL 3.x Tầng `advanced` (`OU2, OU3, OU4, OG1, OG2, OG4, OR1, OX3`):**
+  - **Gen-22 (`4/7 = 57,1% STRICT`):** AI Agent chủ động gọi `code.find_alert_sites` 2–10 lần/ca, tăng ngay từ 29–43% lên 57,1% (`OU3, OG1, OG4, OR1`).
+  - **Gen-23 (`5/7 = 71,4% STRICT` — PASS Graduation Gate `≥ 70%`):** Thêm retry `ModelTimeoutError` + thu hẹp `is_specialist` tiebreaker (`OU3, OG1, OG2, OG4, OR1`).
+  - **Gen-24..26 (`4/7 → 5/7 = 71,4% STRICT`):** Bổ sung `WRONG_RECORD_STAGE` (kiểm tra tổng quát `state == "initial"` + `record.content_type` trong `variants`/`where`) và mở Adaptive Rescue khi có `outcome.failure`.
+  - **Gen-27 (`4/7` nhưng Branch A trúng cả `OU2` & `OU3`):** Cập nhật `locate-alert-sites/SKILL.md` (nguyên lý bản ghi rõ `state=initial` vs sau mã hoá + `early-return` cho `REACTION_ABSENT`) và đệm retry `130k` — `bottom_up_alert_hunter` trúng tuyệt đối cả `OU2` & `OU3` (`ssl3_read_bytes:[846, 857]`, dòng `855`) ngay lượt đầu, 0 retry!
+  - **Gen-28 (`6/7 = 85,7% ALL STRICT > 85%`, `8/8 = 100%` verdict):** Bổ sung kiểm chứng mã nguồn tất định `obs_in_source` (xác minh `[line_start, line_end]` trong `CodeIndex` thực sự chứa mã cảnh báo sai T3) + `earlier_bias` cho cùng `(file, symbol)` trong `select_branch()`.
+- **Kết quả chốt Tầng `advanced` (`Gen-28`, `runs/real/tier_adv_gen28_skill`):**
+  - `verdict_acc`: **`8/8 = 100%`** (**`56/56 = 100%`** qua 7 đợt liên tiếp `Gen-22..Gen-28`, **`0` false compliant**, **`0` false violation**).
+  - `defect_hit`: **`6/7 = 85,7%` — TẤT CẢ 6/6 ĐẠT `defect_hit_strict: true`** (`OU2`, `OU3`, `OG1`, `OG2`, `OG4`, `OR1`).
+  - **Cổng an toàn & đặc tả (`CT08-injection`, `CT26-bad-rbs`):** `29/29 passed (100%)`.
+
+---

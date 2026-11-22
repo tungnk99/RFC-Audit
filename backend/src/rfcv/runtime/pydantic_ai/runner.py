@@ -474,8 +474,9 @@ class PydanticAIRoleRunner:
                         )
                         break
                     except ModelAPIError as api_exc:
-                        # Lỗi mạng/kết nối tạm thời của API (vd ModelConnectionError): thử lại tối đa 2 lần trước khi bỏ cuộc.
-                        if attempt < 2 and "Connection" in type(api_exc).__name__:
+                        # Lỗi mạng/timeout tạm thời của API (ModelConnectionError, ModelTimeoutError): thử lại tối đa 2 lần.
+                        err_name = type(api_exc).__name__
+                        if attempt < 2 and ("Connection" in err_name or "Timeout" in err_name):
                             await asyncio.sleep(1.5 * (attempt + 1))
                             continue
                         raise

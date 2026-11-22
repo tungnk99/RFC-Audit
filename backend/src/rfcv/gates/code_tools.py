@@ -146,6 +146,22 @@ class EvalParams(_P):
     )
 
 
+class AlertSiteParams(_P):
+    alert: str = Field(
+        min_length=2,
+        max_length=80,
+        description="Tên mã cảnh báo cần quét toàn cục không phân biệt hoa thường (vd `illegal_parameter`, `decode_error`, `record_overflow`).",
+        examples=["illegal_parameter", "decode_error", "record_overflow", "unexpected_message"],
+    )
+    keywords: list[str] = Field(
+        default_factory=list,
+        max_length=12,
+        description="Các từ khoá ngữ cảnh của yêu cầu (vd `['key_share', 'group']` hoặc `['content_type', 'record']`) để xếp hạng ứng viên.",
+    )
+    limit: int = Field(default=8, ge=1, le=12, description="Số ứng viên hàng đầu trả về (mặc định 8).")
+    window: int = Field(default=6, ge=2, le=12, description="Số dòng ngữ cảnh trên/dưới mỗi điểm khớp (mặc định 6).")
+
+
 TOOL_DOCS: dict[str, str] = {
     "code.grep": (
         "Tìm văn bản bằng ripgrep trong phạm vi kiểm chứng, giống Grep của Claude Code, và chú thêm HÀM CHỨA mỗi dòng khớp.\n"
@@ -177,6 +193,14 @@ TOOL_DOCS: dict[str, str] = {
         "Trả về: giá trị, vết thay thế, tên chưa phân giải (không đoán), cảnh báo nếu nhiều định nghĩa cùng được biên dịch.\n"
         'Ví dụ: {"expr": "MAX_RECORD_SIZE + MAX_MSG_EXTRA"}'
     ),
+    "code.find_alert_sites": (
+        "Quét tĩnh toàn cục trên chỉ mục mã nguồn (loại bỏ thư mục test/example, không bị cắt cụt `head_limit`) để tìm và xếp hạng "
+        "các điểm phát mã cảnh báo (`SendAlert`, `SSLfatal`, `RLAYERfatal`, `return ...`) không phân biệt hoa thường theo từ khoá yêu cầu.\n"
+        "Khi dùng: khi kho mã tách nhiều tệp (vd OpenSSL `ssl/statem/`, `ssl/record/`) hoặc tệp rất dài (48k dòng) khiến `code.grep` bị cắt cụt "
+        "hoặc có quá nhiều vị trí cùng phát một mã cảnh báo.\n"
+        "Trả về: top ứng viên kèm tên hàm bao quanh `symbol (a–b)`, lát mã ±`window` dòng có đánh dấu `>>>` và `[DISABLED]` (mọi dòng đều tính là ĐÃ ĐỌC cho SchemaGate).\n"
+        'Ví dụ: {"alert": "illegal_parameter", "keywords": ["key_share", "group", "client_hello"]}'
+    ),
 }
 
 _TITLES = {
@@ -184,6 +208,7 @@ _TITLES = {
     "code.glob": "Liệt kê tệp theo mẫu",
     "code.read": "Đọc tệp hoặc hàm",
     "code.eval": "Tính hằng số C",
+    "code.find_alert_sites": "Quét & xếp hạng điểm phát cảnh báo",
 }
 
 CC_TOOL_DESCRIPTORS: tuple[ToolDescriptor, ...] = (
@@ -191,6 +216,7 @@ CC_TOOL_DESCRIPTORS: tuple[ToolDescriptor, ...] = (
     ToolDescriptor("code.glob", Effect.SANDBOXED_RUN, reads_untrusted=True),
     ToolDescriptor("code.read", Effect.READ, reads_untrusted=True),
     ToolDescriptor("code.eval", Effect.READ, reads_untrusted=True),
+    ToolDescriptor("code.find_alert_sites", Effect.READ, reads_untrusted=True),
 )
 
 
@@ -553,11 +579,106 @@ def build_cc_tools(
         rows += [f"cảnh báo: {w}" for w in warnings]
         return _result(f"tool=eval {p.expr!r}", "\n".join(rows), frozenset(used))
 
+    # ---- find_alert_sites (năng lực phân tích tĩnh toàn cục cho AI Agent tự gọi) ----------------------------------
+
+    _noise_dir = re.compile(r"^(?:tests?|examples?|testsuite|fuzz|demos?|docs?|bench|benchmark|scripts?|apps?)/", re.I)
+    _action_re = re.compile(r"\b(?:sendalert|sslfatal|rlayerfatal|alert_fatal|return|goto|tls_alert)\b", re.I)
+    _log_re = re.compile(r'^\s*(?:/\*|\*|//|WOLFSSL_MSG|printf|fprintf|ERR_raise|case\s+\w+:\s*return\s*")')
+    _tok_re = re.compile(r"[A-Za-z0-9]+")
+
+    async def find_alert_sites(p: BaseModel, s: ToolSession) -> ToolResult:
+        assert isinstance(p, AlertSiteParams)
+        term = p.alert.strip()
+        pat = re.compile(rf"\b[A-Za-z0-9_]*{re.escape(term)}\b", re.IGNORECASE)
+        stop = {"send", "receive", "respond", "close", "discard", "alert", "true", "false", "none", "valid"}
+        atoms = tuple(
+            dict.fromkeys(t for kw in p.keywords for t in _tok_re.findall(kw.lower()) if len(t) >= 3 and t not in stop)
+        )
+        compiled_of: Any = getattr(index, "compiled_lines", None)
+        compiled_cache: dict[str, set[int] | None] = {}
+
+        def _comp(f: str) -> set[int] | None:
+            if f not in compiled_cache:
+                compiled_cache[f] = (
+                    compiled_of(f, tuple(build_flags), closed_world=closed_world) if compiled_of is not None else None
+                )
+            return compiled_cache[f]
+
+        files = [
+            f
+            for f in index.files()
+            if f.endswith((".c", ".cc", ".cpp", ".h")) and not _noise_dir.search(f.replace("\\", "/"))
+        ]
+        files.sort(key=lambda f: (not f.endswith(".c"), f))
+
+        hits: list[tuple[int, str, int, Any]] = []
+        for rel in files[:250]:
+            total = line_count(rel) or 200_000
+            src_lines = index.lines(rel, 1, total)
+            if not src_lines:
+                continue
+            file_low = rel.replace("\\", "/").lower()
+            for idx0, raw in enumerate(src_lines):
+                if pat.search(raw) is None:
+                    continue
+                lineno = idx0 + 1
+                sym = index.containing_symbol(rel, lineno)
+                if sym is None or sym.kind not in FUNCTION_KINDS:
+                    continue
+                sym_low = sym.name.lower()
+                lo = max(sym.line_start, lineno - 12)
+                hi = min(sym.line_end, lineno + 12)
+                ctx_text = "\n".join(src_lines[lo - 1 : hi]).lower()
+                score = sum(3 for tok in atoms if tok in ctx_text or tok in sym_low or tok in file_low)
+                if _action_re.search(raw):
+                    score += 2
+                if _log_re.search(raw):
+                    score -= 5
+                if "client" in atoms and "serverhello" in sym_low and "clienthello" not in sym_low:
+                    score -= 8
+                hits.append((score, rel, lineno, sym))
+
+        if not hits:
+            return _result(f"tool=find_alert_sites alert={term!r}", "(không tìm thấy vị trí phát cảnh báo nào)")
+
+        hits.sort(key=lambda h: (-h[0], h[1], h[2]))
+        selected: list[tuple[int, str, int, Any]] = []
+        for h in hits:
+            if any(x[1] == h[1] and abs(x[2] - h[2]) <= p.window for x in selected):
+                continue
+            selected.append(h)
+            if len(selected) >= p.limit:
+                break
+
+        out_lines: list[str] = []
+        shown: set[tuple[str, int]] = set()
+        for rank, (score, rel, lineno, sym) in enumerate(selected, 1):
+            lo = max(sym.line_start, lineno - p.window)
+            hi = min(sym.line_end, lineno + p.window)
+            snippet = index.lines(rel, lo, hi)
+            comp = _comp(rel)
+            out_lines.append(
+                f"### #{rank} (score={score}): {rel}:{lineno} [symbol: {sym.name} ({sym.line_start}–{sym.line_end})]"
+            )
+            for off, line_text in enumerate(snippet):
+                cur = lo + off
+                shown.add((rel, cur))
+                tag = "[DISABLED] " if (comp is not None and cur not in comp) else ""
+                mark = ">>>" if cur == lineno else "   "
+                out_lines.append(f"{rel}:{cur}:{mark} {tag}{line_text}")
+        return _result(
+            f"tool=find_alert_sites alert={term!r} ({len(selected)}/{len(hits)} khớp)",
+            "\n".join(out_lines),
+            frozenset(shown),
+            cap=READ_BYTES + 4096,
+        )
+
     handlers: list[tuple[str, type[BaseModel], Any]] = [
         ("code.grep", GrepParams, grep),
         ("code.glob", GlobParams, glob),
         ("code.read", ReadParams, read),
         ("code.eval", EvalParams, eval_expr),
+        ("code.find_alert_sites", AlertSiteParams, find_alert_sites),
     ]
     return [
         ToolSpec(name, TOOL_DOCS[name], params, handler, title=_TITLES[name], read_only=True)
