@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 340" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="820" height="340" fill="#ffffff" rx="6"/>
+  <text x="410" y="26" text-anchor="middle" font-size="14" font-weight="bold" fill="#111827">Quá trình Tiến hoá Độ chính xác Định vị Lỗi (defect_hit_strict) qua 33 Thế hệ</text>
+  <text x="410" y="44" text-anchor="middle" font-size="10.5" fill="#4b5563">Cùng mô hình nền DeepSeek-V4-Flash · Giữ vững 100% Verdict Accuracy &amp; 0% False Compliant xuyên suốt</text>
+
+  <!-- Grid lines -->
+  <g stroke="#e5e7eb" stroke-width="1">
+    <line x1="70" y1="70" x2="770" y2="70"/>
+    <line x1="70" y1="114" x2="770" y2="114"/>
+    <line x1="70" y1="158" x2="770" y2="158"/>
+    <line x1="70" y1="202" x2="770" y2="202"/>
+    <line x1="70" y1="246" x2="770" y2="246"/>
+    <line x1="70" y1="290" x2="770" y2="290"/>
+  </g>
+  <!-- 85% target line -->
+  <line x1="70" y1="103" x2="770" y2="103" stroke="#10b981" stroke-width="1.4" stroke-dasharray="5,4"/>
+  <text x="765" y="98" text-anchor="end" font-size="9.5" font-weight="bold" fill="#059669">Mục tiêu &gt; 85%</text>
+
+  <!-- Y axis labels -->
+  <g font-size="10" fill="#374151" text-anchor="end">
+    <text x="62" y="74">100%</text>
+    <text x="62" y="118">80%</text>
+    <text x="62" y="162">60%</text>
+    <text x="62" y="206">40%</text>
+    <text x="62" y="250">20%</text>
+    <text x="62" y="294">0%</text>
+  </g>
+  <line x1="70" y1="70" x2="70" y2="290" stroke="#374151" stroke-width="1.2"/>
+  <line x1="70" y1="290" x2="770" y2="290" stroke="#374151" stroke-width="1.2"/>
+
+  <!-- wolfSSL Intermediate curve: Gen-9 (18%) -> Gen-10 (56%) -> Gen-13 (73%) -> Gen-17 (81.8%) -> Gen-18 (90.9%) -->
+  <polyline fill="none" stroke="#2563eb" stroke-width="2.6"
+    points="110,250 185,167 265,129 345,110 420,90"/>
+  <g fill="#2563eb">
+    <circle cx="110" cy="250" r="4.5"/><text x="110" y="240" text-anchor="middle" font-size="9.5" font-weight="bold">18%</text>
+    <circle cx="185" cy="167" r="4.5"/><text x="185" y="157" text-anchor="middle" font-size="9.5" font-weight="bold">56%</text>
+    <circle cx="265" cy="129" r="4.5"/><text x="265" y="119" text-anchor="middle" font-size="9.5" font-weight="bold">73%</text>
+    <circle cx="345" cy="110" r="4.5"/><text x="345" y="100" text-anchor="middle" font-size="9.5" font-weight="bold">81,8%</text>
+    <circle cx="420" cy="90" r="5.5"/><text x="420" y="80" text-anchor="middle" font-size="10" font-weight="bold">90,9%</text>
+  </g>
+
+  <!-- OpenSSL Advanced curve: Gen-18 (29%) -> Gen-20 (43%) -> Gen-22 (57.1%) -> Gen-23 (71.4%) -> Gen-28..30 (85.7%) -->
+  <polyline fill="none" stroke="#ea580c" stroke-width="2.6"
+    points="420,226 490,195 560,164 625,133 690,101"/>
+  <g fill="#ea580c">
+    <circle cx="420" cy="226" r="4.5"/><text x="420" y="242" text-anchor="middle" font-size="9.5" font-weight="bold">29%</text>
+    <circle cx="490" cy="195" r="4.5"/><text x="490" y="185" text-anchor="middle" font-size="9.5" font-weight="bold">43%</text>
+    <circle cx="560" cy="164" r="4.5"/><text x="560" y="154" text-anchor="middle" font-size="9.5" font-weight="bold">57,1%</text>
+    <circle cx="625" cy="133" r="4.5"/><text x="625" y="123" text-anchor="middle" font-size="9.5" font-weight="bold">71,4%</text>
+    <circle cx="690" cy="101" r="5.5"/><text x="690" y="90" text-anchor="middle" font-size="10" font-weight="bold">85,7%</text>
+  </g>
+
+  <!-- Held-out Gen-33 point: 100% -->
+  <circle cx="748" cy="70" r="6.5" fill="#059669" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="748" y="61" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#059669">100%</text>
+
+  <!-- X axis labels -->
+  <g font-size="9.2" fill="#374151" text-anchor="middle">
+    <text x="110" y="305">Gen-9</text><text x="110" y="317" font-size="8.2" fill="#6b7280">Đơn-agent</text>
+    <text x="185" y="305">Gen-10</text><text x="185" y="317" font-size="8.2" fill="#6b7280">Best-of-2</text>
+    <text x="265" y="305">Gen-13</text><text x="265" y="317" font-size="8.2" fill="#6b7280">Chuyên gia</text>
+    <text x="345" y="305">Gen-17</text><text x="345" y="317" font-size="8.2" fill="#6b7280">Rescue</text>
+    <text x="420" y="305">Gen-18</text><text x="420" y="317" font-size="8.2" fill="#6b7280">ACI [sym]</text>
+    <text x="490" y="305">Gen-20</text><text x="490" y="317" font-size="8.2" fill="#6b7280">Đa thư viện</text>
+    <text x="560" y="305">Gen-22</text><text x="560" y="317" font-size="8.2" fill="#6b7280">Tool+Skill</text>
+    <text x="625" y="305">Gen-23</text><text x="625" y="317" font-size="8.2" fill="#6b7280">Pass ≥70%</text>
+    <text x="690" y="305">Gen-28..30</text><text x="690" y="317" font-size="8.2" fill="#6b7280">obs_in_src</text>
+    <text x="748" y="305" font-weight="bold" fill="#059669">Gen-33</text><text x="748" y="317" font-size="8.2" fill="#059669">held_out</text>
+  </g>
+
+  <!-- Legend -->
+  <g font-size="9.5" fill="#111827">
+    <line x1="85" y1="60" x2="108" y2="60" stroke="#2563eb" stroke-width="2.6"/>
+    <text x="114" y="63">Tầng intermediate (wolfSSL + OpenSSL, 11 VIOLATION)</text>
+    <line x1="385" y1="60" x2="408" y2="60" stroke="#ea580c" stroke-width="2.6"/>
+    <text x="414" y="63">Tầng advanced (OpenSSL 3.x, 7 VIOLATION)</text>
+    <circle cx="622" cy="60" r="4.5" fill="#059669"/>
+    <text x="631" y="63">held_out (19 ca)</text>
+  </g>
+</svg>
