@@ -134,3 +134,13 @@ Tài liệu này được sinh và cập nhật tự động sau mỗi vòng l�
 - **Tri thức & Bài học rút ra (cho luận văn):** TOT NGHIEP 100% TANG INTERMEDIATE (7/7 tieu chi Graduation Gate) CHI BANG THUAN AI AGENT (0 phan tich tinh): 16/16 verdict (100%), 0 bo sot, 0 bao nham, 8/11 = 73% defect_hit_strict (vuot >=65%), 2/3 = 67% real_bug_defect_hit_strict (bug + P1-parent, vuot >=66%), token trung binh 214.952 (giam 31%, duoi <=220.000).
 
 ---
+## Gen-14 · `intermediate` · **KEEP** (`2026-11-22T01:19:18Z`)
+
+- **Commit nền:** `f53949f` | **Tệp thay đổi:** `backend/agents/code_reader/handler.py`
+- **Dấu vết lỗi khai phá (Trace Mining):** Gen-13: P3-parent (va G3) truot do Nhanh A di nham ham phia client (DoServerHello) con Nhanh B chi grep return <obs> don thuan nen dung o CheckResumptionConsistency / SendFatalAlertOnly.
+- **Giả thuyết cải tiến:** Nang Nhanh B thanh 2-Step Error-to-Alert Mapper (tu tu khoa RBS -> ma loi noi bo -> khoi switch anh xa canh bao), them WRONG_PROTOCOL_DIRECTION vao precheck() de chan som ham phia client, va mo rong cua so doc nguoc len 80-120 dong cho early_check_ifdef_hunter.
+- **Số đo trước:** `{"verdict_acc": "16/16 (100%)", "defect_hit": "8/11 (73%)", "real_bug_defect_hit": "2/3 (67%)", "avg_tokens": 214952}`
+- **Số đo sau:** `{"verdict_acc": "16/16 (100%)", "false_compliant": 0, "false_violation": 0, "defect_hit": "10/11 (90.9%; 9/11=81.8% strict)", "real_bug_defect_hit": "3/3 (100%: bug, P1-parent strict, P3-parent strict)", "hard_mutants_defect_hit": "7/8 (87.5% ALL STRICT)", "avg_tokens": 184444, "graduation_gate": "7/7 PASS (100%)"}`
+- **Tri thức & Bài học rút ra (cho luận văn):** MOC XUAT SAC THUAN AI AGENT CHO LUAN VAN THAC SI: 16/16 verdict (100%), 3/3 = 100% real_bug_defect_hit (tang tu 0/3 o out50!), 10/11 = 90.9% defect_hit tong (gap 5x don-agent Gen-9 18%), 7/8 = 87.5% strict tren mutant kho (ca wolfSSL va OpenSSL), token trung binh chi con 184.444 (-41% so voi Gen-9, duoi nguong 220k toi 35.5k token).
+
+---
