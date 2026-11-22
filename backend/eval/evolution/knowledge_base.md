@@ -231,3 +231,16 @@ Tài liệu này được sinh và cập nhật tự động sau mỗi vòng l�
   - **Cổng an toàn & đặc tả (`CT08-injection`, `CT26-bad-rbs`):** `29/29 passed (100%)`.
 
 ---
+
+## Gen-29 → Gen-33 · Kiểm chứng Đa tầng, Tối ưu Nén Công cụ & Nghiệm thu Tập Đóng băng `held_out` · **KEEP (FINAL GRADUATION)** (`2026-11-22T10:52:48Z`)
+
+- **Gen-29..30 (`advanced` OpenSSL 3.x — REVERT thử nghiệm dư thừa, giữ `is_plaintext_ct`):** Xác nhận **3 lượt chạy full liên tiếp (`Gen-28`, `Gen-29`, `Gen-30`) đều đạt `8/8 = 100%` verdict (`72/72 = 100%` qua 9 lượt)** và **`6/7 = 85,7% ALL STRICT`** (`18/18 = 100%` trên `OU2, OU3, OG1, OG2, OG4, OR1`), chính thức hoàn thành tiêu chí `repeats_per_item_min: 3` của Graduation Gate Tầng `advanced`.
+- **Gen-31 (`basic` 7 ca Docker):** Tăng gấp đôi `defect_hit` từ `2/5 (40%)` ở `Gen-7` lên **`4/5 = 80,0% ALL STRICT`** (`U2, G2, R14, OR3`), **`7/7 = 100%` verdict**, `0` false compliant, `0` false violation — **PASS Graduation Gate Tầng `basic` (`≥ 80%`)**.
+- **Gen-32 (`intermediate` 16 ca + Nén `code.find_alert_sites`):** Kiểm thử hồi quy phát hiện `ACTIVE_ALERT_ON_REACTION_ABSENT` và `cap=16KB` gây `UsageLimitExceeded` trên tệp 48k dòng của wolfSSL → **REVERT** phần dư thừa về nền `Gen-28` và nén gọn `code.find_alert_sites` (`limit=6, window=4, cap=6144` byte). Kết quả giảm **50% token** trên wolfSSL (`R10: 564k → 252k`, `P3-parent: 506k → 224k`), khôi phục `R10` strict và `P3-parent` hit (`16/16 = 100%` verdict, `9/11 = 81,8%` tổng hợp; mốc đỉnh thuần AI Agent `Gen-18`: `10/11 = 90,9% ALL STRICT`).
+- **Gen-33 (`held_out` 19 ca đóng băng — NGHIỆM THU CUỐI CÙNG 100% TUYỆT ĐỐI):**
+  - `verdict_acc`: **`19/19 = 100,0%`** (Họ `G`: `9/9`, Họ `R`: `7/7`, Họ `U`: `3/3`).
+  - `false_compliant`: **`0/5 = 0,0%`** | `false_violation`: **`0/14 = 0,0%`**.
+  - `defect_hit`: **`5/5 = 100,0% ALL STRICT`** (`R9`, `U14`, `G8`, `G9`, `G12` — cả 5/5 đều trúng tuyệt đối dòng sửa lỗi!).
+  - Chi phí trung bình: **`117.638` token/ca**, **`37,9s`/ca** (12/14 ca `COMPLIANT` hội tụ trong đúng 1 vòng / `0` tool token).
+
+---

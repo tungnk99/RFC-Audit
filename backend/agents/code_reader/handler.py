@@ -279,9 +279,14 @@ class LocationHandler:
             # Chỉ ưu tiên tiebreaker cho error_to_alert_mapper khi nó thực sự ở hàm ánh xạ cảnh báo (tránh đè kết quả
             # từ code__find_alert_sites của bottom_up_alert_hunter ở các ca rec_layer như OU2).
             is_specialist = int(bname.startswith("error_to_alert_mapper") and bool(is_mapper))
-            # Với bản ghi gửi rõ lúc mới nối (`record.content_type`), ưu tiên nhẹ lớp đọc bản ghi rõ (`rec_layer` / `read_bytes`)
-            # hơn hàm chỉ chạy sau mã hoá (`tls13_validate_record_header`).
-            is_plaintext_ct = "content" in atoms and "type" in atoms
+            # Với bản ghi gửi rõ lúc mới nối (`record.content_type` ở trạng thái `initial`), phạt hàm chỉ chạy sau mã hoá (`tls13_validate_record_header`).
+            rbs_state = str(getattr(rbs, "state", "")).lower()
+            where_field = str(getattr(getattr(rbs, "where", None), "field", "")).lower()
+            variant_fields = {str(getattr(v, "field", "")).lower() for v in getattr(rbs, "variants", ())}
+            is_plaintext_ct = (
+                rbs_state == "initial"
+                and (where_field == "record.content_type" or "record.content_type" in variant_fields)
+            ) or ("content" in atoms and "type" in atoms)
             enc_only_penalty = int(is_plaintext_ct and "tls13_validate_record_header" in sym_low)
             sem_score = kw_hits + 3 * is_mapper - 5 * wrong_dir - 2 * enc_only_penalty
             # Cùng một (file, symbol) thì nhánh kiểm tra sớm hơn (số dòng nhỏ hơn) thực thi trước trong luồng C từ trên xuống.

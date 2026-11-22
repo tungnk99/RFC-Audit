@@ -158,8 +158,8 @@ class AlertSiteParams(_P):
         max_length=12,
         description="Các từ khoá ngữ cảnh của yêu cầu (vd `['key_share', 'group']` hoặc `['content_type', 'record']`) để xếp hạng ứng viên.",
     )
-    limit: int = Field(default=8, ge=1, le=12, description="Số ứng viên hàng đầu trả về (mặc định 8).")
-    window: int = Field(default=6, ge=2, le=12, description="Số dòng ngữ cảnh trên/dưới mỗi điểm khớp (mặc định 6).")
+    limit: int = Field(default=6, ge=1, le=12, description="Số ứng viên hàng đầu trả về (mặc định 6).")
+    window: int = Field(default=4, ge=2, le=12, description="Số dòng ngữ cảnh trên/dưới mỗi điểm khớp (mặc định 4).")
 
 
 TOOL_DOCS: dict[str, str] = {
@@ -670,7 +670,7 @@ def build_cc_tools(
             f"tool=find_alert_sites alert={term!r} ({len(selected)}/{len(hits)} khớp)",
             "\n".join(out_lines),
             frozenset(shown),
-            cap=READ_BYTES + 4096,
+            cap=6144,
         )
 
     handlers: list[tuple[str, type[BaseModel], Any]] = [
