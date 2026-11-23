@@ -43,6 +43,8 @@ class ServerSpec:
     workdir: str | None = None
     rev_file: str | None = None  # tệp trong image ghi commit đã dựng (ví dụ /sut/.rev)
     expect_rev: str | None = None  # commit mà adapter yêu cầu; lệch thì từ chối chạy (ràng buộc C3)
+    port: int = PORT
+    udp: bool = False
 
 
 WOLFSSL_COMMAND = ("./examples/server/server", "-v", "4", "-d", "-g", "-i", "-p", str(PORT))
@@ -58,6 +60,10 @@ GNUTLS_COMMAND = (
 OPENSSL_SUT_COMMAND = (
     "/sut/openssl", "s_server", "-accept", str(PORT), "-cert", "/ref/cert.pem", "-key", "/ref/key.pem", "-tls1_3", "-www",
 )  # fmt: skip
+NGHTTP2_COMMAND = ("/sut/nghttpd", "--no-tls", "-d", "/tmp", "8080")
+DNSMASQ_COMMAND = ("/sut/dnsmasq", "--no-daemon", "--port=5353", "--no-resolv", "--address=/example.test/127.0.0.1")
+DROPBEAR_COMMAND = ("/sut/dropbear", "-F", "-E", "-R", "-p", "127.0.0.1:2222")
+NGTCP2_COMMAND = ("/sut/qtlsserver", "127.0.0.1", "4433", "/ref/key.pem", "/ref/cert.pem")
 
 
 def default_specs(
@@ -65,8 +71,8 @@ def default_specs(
 ) -> dict[str, ServerSpec]:
     """Bảng cài đặt → server. Image SUT gắn thẻ theo 12 ký tự đầu của commit (xem eval/README.md).
 
-    `sut_impl="openssl"`: SUT là OpenSSL dựng từ git (`rfcv/sut-openssl:<sha12>`), khi đó `openssl` trong bảng là SUT chứ không phải
-    bản tham chiếu Debian, và wolfSSL ở HEAD thay chỗ làm bản tham chiếu độc lập thứ hai cùng GnuTLS."""
+    Hỗ trợ đầy đủ 5 giao thức: TLS 1.3 (`wolfssl`, `openssl`, `gnutls`), HTTP/2 (`nghttp2`),
+    DNS (`dnsmasq`/`knot`), SSH (`dropbear`/`openssh`), QUIC (`ngtcp2`)."""
     specs = {
         "wolfssl": ServerSpec(
             sut_image or (f"rfcv/sut-wolfssl:{sut_commit[:12]}" if sut_commit else "rfcv/sut-wolfssl:head"),
@@ -74,6 +80,34 @@ def default_specs(
         ),
         "openssl": ServerSpec("rfcv/ref-openssl:latest", OPENSSL_COMMAND),
         "gnutls": ServerSpec("rfcv/ref-gnutls:latest", GNUTLS_COMMAND),
+        "nghttp2": ServerSpec(
+            sut_image if sut_impl == "nghttp2" and sut_image else (
+                f"rfcv/sut-nghttp2:{sut_commit[:12]}" if sut_impl == "nghttp2" and sut_commit else "rfcv/sut-nghttp2:head"
+            ),
+            NGHTTP2_COMMAND, "/sut", "/sut/.rev", sut_commit if sut_impl == "nghttp2" else None, port=8080,
+        ),
+        "nghttp2-ref": ServerSpec("rfcv/sut-nghttp2:head", NGHTTP2_COMMAND, "/sut", "/sut/.rev", None, port=8080),
+        "dnsmasq": ServerSpec(
+            sut_image if sut_impl == "dnsmasq" and sut_image else (
+                f"rfcv/sut-dnsmasq:{sut_commit[:12]}" if sut_impl == "dnsmasq" and sut_commit else "rfcv/sut-dnsmasq:head"
+            ),
+            DNSMASQ_COMMAND, "/sut", "/sut/.rev", sut_commit if sut_impl == "dnsmasq" else None, port=5353, udp=True,
+        ),
+        "dnsmasq-ref": ServerSpec("rfcv/sut-dnsmasq:head", DNSMASQ_COMMAND, "/sut", "/sut/.rev", None, port=5353, udp=True),
+        "dropbear": ServerSpec(
+            sut_image if sut_impl == "dropbear" and sut_image else (
+                f"rfcv/sut-dropbear:{sut_commit[:12]}" if sut_impl == "dropbear" and sut_commit else "rfcv/sut-dropbear:head"
+            ),
+            DROPBEAR_COMMAND, "/sut", "/sut/.rev", sut_commit if sut_impl == "dropbear" else None, port=2222,
+        ),
+        "dropbear-ref": ServerSpec("rfcv/sut-dropbear:head", DROPBEAR_COMMAND, "/sut", "/sut/.rev", None, port=2222),
+        "ngtcp2": ServerSpec(
+            sut_image if sut_impl == "ngtcp2" and sut_image else (
+                f"rfcv/sut-ngtcp2:{sut_commit[:12]}" if sut_impl == "ngtcp2" and sut_commit else "rfcv/sut-ngtcp2:head"
+            ),
+            NGTCP2_COMMAND, "/sut", "/sut/.rev", sut_commit if sut_impl == "ngtcp2" else None, port=4433, udp=True,
+        ),
+        "ngtcp2-ref": ServerSpec("rfcv/sut-ngtcp2:head", NGTCP2_COMMAND, "/sut", "/sut/.rev", None, port=4433, udp=True),
     }  # fmt: skip
     if sut_impl == "openssl":
         specs["openssl"] = ServerSpec(
@@ -133,24 +167,29 @@ class DockerSutLauncher:
         await self.cli.check(*argv, spec.image, "sleep", "infinity", timeout=60)
         try:
             await self.cli.check("exec", "-d", name, "sh", "-c", SERVER_WRAPPER, "sh", *spec.command, timeout=30)
-            await self._wait_ready(name)
+            await self._wait_ready(name, spec)
             await self._verify_rev(name, spec)
-            yield Endpoint(impl, name, PORT)
+            yield Endpoint(impl, name, spec.port)
         finally:
             # `--rm` ở lệnh run: Docker tự huỷ container khi dừng, nên không cần lệnh xoá nào.
             await self.cli("stop", "-t", "1", name, timeout=30)
 
-    async def _wait_ready(self, name: str) -> None:
+    async def _wait_ready(self, name: str, spec: ServerSpec) -> None:
+        hex_port = f"{spec.port:04X}"
+        if spec.udp:
+            check_cmd = f"grep -qE ':{hex_port} .* 07 ' /proc/net/udp /proc/net/udp6"
+        else:
+            check_cmd = f"grep -qE ':{hex_port} .* 0A ' /proc/net/tcp /proc/net/tcp6"
         loops = max(1, int(self.ready_timeout_s / self.poll_s))
         for _ in range(loops):
-            res = await self.cli("exec", name, "sh", "-c", LISTENING, timeout=15)
+            res = await self.cli("exec", name, "sh", "-c", check_cmd, timeout=15)
             if res.ok:
                 return
             if await self._exited(name):
                 raise LauncherError(f"{name}: server thoát trước khi sẵn sàng\n{await self._logs(name)}")
             await asyncio.sleep(self.poll_s)
         raise LauncherError(
-            f"{name}: server không nghe cổng {PORT} sau {self.ready_timeout_s:.0f}s\n{await self._logs(name)}"
+            f"{name}: server không nghe cổng {spec.port} sau {self.ready_timeout_s:.0f}s\n{await self._logs(name)}"
         )
 
     async def _verify_rev(self, name: str, spec: ServerSpec) -> None:
