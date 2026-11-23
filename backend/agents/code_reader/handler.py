@@ -46,11 +46,28 @@ _GUARD = re.compile(r"^\s*#\s*(?:ifdef|ifndef|if|elif)\b(.*)$")
 MAX_GUARD_MACROS = 6
 
 
+_REACTION_CALLS = frozenset(
+    {
+        "send_alert",
+        "send_goaway",
+        "send_rst_stream",
+        "respond",
+        "send_disconnect",
+        "send_connection_close",
+        "send_error",
+    }
+)
+
+
 def _expected_alert(inv: Investigation) -> str | None:
-    """Mã cảnh báo mà RBS đòi (đối số của lời gọi `send_alert(...)` đầu tiên trong `expect`)."""
+    """Mã phản ứng/cảnh báo/lỗi mà RBS đòi (đối số đầu tiên của lời gọi phản ứng trong `expect`, hỗ trợ mọi giao thức)."""
     rbs: Any = inv.domain_state.get(RBS_KEY)
-    first = rbs.expect[0] if rbs is not None and rbs.expect else None
-    return str(first.args[0]) if first is not None and first.name == "send_alert" and first.args else None
+    if rbs is None or not rbs.expect:
+        return None
+    for call in rbs.expect:
+        if call.args and (call.name in _REACTION_CALLS or call.name.startswith(("send_", "respond"))):
+            return str(call.args[0])
+    return None
 
 
 class LocationHandler:

@@ -582,7 +582,11 @@ def build_cc_tools(
     # ---- find_alert_sites (năng lực phân tích tĩnh toàn cục cho AI Agent tự gọi) ----------------------------------
 
     _noise_dir = re.compile(r"^(?:tests?|examples?|testsuite|fuzz|demos?|docs?|bench|benchmark|scripts?|apps?)/", re.I)
-    _action_re = re.compile(r"\b(?:sendalert|sslfatal|rlayerfatal|alert_fatal|return|goto|tls_alert)\b", re.I)
+    _action_re = re.compile(
+        r"\b(?:sendalert|sslfatal|rlayerfatal|alert_fatal|tls_alert|goaway|rst_stream|terminate_session|"
+        r"rcode|formerr|badvers|servfail|refused|disconnect|connection_close|return|goto)\b",
+        re.I,
+    )
     _log_re = re.compile(r'^\s*(?:/\*|\*|//|WOLFSSL_MSG|printf|fprintf|ERR_raise|case\s+\w+:\s*return\s*")')
     _tok_re = re.compile(r"[A-Za-z0-9]+")
 
