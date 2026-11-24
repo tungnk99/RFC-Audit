@@ -1,0 +1,20 @@
+generation: gen-34
+level: L4
+operator: REMOVE_AGENT
+target: ExecutionLoop._plan (Planner LLM fallback)
+contribution_type: Gỡ bỏ gen lặn (Recessive Gene Removal — mục C2)
+capability_rung: bậc 1 (giảm nhiễu & ngân sách trên bài toán hiện tại)
+summary: >
+  Tắt gọi Planner LLM mặc định khi `scripted_plans=True` gặp lỗi tác vụ (`planner_llm_fallback=False`),
+  thay bằng dừng sạch `playbook_stop` và lưu `planner_llm_fallback` vào `gene_bank.yaml` để có thể REINTRODUCE.
+motivation: >
+  `evol_diagnose.py` trên `runs/real/tier_heldout_gen33_final` (19 ca) phát hiện `AGENT_NULL_OUTPUT`:
+  `planner` chỉ được gọi 2 lần (trên U8, U13 sau khi tác vụ hỏng) và trả `output: null` 2/2 (100%),
+  gây lãng phí ngân sách token và độ trễ mà không cải thiện verdict hay defect_hit.
+invariants_touched: []
+metrics_before:
+  planner_llm_null_rate: 1.00
+  planner_llm_calls_heldout: 2
+metrics_after:
+  planner_llm_null_rate: 0.00
+  planner_llm_calls_heldout: 0

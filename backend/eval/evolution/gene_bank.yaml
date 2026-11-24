@@ -1,0 +1,14 @@
+# Ngân hàng Gen Tiến hoá (Evolution Gene Bank — Mục 7.3 của evolution_mutation_design.md)
+# Ghi lại các agent / công cụ / nhánh từng bị gỡ bỏ để có thể REINTRODUCE khi bài toán mới cần.
+genes:
+  - id: planner_llm_fallback
+    type: agent_fallback
+    level: L4
+    removed_in: gen-34
+    reason: >
+      Recessive gene detected by evol_diagnose.py on held-out (tier_heldout_gen33_final):
+      Planner LLM was only invoked after task failures (U8, U13) and returned output=null 2/2 (100%).
+    config_flag: ExecutionLoop(planner_llm_fallback=True)
+    reintroduce_if: >
+      Playbook-only mode fails to dispatch valid recovery tasks on >15% of multi-step dynamic investigations
+      on a new protocol/tier.

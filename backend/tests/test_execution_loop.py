@@ -494,7 +494,7 @@ async def test_a_scripted_plan_replaces_the_planner_llm_when_the_playbook_rule_i
     assert sources and all(s == "playbook" for s in sources)
 
 
-async def test_a_failed_task_hands_the_decision_back_to_the_planner_llm(
+async def test_a_failed_task_stops_cleanly_without_planner_llm_by_default(
     store: EvidenceStore, trace: TraceLog, policy: PolicyStore
 ) -> None:
     class Flaky(FakeRunner):
@@ -520,7 +520,38 @@ async def test_a_failed_task_hands_the_decision_back_to_the_planner_llm(
         scripted_plans=True,
     )
     await loop.investigate(inv())
-    assert "planner" in [c.to_role for c in runner.calls]  # sau lỗi tác vụ, cần phán đoán chứ không chỉ làm theo luật
+    assert "planner" not in [c.to_role for c in runner.calls]
+    assert any(p.get("planner_llm_skipped") for p in payloads(trace, "plan"))
+
+
+async def test_a_failed_task_hands_the_decision_back_to_the_planner_llm_when_reintroduced(
+    store: EvidenceStore, trace: TraceLog, policy: PolicyStore
+) -> None:
+    class Flaky(FakeRunner):
+        async def run(self, envelope: Envelope, context: dict[str, Any], session: ToolSession) -> RoleOutcome:
+            if envelope.to_role == "code_reader":
+                self.calls.append(envelope)
+                return RoleOutcome(None, 10, "UsageLimitExceeded")
+            return await super().run(envelope, context, session)
+
+    runner = Flaky(lambda n: plan(CRITIQUE), OUTPUTS)
+    handlers = {
+        TaskType.SELECT_TESTS: WriteOnce(store, full_passing_set),
+        TaskType.LOCATE: Noop(),
+        TaskType.CRITIQUE: Noop(),
+    }
+    loop = ExecutionLoop(
+        run_id="run-test",
+        runner=runner,
+        policy=policy,
+        store=store,
+        trace=trace,
+        handlers=handlers,
+        scripted_plans=True,
+        planner_llm_fallback=True,
+    )
+    await loop.investigate(inv())
+    assert "planner" in [c.to_role for c in runner.calls]
 
 
 def _efficient_loop(

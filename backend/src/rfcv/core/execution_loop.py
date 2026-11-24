@@ -168,10 +168,12 @@ class ExecutionLoop:
         | None = None,
         scripted_plans: bool = False,
         audit_skips_critique: bool = False,
+        planner_llm_fallback: bool = False,
     ) -> None:
         reg = current_registry()
         self._scripted_plans = scripted_plans
         self._audit_skips_critique = audit_skips_critique
+        self._planner_llm_fallback = planner_llm_fallback
         self.run_id = run_id
         self._runner = runner
         self._policy = policy
@@ -491,6 +493,17 @@ class ExecutionLoop:
             )
             self._log_plan_context(available, scripted, req.requirement_id, round=tracker.rounds)
             return scripted
+        if self._scripted_plans and not self._planner_llm_fallback:
+            # gen-34 (L4 REMOVE_AGENT): Planner LLM là gen lặn (100% output=null trên held-out sau lỗi tác vụ).
+            # Khi sổ tay không còn luật tất định phù hợp, dừng sạch thay vì đốt ngân sách gọi Planner LLM.
+            stop_plan = PlanAction(action="stop", tasks=[], rationale_code="playbook_no_further_rule")
+            self._log(
+                "plan",
+                {**stop_plan.model_dump(mode="json"), "source": "playbook_stop", "planner_llm_skipped": True},
+                req.requirement_id,
+                round=tracker.rounds,
+            )
+            return stop_plan
         outcome, _ = await self._run_role(
             self._loop.planner_role,
             inv,
