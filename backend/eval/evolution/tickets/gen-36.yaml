@@ -1,0 +1,20 @@
+generation: gen-36
+level: L3
+operator: ADD_STEP
+target: ExecutionLoop._ExplanationGate._check_reaction_consistency & agents/report/prompt.md
+contribution_type: Nâng cấp cổng nhất quán lời giải thích (Report Consistency Gate — mục C5)
+capability_rung: bậc 2 (loại bỏ lỗi giải thích đảo ngược mã phản ứng kiểu R9)
+summary: >
+  Bổ sung bước kiểm tra tất định `_check_reaction_consistency` vào `_ExplanationGate.precheck()`
+  (không chạm `output_gate.py` bất biến): với `VIOLATION` sai mã phản ứng (`WRONG_ALERT`), bắt buộc
+  lời giải thích nêu đủ cả mã yêu cầu và mã SUT thực tế phát (`ALERT_PAIR_MISSING`) và chặn đảo ngược
+  chiều hai mã (`ALERT_DIRECTION_INVERTED`), kèm hướng dẫn tự sửa trong `agents/report/prompt.md`.
+motivation: >
+  Mục C5 (🔴) trong `docs/05_project/han_che_he_thong.md` ghi nhận trường hợp `R9` trên held-out:
+  verdict và defect_hit đều đúng 100%, nhưng `Report` viết đảo ngược mã yêu cầu và mã quan sát trong
+  đoạn giải thích mà Output gate hiện tại không bắt được.
+invariants_touched: []
+metrics_before:
+  report_wrong_alert_inversion_caught: false
+metrics_after:
+  report_wrong_alert_inversion_caught: true

@@ -645,3 +645,58 @@ async def test_thorough_mode_reads_code_before_stopping_with_compliant(
     loop = _efficient_loop(store, trace, policy, runner, handlers, locate_compliant=True)
     await loop.investigate(inv())
     assert "code_reader" in [c.to_role for c in runner.calls]
+
+
+def test_explanation_gate_catches_inverted_and_missing_wrong_alert(store: EvidenceStore) -> None:
+    from rfcv.agents.schemas import Explanation
+    from rfcv.core.execution_loop import _ExplanationGate
+    from rfcv.evidence.verdict_engine import StopReason, VerdictRecord
+
+    req = inv().requirement
+    ev = store.append(t3("bad_record", Outcome.FAIL, alert="decode_error"))
+    verdict = VerdictRecord(
+        requirement_id=req.requirement_id,
+        label=Label.VIOLATION,
+        rule="V2",
+        modal=req.modal,
+        evidence_ids=(ev.evidence_id,),
+        assurance=None,
+        stop_reason=StopReason.SUFFICIENT,
+        rules_version="1",
+    )
+    inv_r9 = Investigation(
+        requirement=req,
+        context={
+            "requirement.rbs": Labeled(
+                {"expect": [{"name": "send_alert", "args": ["unexpected_message"]}]},
+                TrustLabel.TRUSTED,
+            )
+        },
+    )
+    gate = _ExplanationGate(verdict, [ev])
+
+    # 1. Đảo ngược chiều (lỗi R9): phải bị chặn bởi ALERT_DIRECTION_INVERTED
+    inverted = Explanation(
+        requirement_id=req.requirement_id,
+        text="VIOLATION: RFC yêu cầu gửi decode_error nhưng SUT lại gửi unexpected_message trong kiểm thử T3.",
+        cited_evidence_ids=[ev.evidence_id],
+    )
+    errs_inv = gate.precheck(inv_r9, inverted, None)
+    assert any("ALERT_DIRECTION_INVERTED" in e for e in errs_inv), errs_inv
+
+    # 2. Thiếu mã SUT thực tế phát: phải bị chặn bởi ALERT_PAIR_MISSING
+    missing = Explanation(
+        requirement_id=req.requirement_id,
+        text="VIOLATION: RFC yêu cầu gửi unexpected_message nhưng SUT đã trả mã cảnh báo sai trong kiểm thử T3.",
+        cited_evidence_ids=[ev.evidence_id],
+    )
+    errs_miss = gate.precheck(inv_r9, missing, None)
+    assert any("ALERT_PAIR_MISSING" in e for e in errs_miss), errs_miss
+
+    # 3. Đúng chiều: qua cổng sạch
+    correct = Explanation(
+        requirement_id=req.requirement_id,
+        text="VIOLATION: RFC yêu cầu gửi unexpected_message nhưng SUT thực tế phát decode_error trong kiểm thử T3.",
+        cited_evidence_ids=[ev.evidence_id],
+    )
+    assert gate.precheck(inv_r9, correct, None) == []

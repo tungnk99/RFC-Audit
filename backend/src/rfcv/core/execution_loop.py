@@ -140,7 +140,76 @@ class _ExplanationGate:
     def precheck(self, inv: Investigation, output: Any, session: Any) -> Sequence[str]:
         if not isinstance(output, Explanation):
             return ()
-        return check_explanation(output, self._verdict, self._evidence)
+        errors = list(check_explanation(output, self._verdict, self._evidence))
+        errors.extend(self._check_reaction_consistency(inv, output))
+        return errors
+
+    def _check_reaction_consistency(self, inv: Investigation, output: Explanation) -> list[str]:
+        """gen-36 (L3 ADD_STEP): Kiểm chứng tất định chiều mã phản ứng trong Explanation khi VIOLATION do sai mã (chặn lỗi đảo ngược R9)."""
+        if self._verdict.label.value != "VIOLATION":
+            return []
+        rbs_lbl = inv.context.get("requirement.rbs")
+        rbs_val = rbs_lbl.value if rbs_lbl is not None else None
+        expected: str | None = None
+        if isinstance(rbs_val, Mapping):
+            rbs_map = cast("Mapping[str, Any]", rbs_val)
+            for call in cast("Sequence[Any]", rbs_map.get("expect") or ()):
+                if isinstance(call, Mapping):
+                    call_map = cast("Mapping[str, Any]", call)
+                    cname = str(call_map.get("name", ""))
+                    cargs = cast("Sequence[Any]", call_map.get("args") or ())
+                    if cargs and cname.startswith(("send_", "respond")):
+                        expected = str(cargs[0]).strip().lower()
+                        break
+        if not expected:
+            return []
+        non_err = {"", "none", "noerror", "no_error"}
+        observed: set[str] = set()
+        for ev in self._evidence:
+            if str(ev.tier) != "T3":
+                continue
+            p: Any = ev.payload
+            if isinstance(p, Mapping):
+                pmap = cast("Mapping[str, Any]", p)
+                side: Any = pmap.get("side")
+                outcome: Any = pmap.get("outcome")
+                obs_map: Any = pmap.get("observed")
+            else:
+                side = getattr(p, "side", None)
+                outcome = getattr(p, "outcome", None)
+                obs_map = getattr(p, "observed", None)
+            outcome_val: Any = getattr(outcome, "value", outcome)
+            if str(side) == "trigger" and str(outcome_val) == "FAIL" and isinstance(obs_map, Mapping):
+                obs_dict = cast("Mapping[str, Any]", obs_map)
+                code = str(obs_dict.get("alert", "")).strip().lower()
+                if code not in non_err and code != expected:
+                    observed.add(code)
+        if not observed:
+            return []
+        text_low = output.text.lower()
+        obs_sorted = sorted(observed)
+        errs: list[str] = []
+        if expected not in text_low or not any(o in text_low for o in obs_sorted):
+            errs.append(
+                f"ALERT_PAIR_MISSING: giải thích VIOLATION sai mã phản ứng phải nêu rõ cả mã yêu cầu `{expected}` "
+                f"lẫn mã SUT thực sự phát (`{', '.join(obs_sorted)}`)."
+            )
+            return errs
+        import re
+
+        for obs in obs_sorted:
+            inv_pat = re.compile(
+                rf"(?:^|[\s,:(])(?:yêu cầu|đòi hỏi|phải gửi|expects?|must send|should send)\b"
+                rf"(?:(?!(?:nhưng|tuy nhiên|còn|thay vì|\bbut\b|instead))[^{{.;\n}}]){{0,45}}\b{re.escape(obs)}\b"
+            )
+            for m in inv_pat.finditer(text_low):
+                if expected not in m.group(0):
+                    errs.append(
+                        f"ALERT_DIRECTION_INVERTED: giải thích đang đảo ngược chiều mã phản ứng — "
+                        f"RFC yêu cầu `{expected}`, còn SUT thực tế phát `{obs}`."
+                    )
+                    break
+        return errs
 
     async def handle(self, inv: Investigation, task: Any, output: Any, session: Any, msg_id: str) -> int:
         return 0  # giải thích không ghi bằng chứng; `_run_role` chỉ gọi khi có nhiệm vụ, mà bước này không có

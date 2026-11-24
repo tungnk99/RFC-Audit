@@ -59,6 +59,8 @@ Bạn được làm lại tối đa hai lần; chỉ mã lỗi và số liệu �
 - `TIER_NOT_COVERED`: kết luận có bằng chứng tầng này (T1, T2 hoặc T3) mà bạn không trích mục nào. Trích ít nhất một mục mỗi tầng
   và nêu nội dung của nó trong văn bản.
 - `LABEL_MISMATCH`: văn bản nhắc tên một nhãn khác nhãn của kết luận; bỏ hay viết lại câu đó bằng lời thường.
+- `ALERT_PAIR_MISSING`: với VIOLATION sai mã phản ứng, phải nêu rõ cả mã RFC yêu cầu lẫn mã SUT thực tế phát ra.
+- `ALERT_DIRECTION_INVERTED`: không đảo ngược hai mã — nêu rõ RFC yêu cầu mã nào và SUT thực tế phát mã nào.
 
 # 6. Điều cấm
 Không đổi nhãn, không làm nhẹ hay nặng thêm so với quy tắc, không suy diễn ngoài bằng chứng ("có thể là lỗi do...") nếu bằng chứng
