@@ -1,0 +1,110 @@
+adapter: http2
+version: 0.1.0
+backend: h2spec
+domain: rfc_protocol
+verdict_profile: rfc-protocol@8
+specs:
+- doc: RFC9113
+  role: primary
+  sections_in_scope:
+  - '4.1'
+  - '4.2'
+  - '5.4'
+  - '6'
+- doc: RFC7541
+  role: reference
+component_taxonomy:
+- framing
+- streams
+- settings
+- flow_control
+- hpack
+- error_handling
+vocabulary:
+  events:
+  - receive(frame)
+  - send_goaway(error_code)
+  - send_rst_stream(error_code)
+  - send(frame_type)
+  - close
+  - discard
+  states:
+  - initial
+  - connected
+  enums:
+    error_code:
+    - no_error
+    - protocol_error
+    - internal_error
+    - flow_control_error
+    - settings_timeout
+    - stream_closed
+    - frame_size_error
+    - refused_stream
+    - cancel
+    - compression_error
+    - connect_error
+    - enhance_your_calm
+    - inadequate_security
+    - http_1_1_required
+    frame_type:
+    - data
+    - headers
+    - priority
+    - rst_stream
+    - settings
+    - push_promise
+    - ping
+    - goaway
+    - window_update
+    - continuation
+field_domains:
+  frame.length:
+    min: 0
+    max: 16777215
+    canonical:
+    - 16385
+  ping.length:
+    min: 0
+    max: 16384
+consistency_rules: []
+locator_hints:
+  framing:
+    keywords:
+    - max_frame_size
+    - NGHTTP2_FRAME_SIZE_ERROR
+    - NGHTTP2_ERR_FRAME_SIZE_ERROR
+    - payloadlen
+    entry_points:
+    - nghttp2_session_mem_recv
+    paths:
+    - lib/nghttp2_session.c
+    - lib/nghttp2_frame.c
+  error_handling:
+    keywords:
+    - nghttp2_session_terminate_session
+    - GOAWAY
+    - NGHTTP2_PROTOCOL_ERROR
+    paths:
+    - lib/nghttp2_session.c
+build_flags:
+- --enable-app
+- --disable-python-bindings
+sut:
+  repo: https://github.com/nghttp2/nghttp2
+  recipe: sut/nghttp2.yaml
+  start:
+    role: server
+    port: 8080
+  commit: 59723dc1c81df03fffcff6656a4419f281e7d816
+references:
+- nghttp2-ref
+code_scope:
+  include:
+  - lib/**
+  exclude:
+  - tests/**
+  - examples/**
+  - doc/**
+  - fuzz/**
+examples: examples/*.yaml

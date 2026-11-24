@@ -1,0 +1,13 @@
+id: http2.frame.size_limit_dsl
+requirement_types: [B]
+rfc_refs: ["RFC9113§4.2"]
+checks_behavior: "receive(frame, length > 16384) → send_goaway(frame_size_error)"
+variant_class: length_bound
+runner: h2spec
+steps:
+  - {op: connect, args: {tls: false}}
+  - {op: complete_handshake}
+  - {op: send_raw_record, args: {type: data, flags: "0", stream_id: 1, length: "$frame.length", body: zeros}}
+  - {op: expect, args: {within_ms: 2000}}
+bindings: {frame.length: from_variant}
+oracle: {pass: "alert == frame_size_error", fail: "otherwise", error: "sanity_failed or preface_failed"}

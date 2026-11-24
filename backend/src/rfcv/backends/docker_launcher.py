@@ -61,6 +61,7 @@ OPENSSL_SUT_COMMAND = (
     "/sut/openssl", "s_server", "-accept", str(PORT), "-cert", "/ref/cert.pem", "-key", "/ref/key.pem", "-tls1_3", "-www",
 )  # fmt: skip
 NGHTTP2_COMMAND = ("/sut/nghttpd", "--no-tls", "-d", "/tmp", "8080")
+KNOT_COMMAND = ("/sut/knotd", "-c", "/sut/knot.conf")
 DNSMASQ_COMMAND = ("/sut/dnsmasq", "--no-daemon", "--port=5353", "--no-resolv", "--address=/example.test/127.0.0.1")
 DROPBEAR_COMMAND = ("/sut/dropbear", "-F", "-E", "-R", "-p", "127.0.0.1:2222")
 NGTCP2_COMMAND = ("/sut/qtlsserver", "127.0.0.1", "4433", "/ref/key.pem", "/ref/cert.pem")
@@ -87,6 +88,13 @@ def default_specs(
             NGHTTP2_COMMAND, "/sut", "/sut/.rev", sut_commit if sut_impl == "nghttp2" else None, port=8080,
         ),
         "nghttp2-ref": ServerSpec("rfcv/sut-nghttp2:head", NGHTTP2_COMMAND, "/sut", "/sut/.rev", None, port=8080),
+        "knot": ServerSpec(
+            sut_image if sut_impl == "knot" and sut_image else (
+                f"rfcv/sut-knot:{sut_commit[:12]}" if sut_impl == "knot" and sut_commit else "rfcv/sut-knot:head"
+            ),
+            KNOT_COMMAND, "/sut", "/sut/.rev", sut_commit if sut_impl == "knot" else None, port=5353, udp=True,
+        ),
+        "knot-ref": ServerSpec("rfcv/sut-knot:head", KNOT_COMMAND, "/sut", "/sut/.rev", None, port=5353, udp=True),
         "dnsmasq": ServerSpec(
             sut_image if sut_impl == "dnsmasq" and sut_image else (
                 f"rfcv/sut-dnsmasq:{sut_commit[:12]}" if sut_impl == "dnsmasq" and sut_commit else "rfcv/sut-dnsmasq:head"

@@ -1,0 +1,10 @@
+requirement HTTP2-0002 from RFC9113§6.7#p9s1 modal MUST type B
+actor server
+state connected
+# "treated as a connection error of type FRAME_SIZE_ERROR": theo mục 5.4.1, đóng kết nối là MUST, còn gửi GOAWAY kèm mã
+# lỗi là SHOULD; nên oracle chỉ đòi đóng và cấm trả PING ACK (khung lỗi không được xử lý). Mã lỗi trong GOAWAY, nếu có,
+# vẫn được đối chiếu với REACTION của T1.
+trigger receive(frame) where ping.length != 8
+expect close within 2000ms
+forbid send(ping)
+variants boundary(ping.length, 9), boundary(ping.length, 7), min(ping.length), random(ping.length, k=4, stratified)

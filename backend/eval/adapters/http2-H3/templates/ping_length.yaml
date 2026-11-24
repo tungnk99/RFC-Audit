@@ -1,0 +1,14 @@
+# Mẫu DSL (tài liệu adapter, mục 5.3): h2spec chỉ có một độ dài PING sai cố định, DSL cho mọi giá trị biến thể.
+id: http2.ping.length
+requirement_types: [B]
+rfc_refs: ["RFC9113§6.7"]
+checks_behavior: "receive(PING, length != 8) → close, không ACK"
+variant_class: length_bound
+runner: h2spec
+steps:
+  - {op: connect, args: {tls: false}}
+  - {op: complete_handshake}
+  - {op: send_raw_record, args: {type: ping, flags: "0", stream_id: 0, length: "$ping.length", body: zeros}}
+  - {op: expect, args: {within_ms: 2000}}
+bindings: {ping.length: from_variant}
+oracle: {pass: "closed and no PING ACK", fail: "otherwise", error: "sanity_failed or preface_failed"}

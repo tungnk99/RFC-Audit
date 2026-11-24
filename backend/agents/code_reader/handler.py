@@ -371,6 +371,12 @@ class LocationHandler:
                     f"thuộc thân hàm `{enclosing.name}` (không phải `{output.symbol}`). "
                     f"Hãy đổi `symbol` và `call_path` sang `{enclosing.name}`."
                 )
+        if "THRESHOLD_EQUALS_EXPECTED" in errors:
+            errors.append(
+                "HINT_THRESHOLD_EQUALS_EXPECTED: giá trị `observed` ở khía cạnh `THRESHOLD` đang bằng đúng ngưỡng yêu cầu nên không thể đặt `MISMATCH`. "
+                "Nếu phép kiểm tra đã bị xoá hoặc không có hằng ngưỡng sai rõ ràng, hãy đặt `THRESHOLD` thành `UNCLEAR` (`observed: null`) "
+                "và đặt `CONDITION` hoặc `REACTION` thành `MISMATCH`."
+            )
         # Chặn sớm lỗi nhầm chiều giao thức (vd SUT là SERVER nhận ClientHello nhưng agent trỏ vào DoServerHello của client)
         # hoặc nhầm giai đoạn bản ghi (bản ghi rõ lúc mới nối `record.content_type` nhưng trỏ vào hàm chỉ chạy sau mã hoá).
         rbs = inv.domain_state.get(RBS_KEY)

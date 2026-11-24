@@ -1,0 +1,13 @@
+id: dns.edns.opt_duplicate_dsl
+requirement_types: [B]
+rfc_refs: ["RFC6891§6.1.1"]
+checks_behavior: "receive(query, query.opt_count > 1) → respond(formerr)"
+variant_class: length_bound
+runner: dnspython
+steps:
+  - {op: connect, args: {transport: udp}}
+  - {op: mutate, args: {field: query.opt_count, op: set, value: "$query.opt_count"}}
+  - {op: send_msg, args: {type: query, qname: example.test}}
+  - {op: expect, args: {within_ms: 2000}}
+bindings: {query.opt_count: from_variant}
+oracle: {pass: "alert == formerr", fail: "otherwise", error: "sanity_failed"}

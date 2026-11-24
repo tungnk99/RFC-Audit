@@ -58,7 +58,7 @@ DSL = DslSpec(
     },
 )
 
-SUPPORTED = {"connect", "send_raw_record", "expect"}
+SUPPORTED = {"connect", "send_msg", "send_raw_record", "mutate", "expect"}
 RUNNER_SOURCE = Path(__file__).with_name("runner.py")
 PYTHON_IN_IMAGE = "python3"
 RESULT_PREFIX = "RFCV_RESULT "

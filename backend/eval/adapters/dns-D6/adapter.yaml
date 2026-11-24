@@ -1,0 +1,96 @@
+adapter: dns
+version: 0.1.0
+backend: dnspython
+domain: rfc_protocol
+verdict_profile: rfc-protocol@8
+specs:
+- doc: RFC6891
+  role: primary
+  sections_in_scope:
+  - '6.1'
+  - '6.2'
+  - '7'
+- doc: RFC1035
+  role: reference
+  sections_in_scope:
+  - '4.1'
+- doc: RFC1034
+  role: reference
+- doc: RFC2181
+  role: reference
+component_taxonomy:
+- message_parsing
+- edns
+- query_processing
+- response_building
+- transport
+vocabulary:
+  events:
+  - receive(query)
+  - respond(rcode)
+  - close
+  - discard
+  states:
+  - ready
+  enums:
+    rcode:
+    - noerror
+    - formerr
+    - servfail
+    - nxdomain
+    - notimp
+    - refused
+    - badvers
+field_domains:
+  query.opt_count:
+    min: 0
+    max: 5000
+    canonical:
+    - 2
+  opt.version:
+    min: 0
+    max: 255
+    canonical:
+    - 1
+consistency_rules: []
+locator_hints:
+  message_parsing:
+    keywords:
+    - knot_pkt_parse
+    - opt_rr
+    - KNOT_EMALF
+    - KNOT_RCODE_FORMERR
+    entry_points:
+    - knot_pkt_parse
+    paths:
+    - src/libknot/packet/pkt.c
+  edns:
+    keywords:
+    - knot_edns_get_version
+    - KNOT_EDNS_VERSION
+    - KNOT_RCODE_BADVERS
+    - opt_rr
+    paths:
+    - src/libknot/rrtype/opt.c
+    - src/knot/nameserver/process_query.c
+build_flags:
+- --disable-documentation
+- --disable-fastparser
+sut:
+  repo: https://github.com/CZ-NIC/knot
+  recipe: sut/knot.yaml
+  start:
+    role: server
+    port: 5353
+  commit: e9282564005921a8b75341fe568a297e5d64973b
+references:
+- knot-ref
+code_scope:
+  include:
+  - src/**
+  exclude:
+  - tests/**
+  - tests-fuzz/**
+  - doc/**
+  - samples/**
+examples: examples/*.yaml

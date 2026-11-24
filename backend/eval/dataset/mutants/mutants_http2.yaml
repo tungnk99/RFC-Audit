@@ -1,0 +1,86 @@
+items:
+- id: H1
+  family: F
+  adapter: eval/adapters/http2-H1
+  code_root: runs/real/src/nghttp2-H1
+  image: rfcv/sut-nghttp2:d0c76a7e9434
+  commit: d0c76a7e943444afa97e84db93a1abf6ddadc899
+  operator: WRONG_ALERT
+  requirement: HTTP2-0001
+  expected: VIOLATION
+  why: Gửi GOAWAY(PROTOCOL_ERROR) thay vì FRAME_SIZE_ERROR khi khung vượt SETTINGS_MAX_FRAME_SIZE.
+  fix_location:
+    files:
+      lib/nghttp2_session.c:
+      - - 5963
+        - 5963
+- id: H2
+  family: F
+  adapter: eval/adapters/http2-H2
+  code_root: runs/real/src/nghttp2-H2
+  image: rfcv/sut-nghttp2:b34a2fcd4b81
+  commit: b34a2fcd4b81b087eb199673191ba96e089149b2
+  operator: WRONG_ALERT_OTHER
+  requirement: HTTP2-0001
+  expected: VIOLATION
+  why: Gửi GOAWAY(INTERNAL_ERROR) thay vì FRAME_SIZE_ERROR khi khung vượt SETTINGS_MAX_FRAME_SIZE.
+  fix_location:
+    files:
+      lib/nghttp2_session.c:
+      - - 5963
+        - 5963
+- id: H3
+  family: F
+  adapter: eval/adapters/http2-H3
+  code_root: runs/real/src/nghttp2-H3
+  image: rfcv/sut-nghttp2:c33a2b501fb9
+  commit: c33a2b501fb954dfc1e7c932e43d28523855ada1
+  operator: THRESHOLD_SHIFT
+  requirement: HTTP2-0001
+  expected: VIOLATION
+  why: Nâng ngưỡng kiểm tra độ dài khung thêm +1024 nên bỏ qua khung 16385..17408
+    byte.
+  fix_location:
+    files:
+      lib/nghttp2_session.c:
+      - - 5958
+        - 5958
+- id: H4
+  family: P
+  adapter: eval/adapters/http2-H4
+  code_root: runs/real/src/nghttp2-H4
+  image: rfcv/sut-nghttp2:cbe614bc07fc
+  commit: cbe614bc07fc03733ecbad7365775e8b3cdbcf41
+  operator: DEL_CHECK
+  requirement: HTTP2-0002
+  expected: VIOLATION
+  why: Bỏ kiểm tra độ dài khung PING != 8, không đóng kết nối mà xử lý tiếp.
+  fix_location:
+    files:
+      lib/nghttp2_session.c:
+      - - 6239
+        - 6239
+- id: H5
+  family: F
+  adapter: eval/adapters/http2-H5
+  code_root: runs/real/src/nghttp2-H5
+  image: rfcv/sut-nghttp2:59723dc1c81d
+  commit: 59723dc1c81df03fffcff6656a4419f281e7d816
+  operator: BASELINE
+  requirement: HTTP2-0001
+  expected: COMPLIANT
+  why: nghttp2 v1.64.0 gốc tuân thủ RFC 9113 §4.2.
+  fix_location:
+    files: {}
+- id: H6
+  family: P
+  adapter: eval/adapters/http2-H6
+  code_root: runs/real/src/nghttp2-H6
+  image: rfcv/sut-nghttp2:66714db8fb83
+  commit: 66714db8fb83bc263d0040be80915227bc8801a4
+  operator: BASELINE
+  requirement: HTTP2-0002
+  expected: COMPLIANT
+  why: nghttp2 v1.64.0 gốc tuân thủ RFC 9113 §6.7.
+  fix_location:
+    files: {}

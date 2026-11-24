@@ -1,0 +1,19 @@
+# Công thức dựng SUT Knot DNS (tài liệu adapter, mục 4). Chưa dựng thử (cần Docker, BL-03); kiểm lại lệnh khi dựng.
+implementation: knot
+repo: https://github.com/CZ-NIC/knot
+build:
+  steps:
+    - autoreconf -if
+    - ./configure --disable-documentation --disable-fastparser
+    - make -j2
+  coverage_cflags: ["-fprofile-instr-generate", "-fcoverage-mapping"]
+roles:
+  server:
+    cmd: "./src/knotd -c /etc/knot/knot.conf"   # cấu hình một vùng thử nghiệm, lắng nghe {port} UDP và TCP
+    zone: zones/example.test.zone
+lifecycle:
+  per_case_process: false        # máy chủ DNS phục vụ nhiều truy vấn; mỗi ca dùng truy vấn mới
+  ready_check: {kind: udp_query, port: "{port}", qname: "example.test.", timeout_s: 5}
+  sanity_case: "genreport:dns"   # truy vấn thường phải được trả lời NOERROR
+  stop_signal: SIGTERM
+resources: {cpus: 1, memory: 256m, pids: 64, timeout_s: 60}

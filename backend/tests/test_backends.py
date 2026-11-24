@@ -122,12 +122,10 @@ def test_dsl_rejects_operations_outside_the_shared_set() -> None:
         DslSpec(ops={"shell": frozenset()})
 
 
-async def test_run_and_sanity_are_not_implemented_yet() -> None:
-    b = backend("dnspython")
-    with pytest.raises(NotImplementedError):
-        await b.sanity(None)  # type: ignore[arg-type]
-    with pytest.raises(NotImplementedError):
-        await b.run(GOOD["dnspython"], {}, None, 1)  # type: ignore[arg-type]
+def test_all_five_backends_implement_runner() -> None:
+    for name in BACKENDS:
+        b = backend(name)
+        assert callable(getattr(b, 'sanity', None)) and callable(getattr(b, 'run', None))
 
 
 def test_tlsfuzzer_plain_record_before_handshake() -> None:

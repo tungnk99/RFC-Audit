@@ -64,8 +64,9 @@ def diagnose(expected_alert: str | None, t3s: Sequence[T3Payload]) -> Diagnosis:
     def make(signature: str, hypothesis: str, next_step: str) -> Diagnosis:
         return Diagnosis(signature, hypothesis, next_step, expected_alert, alerts, len(fails), len(passes))
 
+    NON_ERROR = frozenset({"none", "noerror", "no_error"})
     code = expected_alert or "<mã cảnh báo yêu cầu>"
-    if alerts == ("none",):
+    if all(a in NON_ERROR for a in alerts):
         if not passes:
             return make(
                 REACTION_ABSENT,
@@ -80,7 +81,7 @@ def diagnose(expected_alert: str | None, t3s: Sequence[T3Payload]) -> Diagnosis:
             "SUT có phản ứng ở một số ca kích hoạt nhưng không có ở các ca khác: ngưỡng hoặc điều kiện kiểm tra lệch so với yêu cầu.",
             "Tìm phép so sánh quyết định phản ứng, khai triển hằng/ngưỡng bằng `code__eval`, so với giá trị trong `where`.",
         )
-    wrong = tuple(a for a in alerts if a != "none" and a != expected_alert)
+    wrong = tuple(a for a in alerts if a not in NON_ERROR and a != expected_alert)
     if expected_alert is not None and wrong:
         observed = ", ".join(wrong)
         return make(

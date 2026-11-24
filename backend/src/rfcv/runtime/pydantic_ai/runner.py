@@ -182,10 +182,10 @@ def thin_history(ctx: RunContext[ToolSession], messages: list[ModelMessage]) -> 
             kept_reads += len(text)
             continue
         part.content = f"[đã lược {len(text)} ký tự kết quả cũ] " + text[:CLEARED_HEAD]
-    limit = ctx.deps.max_tokens
+    limit = getattr(ctx.deps, "max_tokens", 0)
     used = ctx.usage.total_tokens or 0
-    limit_tools = ctx.deps.max_tool_calls
-    used_tools = max(ctx.deps.tool_calls, int(getattr(ctx.usage, "tool_calls", 0) or 0))
+    limit_tools = getattr(ctx.deps, "max_tool_calls", 0)
+    used_tools = max(getattr(ctx.deps, "tool_calls", 0), int(getattr(ctx.usage, "tool_calls", 0) or 0))
     near_tok = limit > 0 and used >= limit * WRAP_UP_SHARE
     near_tools = limit_tools > 0 and used_tools >= max(1, int(limit_tools * HARD_TOOL_WRAP_SHARE))
     if (near_tok or near_tools) and messages and isinstance(messages[-1], ModelRequest):

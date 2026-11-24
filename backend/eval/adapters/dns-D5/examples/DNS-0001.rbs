@@ -1,0 +1,6 @@
+requirement DNS-0001 from RFC6891§6.1.1#p5s3 modal MUST type B
+actor server
+state ready
+trigger receive(query) where query.opt_count > 1   # "a query message with more than one OPT RR"
+expect respond(formerr) within 2000ms
+variants boundary(query.opt_count, 2), max(query.opt_count), random(query.opt_count, k=4, stratified)
