@@ -1,0 +1,23 @@
+generation: gen-35
+level: L2
+operator: REMOVE_HARDCODE
+target: backend/agents/code_reader/handler.py & backend/skills/core/locate-alert-sites/SKILL.md
+contribution_type: Tổng quát hoá không phụ thuộc thư viện (Library-Agnostic Cleanup — mục C6)
+capability_rung: bậc 3 (cổng mới — xoá toàn bộ tên hàm/tệp/macro đặc thù wolfSSL/OpenSSL khỏi lõi)
+summary: >
+  Gỡ bỏ 100% tên hàm, tên tệp và macro đặc thù wolfSSL/OpenSSL (`DoProcessReplyEx`, `DoServerHello`,
+  `CompleteServerHello`, `tls13_validate_record_header`, `ssl3_read_bytes`, `ssl/statem/extensions.c`,
+  `ssl/record/rec_layer_s3.c`, `KEY_SHARE_ERROR`, `MATCH_SUITE_ERROR`, `SendFatalAlertOnly`, `SSLfatal`)
+  khỏi `code_reader/handler.py` và làm trung lập hoàn toàn `skills/core/locate-alert-sites/SKILL.md`
+  (vượt qua `test_skills_protocol_neutral.py`).
+motivation: >
+  Mục C6 (🔴) trong `docs/05_project/han_che_he_thong.md` chỉ ra rằng `code_reader/handler.py` và
+  `locate-alert-sites/SKILL.md` vẫn còn gắn cứng tên hàm/tệp của wolfSSL và OpenSSL, làm giảm tính thuyết phục
+  của khả năng tổng quát hoá đa thư viện/đa giao thức và khiến `test_skills_protocol_neutral.py` thất bại.
+invariants_touched: []
+metrics_before:
+  hardcoded_sut_symbols_in_core: 11
+  test_skills_protocol_neutral: FAIL
+metrics_after:
+  hardcoded_sut_symbols_in_core: 0
+  test_skills_protocol_neutral: PASS
