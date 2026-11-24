@@ -11,11 +11,15 @@ giới hạn tiến trình/bộ nhớ/CPU, người dùng không phải root (do
 from __future__ import annotations
 
 import asyncio
+import shlex
 import uuid
 from collections.abc import AsyncGenerator, Mapping
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass, field
-from typing import Any
+from pathlib import Path
+from typing import Any, cast
+
+import yaml
 
 from rfcv.backends.docker_cli import DockerCli, DockerError
 from rfcv.domains.rfc_protocol.sandbox.backend import Endpoint
@@ -219,14 +223,98 @@ class DockerSutLauncher:
         return (res.stdout + res.stderr).decode("utf-8", "replace")
 
 
+def specs_from_adapter(
+    adapter_dir: Path | None,
+    *,
+    sut_commit: str | None = None,
+    sut_image: str | None = None,
+    sut_impl: str = "wolfssl",
+) -> dict[str, ServerSpec]:
+    """gen-37 (L6 ADD_CAPABILITY — mục A2): Đọc công thức `sut/*.yaml` của adapter để tự dựng `ServerSpec`.
+
+    Thư viện mới chỉ cần khai báo `roles.server.cmd` (hoặc `docker_cmd`), `port`, `image`, `workdir`
+    trong `sut/<impl>.yaml` mà không cần sửa `docker_launcher.py`; vẫn giữ `default_specs()` làm nền tương thích ngược.
+    """
+    specs = default_specs(sut_commit, sut_image, sut_impl)
+    if adapter_dir is None:
+        return specs
+    sut_dir = Path(adapter_dir) / "sut"
+    if not sut_dir.is_dir():
+        return specs
+    for path in sorted(sut_dir.glob("*.yaml")):
+        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if not isinstance(raw, Mapping):
+            continue
+        doc = cast("Mapping[str, Any]", raw)
+        impl = str(doc.get("implementation") or path.stem).strip()
+        if not impl:
+            continue
+        roles = cast("Mapping[str, Any]", doc.get("roles") or {})
+        server = cast("Mapping[str, Any]", roles.get("server") or {})
+        raw_cmd = server.get("docker_cmd") or (server.get("cmd") if impl not in specs else None)
+        if not raw_cmd:
+            continue
+        port = int(server.get("port") or PORT)
+        lifecycle = cast("Mapping[str, Any]", doc.get("lifecycle") or {})
+        ready = cast("Mapping[str, Any]", lifecycle.get("ready_check") or {})
+        transport = str(server.get("transport") or "").lower()
+        udp = transport == "udp" or str(ready.get("kind") or "").lower() == "udp_query"
+        if isinstance(raw_cmd, str):
+            argv = tuple(shlex.split(raw_cmd.format(port=port)))
+        else:
+            argv = tuple(str(tok).format(port=port) for tok in cast("list[Any]", raw_cmd))
+        workdir = str(server.get("workdir") or "/sut")
+        is_sut = impl == sut_impl
+        default_img = f"rfcv/sut-{impl}:{sut_commit[:12]}" if (is_sut and sut_commit) else f"rfcv/sut-{impl}:head"
+        image = str(sut_image if (is_sut and sut_image) else (server.get("image") or default_img))
+        specs[impl] = ServerSpec(
+            image=image,
+            command=argv,
+            workdir=workdir,
+            rev_file="/sut/.rev",
+            expect_rev=sut_commit if is_sut else None,
+            port=port,
+            udp=udp,
+        )
+        ref_key = f"{impl}-ref"
+        if ref_key not in specs:
+            ref_img = str(server.get("ref_image") or f"rfcv/sut-{impl}:head")
+            specs[ref_key] = ServerSpec(
+                image=ref_img,
+                command=argv,
+                workdir=workdir,
+                rev_file="/sut/.rev",
+                expect_rev=None,
+                port=port,
+                udp=udp,
+            )
+    return specs
+
+
 def launcher_factory(manifest: Any, config: Any) -> DockerSutLauncher:
-    """Nhà máy đăng ký ở `rfcv.builtin`: commit lấy từ adapter (`sut.commit`), image có thể ghi đè bằng biến môi trường."""
+    """Nhà máy đăng ký ở `rfcv.builtin`: đọc `sut/*.yaml` của adapter, commit lấy từ `sut.commit`, image có thể ghi đè qua env."""
     import os
 
     sut = getattr(manifest, "sut", None)
     commit = getattr(sut, "commit", None)
     impl = str(getattr(sut, "repo", "")).rstrip("/").rsplit("/", 1)[-1] or "wolfssl"
-    return DockerSutLauncher(default_specs(commit, os.environ.get("RFCV_SUT_IMAGE"), impl))
+    adapter_dir = getattr(config, "adapter_dir", None)
+    return DockerSutLauncher(
+        specs_from_adapter(
+            Path(adapter_dir) if adapter_dir is not None else None,
+            sut_commit=commit,
+            sut_image=os.environ.get("RFCV_SUT_IMAGE"),
+            sut_impl=impl,
+        )
+    )
 
 
-__all__ = ["DockerError", "DockerSutLauncher", "LauncherError", "ServerSpec", "default_specs", "launcher_factory"]
+__all__ = [
+    "DockerError",
+    "DockerSutLauncher",
+    "LauncherError",
+    "ServerSpec",
+    "default_specs",
+    "launcher_factory",
+    "specs_from_adapter",
+]

@@ -1,0 +1,18 @@
+generation: gen-37
+level: L6
+operator: ADD_CAPABILITY
+target: backend/src/rfcv/backends/docker_launcher.py (specs_from_adapter)
+contribution_type: Tự động nạp công thức server từ adapter YAML (mục A2)
+capability_rung: bậc 3 (cổng mới — thêm thư viện mới không cần sửa docker_launcher.py)
+summary: >
+  Bổ sung `specs_from_adapter()` trong `docker_launcher.py` để tự động đọc `roles.server.cmd`
+  (hoặc `docker_cmd`), `port`, `transport`/`ready_check.kind`, `image`, `workdir` từ `sut/*.yaml`
+  của adapter và tự đăng ký cả `<impl>` lẫn `<impl>-ref`, giữ `default_specs()` tương thích ngược.
+motivation: >
+  Mục A2 (🟡) trong `docs/05_project/han_che_he_thong.md` chỉ ra rằng lệnh chạy server bị viết cứng
+  trong `docker_launcher.py`, mâu thuẫn với mục tiêu "thêm thư viện chỉ cần thêm adapter".
+invariants_touched: []
+metrics_before:
+  new_library_requires_launcher_code_edit: true
+metrics_after:
+  new_library_requires_launcher_code_edit: false

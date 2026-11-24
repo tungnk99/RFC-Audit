@@ -2,7 +2,7 @@
 
 Tệp này ghi lại mọi hạn chế đã phát hiện, kèm bằng chứng, ảnh hưởng và hướng xử lý. Mỗi khi phát hiện hạn chế mới, hoặc xử lý xong một hạn chế, cập nhật tệp này.
 
-- **Cập nhật lần cuối:** 24/11/2026 (sau các thế hệ tiến hoá `gen-34`–`gen-36`)
+- **Cập nhật lần cuối:** 24/11/2026 (sau các thế hệ tiến hoá `gen-34`–`gen-37`)
 - **Cột "Báo cáo 02":** ✅ đã nêu trong báo cáo tiến độ 02 · ❌ chưa nêu · ⚠️ báo cáo đang ghi sai hoặc thiếu
 - **Mức độ:** 🔴 thầy hoặc hội đồng dễ hỏi, ảnh hưởng tới kết luận chính · 🟡 nên nêu · ⚪ chi tiết kỹ thuật, biết để trả lời khi bị hỏi
 
@@ -27,7 +27,7 @@ Tệp này ghi lại mọi hạn chế đã phát hiện, kèm bằng chứng, �
 | # | Hạn chế | Bằng chứng | Ảnh hưởng | Hướng xử lý | Báo cáo 02 |
 |---|---|---|---|---|---|
 | A1 🔴 | **Thư viện mới cần dựng adapter bằng tay** (Dockerfile, lệnh chạy, tham chiếu, mẫu kịch bản). Hệ thống không tự sinh. | `backend/adapters/tls13/sut/wolfssl.yaml`, `backend/docker/eval-*.Dockerfile` | Mỗi cặp (giao thức, thư viện) tốn công chuẩn bị. Chưa thể "đưa thư viện vào là chạy". | Để AI đọc tài liệu và sinh công thức chạy, kiểm tra lại bằng ca sanity và bản tham chiếu | ❌ |
-| A2 🟡 | **Lệnh chạy viết cứng trong mã**, không đọc từ tệp công thức của adapter. Thêm thư viện mới phải sửa mã. | `backend/src/rfcv/backends/docker_launcher.py`: `WOLFSSL_COMMAND`, `OPENSSL_COMMAND`, `default_specs()` | Mâu thuẫn với câu "chỉ cần thêm adapter" | Cho bộ khởi chạy đọc `roles.server.cmd` từ tệp công thức | ❌ |
+| A2 🟢 | ~~**Lệnh chạy viết cứng trong mã**, không đọc từ tệp công thức của adapter.~~ **Đã xử lý ở `gen-37` (`L6 ADD_CAPABILITY`):** bổ sung `specs_from_adapter()` trong `docker_launcher.py` tự đọc `roles.server.cmd`/`docker_cmd`, `port`, `transport`/`ready_check.kind`, `image` từ `sut/*.yaml` và tự đăng ký `<impl>` + `<impl>-ref` mà không cần sửa mã khởi chạy. | `backend/eval/evolution/tickets/gen-37.yaml`, `docker_launcher.py`, `test_backends.py` | Thêm thư viện mới chỉ cần thêm `sut/<impl>.yaml` trong adapter | Đã xử lý (`gen-37`) | ❌ |
 | A3 🔴 | **Chỉ kiểm tra vai trò máy chủ.** tlsfuzzer luôn đóng vai client; phần mềm cần kiểm tra luôn là server. | `docker_launcher.py`: chỉ khởi chạy server; runner luôn là client | Không kiểm tra được các yêu cầu dành cho client | Thêm chế độ hệ thống đóng vai server, phần mềm cần kiểm tra đóng vai client | ❌ |
 | A4 🟡 | **Thư viện không có phần mạng** (chỉ phân tích cú pháp, mã hoá/giải mã) chưa kiểm tra được. Hiện chỉ có backend gửi gói tin qua mạng. | `backend/src/rfcv/backends/`: tlsfuzzer, http2, dns, ssh, quic đều đi qua socket | Bỏ ngoài phạm vi một lớp thư viện | Thêm backend gọi API trực tiếp, quan sát mã lỗi trả về | ❌ |
 | A5 🟡 | **Yêu cầu nội bộ** (loại D, ví dụ "phải xoá khoá sau khi dùng") có thiết kế (quy tắc V8, truy vấn tĩnh T2) nhưng **chưa được đánh giá**. | `rules.py`: `V8-violation`, `V8-compliant` | Chưa chứng minh được câu "kiểm tra cả yêu cầu không quan sát được qua mạng" | Làm bộ mẫu loại D và đánh giá | ❌ |

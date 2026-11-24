@@ -159,3 +159,27 @@ def test_openssl_as_sut_replaces_the_debian_reference_and_adds_wolfssl_reference
     assert specs["wolfssl"].image == "rfcv/sut-wolfssl:head" and specs["wolfssl"].expect_rev is None
     default = default_specs(commit)  # SUT là wolfSSL: OpenSSL là bản tham chiếu Debian
     assert default["openssl"].image == "rfcv/ref-openssl:latest" and default["wolfssl"].expect_rev == commit
+
+
+def test_specs_from_adapter_loads_new_library_without_launcher_edits(tmp_path: Any) -> None:
+    from rfcv.backends.docker_launcher import specs_from_adapter
+
+    sut_dir = tmp_path / "sut"
+    sut_dir.mkdir()
+    (sut_dir / "coredns.yaml").write_text(
+        "implementation: coredns\n"
+        "roles:\n"
+        "  server:\n"
+        "    cmd: '/sut/coredns -dns.port {port} -conf /sut/Corefile'\n"
+        "    port: 5354\n"
+        "lifecycle:\n"
+        "  ready_check: {kind: udp_query, port: '{port}'}\n",
+        encoding="utf-8",
+    )
+    commit = "b" * 40
+    specs = specs_from_adapter(tmp_path, sut_commit=commit, sut_impl="coredns")
+    assert "coredns" in specs and "coredns-ref" in specs
+    assert specs["coredns"].command == ("/sut/coredns", "-dns.port", "5354", "-conf", "/sut/Corefile")
+    assert specs["coredns"].port == 5354 and specs["coredns"].udp is True
+    assert specs["coredns"].image == f"rfcv/sut-coredns:{commit[:12]}" and specs["coredns"].expect_rev == commit
+    assert specs["coredns-ref"].image == "rfcv/sut-coredns:head" and specs["coredns-ref"].expect_rev is None
