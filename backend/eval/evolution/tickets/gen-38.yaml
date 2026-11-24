@@ -1,0 +1,21 @@
+generation: gen-38
+level: L6
+operator: ADD_STRATEGY
+target: backend/src/rfcv/domains/rfc_protocol/code_probe.py, backend/agents/tester/handler.py, backend/src/rfcv/backends/tlsfuzzer/runner.py
+contribution_type: Chiến lược hai chiều Code-First → Targeted Dynamic Verify (giải D12, F1, C1)
+capability_rung: bậc 3 (cổng mới — phát hiện lỗi cửa sổ hẹp/magic value mà Test-First bị mù như U5)
+summary: >
+  Bổ sung chiến lược trắng-hộp có kiểm soát (`code_probe.py` + `_run_code_first_probe` trong
+  `tester/handler.py` + phân tích động `type_<0..255>` trong `tlsfuzzer/runner.py`): khi toàn bộ
+  ca kích hoạt hộp đen PASS, trích xuất tất định hằng số nhánh `if`/`switch`/`case` quanh điểm
+  phát mã phản ứng kỳ vọng và chạy xác minh ngược bằng `T3` trên cả SUT lẫn bản tham chiếu, giữ
+  nguyên 100% bất biến IFC và Verdict Engine.
+motivation: >
+  Mục D12 (🔴) và F1 (🟡) trong `docs/05_project/han_che_he_thong.md`: hướng Test-First một chiều
+  bỏ sót hoàn toàn lỗi cửa sổ hẹp/magic value ngoài tập biến thể tĩnh (ví dụ `U5` chỉ lỗi ở
+  `record.content_type == 77`, trong khi bộ sinh biến thể chỉ thử 0, 99, 255).
+invariants_touched: []
+metrics_before:
+  u5_narrow_magic_value_verdict: COMPLIANT (FALSE_COMPLIANT)
+metrics_after:
+  u5_narrow_magic_value_verdict: VIOLATION (V2, verified by real T3 + reference witness)

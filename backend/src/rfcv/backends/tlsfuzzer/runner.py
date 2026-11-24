@@ -183,7 +183,12 @@ def run_plain_record(req: dict[str, Any]) -> dict[str, Any]:
     """Một bản ghi RÕ có loại cho trước, gửi ngay sau khi nối (trước bắt tay), rồi quan sát phản ứng của SUT."""
     within_ms = int(req.get("within_ms", 2000))
     base: dict[str, Any] = {"trigger_reached": False, "reason": "", "send_error": False}
-    ctype = PLAIN_TYPES.get(str(req.get("content_type")))
+    raw_name = str(req.get("content_type"))
+    ctype = PLAIN_TYPES.get(raw_name)
+    if ctype is None and raw_name.startswith("type_") and raw_name[5:].isdigit():
+        num = int(raw_name[5:])
+        if 0 <= num <= 255:
+            ctype = num
     if ctype is None:
         return {**base, "reason": "unknown_content_type_name"}
     from tlsfuzzer.messages import RawMessageGenerator
