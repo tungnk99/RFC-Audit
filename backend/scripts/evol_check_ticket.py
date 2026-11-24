@@ -90,7 +90,7 @@ def append_innovation_log(ticket: dict[str, Any], log_path: Path) -> None:
     gen = ticket.get("generation", "gen-?")
     lvl_op = f"`{ticket.get('level')} {ticket.get('operator')}`"
     contrib = ticket.get("contribution_type", "Cải thiện thật")
-    summary = str(ticket.get("summary", "")).replace("|", "/")
+    summary = " ".join(str(ticket.get("summary", "")).split()).replace("|", "/")
     tier = ticket.get("capability_rung", "bậc 1")
     row = f"| **{gen}** | {lvl_op} | {contrib} | {summary} | {tier} |\n"
     with log_path.open("a", encoding="utf-8") as f:

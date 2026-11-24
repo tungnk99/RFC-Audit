@@ -562,9 +562,9 @@ class ExecutionLoop:
             )
             self._log_plan_context(available, scripted, req.requirement_id, round=tracker.rounds)
             return scripted
-        if self._scripted_plans and not self._planner_llm_fallback:
+        if self._scripted_plans and not self._planner_llm_fallback and any(h.get("failure") for h in history):
             # gen-34 (L4 REMOVE_AGENT): Planner LLM là gen lặn (100% output=null trên held-out sau lỗi tác vụ).
-            # Khi sổ tay không còn luật tất định phù hợp, dừng sạch thay vì đốt ngân sách gọi Planner LLM.
+            # Khi một tác vụ đã hỏng trong chế độ sổ tay, dừng sạch thay vì đốt ngân sách gọi Planner LLM.
             stop_plan = PlanAction(action="stop", tasks=[], rationale_code="playbook_no_further_rule")
             self._log(
                 "plan",
