@@ -27,6 +27,8 @@ th { background: #eee; } tr { break-inside: avoid; }
 code { font-family: Consolas, monospace; font-size: 8.8pt; background: #f1f1f1; padding: 0 2pt; }
 pre { font: 8pt/1.3 Consolas, monospace; background: #f6f6f6; border: 1px solid #ccc; padding: 6pt; white-space: pre-wrap; break-inside: avoid; }
 hr { border: 0; border-top: 1px solid #bbb; margin: 10pt 0; }
+p.cap { break-after: avoid; text-align: left; }
+div.keep { break-inside: avoid; }
 figure { margin: 8pt 0 2pt; break-inside: avoid; text-align: center; } figure svg { width: 100%; height: auto; max-height: 150mm; }
 """
 
@@ -62,6 +64,10 @@ def convert(md: str, base: Path) -> str:
             out.append("<pre>" + html.escape("\n".join(buf)) + "</pre>")
             i += 1
             continue
+        if ln.strip() == "<!-- pagebreak -->":
+            out.append('<div style="break-before: page"></div>')
+            i += 1
+            continue
         if m := re.match(r"^!\[[^\]]*\]\(([^)]+)\)\s*$", ln):
             img = (base / m.group(1)).resolve()
             out.append(figure(img) if img.suffix.lower() == ".svg" and img.is_file() else f"<p>[thiếu hình {m.group(1)}]</p>")
@@ -85,7 +91,11 @@ def convert(md: str, base: Path) -> str:
                 i += 1
             t = "<table><thead><tr>" + "".join(f"<th>{inline(c)}</th>" for c in head) + "</tr></thead><tbody>"
             t += "".join("<tr>" + "".join(f"<td>{inline(c)}</td>" for c in r) + "</tr>" for r in rows)
-            out.append(t + "</tbody></table>")
+            t += "</tbody></table>"
+            # Bảng ngắn: giữ tiêu đề bảng và bảng trên cùng một trang.
+            if out and out[-1].startswith('<p class="cap">') and len(rows) <= 12:
+                t = '<div class="keep">' + out.pop() + t + "</div>"
+            out.append(t)
             continue
         if LIST_ITEM.match(ln):
             tag = "ol" if re.match(r"^\s*\d+\.", ln) else "ul"
@@ -107,7 +117,8 @@ def convert(md: str, base: Path) -> str:
         while i < len(lines) and lines[i].strip() and not re.match(r"^(#{1,4}\s|-{3,}\s*$|\||```|!\[|\s*(\d+\.|-)\s+)", lines[i]):
             para.append(lines[i])
             i += 1
-        out.append("<p>" + "<br>".join(inline(p) for p in para) + "</p>")
+        cls = ' class="cap"' if para[0].startswith(("**Bảng", "**Hình")) else ""
+        out.append(f"<p{cls}>" + "<br>".join(inline(p) for p in para) + "</p>")
     return "\n".join(out)
 
 
