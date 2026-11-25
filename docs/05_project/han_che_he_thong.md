@@ -2,7 +2,7 @@
 
 Tệp này ghi lại mọi hạn chế đã phát hiện, kèm bằng chứng, ảnh hưởng và hướng xử lý. Mỗi khi phát hiện hạn chế mới, hoặc xử lý xong một hạn chế, cập nhật tệp này.
 
-- **Cập nhật lần cuối:** 25/11/2026 (sau `gen-39`: đánh giá 2 giao thức Held-out SSH `Dropbear` + QUIC `ngtcp2` với lõi đóng băng)
+- **Cập nhật lần cuối:** 25/11/2026 (sau `gen-40`: thí nghiệm đối chứng Ablation `D5` trên 6 ca OpenSSL thực tế)
 - **Cột "Báo cáo 02":** ✅ đã nêu trong báo cáo tiến độ 02 · ❌ chưa nêu · ⚠️ báo cáo đang ghi sai hoặc thiếu
 - **Mức độ:** 🔴 thầy hoặc hội đồng dễ hỏi, ảnh hưởng tới kết luận chính · 🟡 nên nêu · ⚪ chi tiết kỹ thuật, biết để trả lời khi bị hỏi
 
@@ -64,7 +64,7 @@ Tệp này ghi lại mọi hạn chế đã phát hiện, kèm bằng chứng, �
 | D2 🔴 | **Lỗi thật rất ít:** 7 mẫu lấy từ lịch sử wolfSSL, trong đó chỉ 3 bản có lỗi. 43 mẫu còn lại là lỗi tự tạo. | `docs/04_evaluation/real_data_report.md` | Kết quả chủ yếu trên lỗi tự tạo | Tìm thêm lỗi thật từ lịch sử commit | ✅ |
 | D3 🟡 | **Tập phát triển đã được dùng để chỉnh hệ thống nhiều vòng** (Tầng 2: 6 vòng, Tầng 3: 9 vòng). | báo cáo 02, mục 4.1 | 85,7% có thể cao hơn thực tế | Chỉ dùng tập độc lập để báo cáo con số chính | ✅ |
 | D4 🔴 | **Kiểm thử hộp đen cũng kết luận đúng 100%.** Phần "có lỗi hay không" thực chất do kiểm thử chạy thật quyết định; đóng góp riêng của hệ thống là định vị dòng lỗi. | báo cáo 02, Bảng 3 | Không thể nói AI giúp kết luận đúng hơn | Trình bày đúng: đóng góp chính là định vị | ✅ |
-| D5 🔴 | **Thiếu hai thí nghiệm đối chứng:** (a) kiểm thử hộp đen + một tác tử đơn đọc mã; (b) bỏ từng thành phần (1 nhánh thay vì 2, bỏ chấm điểm, bỏ dấu hiệu lỗi). | báo cáo 02, mục 4.2 | Chưa tách được phần đóng góp của kiến trúc | Chạy hai thí nghiệm này | ✅ |
+| D5 🟢 | ~~**Thiếu hai thí nghiệm đối chứng.**~~ **Đã xử lý ở `gen-40` (Ablation trên Docker thật, 6 ca OpenSSL khó `OU2, OU3, OG1, OG2, OG4, OR1`, cùng `DeepSeek-V4-Flash`):** `A2` (`T3 + 1 tác tử đơn mù`, bỏ chẩn đoán & giải đấu 2 nhánh) đạt `2/6 = 33,3%` defect_hit (**`1/6 = 16,7% STRICT`**, Wilson 95%: `3%–56%`); `A1` (`T3 + chẩn đoán + 1 tác tử đơn`, bỏ giải đấu 2 nhánh & chấm điểm nhánh) đạt **`1/6 = 16,7% STRICT`** (Wilson 95%: `3%–56%`); `C0` đầy đủ đạt **`6/6 = 100,0% STRICT`** (Wilson 95%: `61%–100%`) — hai khoảng tin cậy 95% tách rời hoàn toàn (`+83,3` điểm %). | `gen-40.yaml`, `runs/real/ablation_d5_gen40` | Đã tách rõ và chứng minh có ý nghĩa thống kê đóng góp của giải đấu 2 nhánh chuyên biệt + chấm điểm `obs_in_source` | Đã xử lý (`gen-40`) | ✅ |
 | D6 🟡 | **"Định vị đúng" chỉ cần trùng ít nhất một vị trí sửa.** Ở R9, lỗi nằm ở 2 dòng (26216 và 26290), hệ thống chỉ tìm ra một dòng. | `mutants_multi.yaml` mục R9; `run-64c4619f0763` | Con số định vị có thể bị hiểu là "tìm đủ" | Định nghĩa rõ trong báo cáo; thêm chỉ số "tìm đủ mọi vị trí" | ❌ |
 | D7 🟡 | **Tốn token hơn tác tử đơn khoảng 1,4–2 lần** (khoảng 118 nghìn so với 60 và 83 nghìn token mỗi mẫu). | báo cáo 02, Bảng 3 | Chi phí cao hơn | Tối ưu ngân sách nhánh | ✅ |
 | D8 🟡 | **Một mẫu OpenSSL chưa định vị được**: lệnh gửi cảnh báo bị xoá hẳn trong một hàm dài. Tìm kiếm văn bản tĩnh khó phát hiện kiểu lỗi này. | báo cáo 02, mục 5 | Một loại lỗi chưa xử lý được | Đo độ phủ mã theo dòng giữa ca chạy đạt và ca chạy lỗi | ✅ |

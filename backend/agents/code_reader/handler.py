@@ -4,6 +4,7 @@ Agent không ghi bằng chứng; cổng mới ghi. Bộ quét nhánh nghi vấn 
 
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import Mapping, Sequence
 from typing import Any
@@ -85,6 +86,8 @@ class LocationHandler:
           giả thuyết thay vì mò từ đầu;
         - `code.candidates`: khi phản ứng thiếu hay sai, mọi nơi phát mã cảnh báo kèm hàm chứa, và `defined()` của macro bảo vệ chúng
           (grep và eval cùng một công cụ agent dùng; dòng trả về tính là đã hiển thị cho Schema gate)."""
+        if os.environ.get("RFCV_ABLATION", "").strip().lower() == "no_diagnosis":
+            return {}, frozenset()
         req_id = inv.requirement.requirement_id
         t3s = [e.payload for e in self._rt.store.for_requirement(req_id) if isinstance(e.payload, T3Payload)]
         expected = _expected_alert(inv)
@@ -144,6 +147,8 @@ class LocationHandler:
     def branches(self, inv: Investigation, task: Any) -> Sequence[dict[str, Any]]:
         """Khi T3 đã chứng minh vi phạm, chạy song song 2 AI Agent chuyên biệt tối ưu theo chữ ký lỗi (tổng ~170k-200k token)."""
         if str(getattr(task, "task_type", "")) != "LOCATE":
+            return ()
+        if os.environ.get("RFCV_ABLATION", "").strip().lower() in ("single_branch", "no_diagnosis"):
             return ()
         req_id = inv.requirement.requirement_id
         t3s = [e.payload for e in self._rt.store.for_requirement(req_id) if isinstance(e.payload, T3Payload)]

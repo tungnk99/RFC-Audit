@@ -1,0 +1,23 @@
+generation: gen-40
+level: L2
+operator: ABLATION_STUDY
+target: backend/agents/code_reader/handler.py (RFCV_ABLATION) & backend/scripts/run_ablation_d5.py
+contribution_type: Thí nghiệm đối chứng tách thành phần Ablation (Chặng A, xử lý triệt để mục D5 🔴)
+capability_rung: "bậc 2 (chứng minh định lượng đóng góp kiến trúc đa tác tử: +83.3% ALL STRICT, CI 95% không giao nhau)"
+summary: >
+  Chạy thí nghiệm đối chứng Ablation thực tế trên Docker với 6 ca OpenSSL khó (`OU2, OU3, OG1, OG2, OG4, OR1`)
+  cùng mô hình `DeepSeek-V4-Flash`: `A2` (T3 + 1 tác tử đơn mù, bỏ chẩn đoán & giải đấu 2 nhánh) chỉ đạt
+  `2/6 = 33.3%` defect_hit (`1/6 = 16.7% STRICT`, Wilson 95%: 3%–56%); `A1` (T3 + chẩn đoán + 1 tác tử đơn,
+  bỏ giải đấu 2 nhánh & chấm điểm nhánh) chỉ đạt `1/6 = 16.7% STRICT` (Wilson 95%: 3%–56%); trong khi `C0`
+  đầy đủ (giải đấu 2 nhánh chuyên biệt + chấm điểm tất định `obs_in_source`) đạt `6/6 = 100.0% STRICT`
+  (Wilson 95%: 61%–100%) — khoảng tin cậy 95% tách rời hoàn toàn.
+motivation: >
+  Mục D5 (🔴) trong `docs/05_project/han_che_he_thong.md` yêu cầu tách rõ phần đóng góp của kiến trúc
+  đa tác tử 2 nhánh so với "kiểm thử hộp đen + 1 tác tử đơn đọc mã" và "bỏ từng thành phần".
+invariants_touched: []
+metrics_before:
+  ablation_d5_evidence: missing
+metrics_after:
+  a2_no_diagnosis_strict: "1/6 (16.7%, CI 3%-56%)"
+  a1_single_branch_strict: "1/6 (16.7%, CI 3%-56%)"
+  c0_full_strict: "6/6 (100.0%, CI 61%-100%)"
