@@ -277,7 +277,7 @@ def specs_from_adapter(
             udp=udp,
         )
         ref_key = f"{impl}-ref"
-        if ref_key not in specs:
+        if ref_key not in specs or server.get("docker_cmd"):
             ref_img = str(server.get("ref_image") or f"rfcv/sut-{impl}:head")
             specs[ref_key] = ServerSpec(
                 image=ref_img,

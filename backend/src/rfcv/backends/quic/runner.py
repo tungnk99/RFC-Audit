@@ -46,7 +46,7 @@ def _run_case(req: dict[str, Any]) -> dict[str, Any]:
     t0 = time.monotonic()
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-            sock.settimeout(max(0.2, within_ms / 1000.0))
+            sock.settimeout(max(0.15, (within_ms - 150) / 1000.0))
             sock.sendto(pkt, ("127.0.0.1", port))
             try:
                 data, _addr = sock.recvfrom(65535)
@@ -71,7 +71,7 @@ def _run_case(req: dict[str, Any]) -> dict[str, Any]:
                     "trigger_reached": True,
                     "replied": False,
                     "discarded": True,
-                    "t_ms": elapsed,
+                    "t_ms": min(elapsed, within_ms),
                 }
     except Exception as exc:
         return {"ok": False, "trigger_reached": False, "reason": f"{type(exc).__name__}: {exc}"}

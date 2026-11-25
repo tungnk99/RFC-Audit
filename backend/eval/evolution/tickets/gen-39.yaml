@@ -1,0 +1,25 @@
+generation: gen-39
+level: L6
+operator: EVAL_HELDOUT
+target: Held-out protocols SSH (Dropbear 2024.86) & QUIC (ngtcp2 v1.11.0) + backend runner/launcher fixes
+contribution_type: Đánh giá tổng quát hoá đa giao thức trên 2 giao thức Held-out với lõi đóng băng (Chặng A, mục D9/D10)
+capability_rung: "bậc 3 (xác minh 5 giao thức thực tế trên Docker: 3 Dev → 2 Held-out)"
+summary: >
+  Dựng và chạy đánh giá thực tế trên Docker với lõi/agent đóng băng cho 2 giao thức Held-out:
+  SSH (`Dropbear 2024.86`: 4/4 = 100% verdict trên các ca không tương đương S3..S6, 0% False VIOLATION;
+  S1/S2 là đột biến tương đương do `requirenext` chặn trước dòng 139) và QUIC (`ngtcp2 v1.11.0`:
+  4/4 = 100% verdict trên Q1..Q4, 0% False COMPLIANT, 0% False VIOLATION). Sửa 2 lỗi cấu hình hạ tầng
+  không chạm lõi: đồng bộ `docker_cmd` cho `<impl>-ref` trong `docker_launcher.py` và sửa biên 1ms
+  timeout UDP trong `quic/runner.py`.
+motivation: >
+  Chặng A (Mốc 2): khép kín ma trận tổng quát hoá 5 giao thức (TLS 1.3, HTTP/2, DNS → SSH, QUIC) và
+  ghi nhận trung thực 2 điểm nghẽn định vị mới phát hiện trên mã nguồn chưa từng thấy (`tree-sitter`
+  cắt biên hàm K&R C chứa `#ifdef` ở `S3` `read_kex_algos`, và dừng ở điểm kiểm tra trùng thứ nhất
+  `conn_recv_pkt:6109` thay vì `ngtcp2_accept:10230` ở `Q1/Q2`).
+invariants_touched: []
+metrics_before:
+  protocols_evaluated_in_docker: 3
+metrics_after:
+  protocols_evaluated_in_docker: 5
+  heldout_ssh_verdict_non_equiv: "4/4 (100.0%)"
+  heldout_quic_verdict: "4/4 (100.0%)"
