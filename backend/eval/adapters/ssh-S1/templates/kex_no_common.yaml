@@ -1,0 +1,14 @@
+# Mẫu DSL (tài liệu adapter, mục 5.3): KEXINIT của client chỉ chứa thuật toán kex mà SUT không hỗ trợ.
+id: ssh.kex.no_common_algorithm
+requirement_types: [B]
+rfc_refs: ["RFC4253§7.1"]
+checks_behavior: "receive(KEXINIT, không thuật toán kex chung) → close"
+variant_class: field_presence
+runner: asyncssh
+steps:
+  - {op: connect}
+  - {op: mutate, args: {field: kexinit.common_kex_count, op: set, value: "$kexinit.common_kex_count"}}
+  - {op: send_msg, args: {type: kexinit}}
+  - {op: expect, args: {within_ms: 2000}}
+bindings: {kexinit.common_kex_count: from_variant}
+oracle: {pass: "closed and no NEWKEYS", fail: "otherwise", error: "sanity_failed"}

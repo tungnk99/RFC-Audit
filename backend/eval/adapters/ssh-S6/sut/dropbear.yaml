@@ -1,0 +1,13 @@
+implementation: dropbear
+repo: https://github.com/mkj/dropbear
+roles:
+  server:
+    cmd: "/sut/dropbear -F -E -r /sut/host_ed25519_key -p 127.0.0.1:{port}"
+    docker_cmd: "/sut/dropbear -F -E -r /sut/host_ed25519_key -p 127.0.0.1:{port}"
+    port: 2222
+    workdir: /sut
+lifecycle:
+  per_case_process: false
+  ready_check: {kind: listen_socket, port: "{port}", timeout_s: 5}
+  sanity_case: "asyncssh:sanity"
+  stop_signal: SIGTERM

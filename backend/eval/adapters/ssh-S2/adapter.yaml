@@ -1,0 +1,121 @@
+adapter: ssh
+version: 0.1.0
+backend: asyncssh
+domain: rfc_protocol
+verdict_profile: rfc-protocol@8
+specs:
+- doc: RFC4253
+  role: primary
+  sections_in_scope:
+  - '4.2'
+  - '6'
+  - '7.1'
+  - '11'
+- doc: RFC4252
+  role: primary
+  sections_in_scope:
+  - '4'
+  - '5'
+  - '6'
+- doc: RFC4254
+  role: reference
+component_taxonomy:
+- transport
+- kex
+- packet_protocol
+- userauth
+- connection
+vocabulary:
+  events:
+  - receive(msg)
+  - receive(kexinit)
+  - send(msg_type)
+  - send_disconnect(reason)
+  - close
+  - discard
+  states:
+  - initial
+  - version_exchanged
+  - authenticating
+  - authenticated
+  enums:
+    msg_type:
+    - disconnect
+    - ignore
+    - unimplemented
+    - debug
+    - service_request
+    - service_accept
+    - kexinit
+    - newkeys
+    - userauth_request
+    - userauth_failure
+    - userauth_success
+    - userauth_banner
+    reason:
+    - host_not_allowed_to_connect
+    - protocol_error
+    - key_exchange_failed
+    - reserved
+    - mac_error
+    - compression_error
+    - service_not_available
+    - protocol_version_not_supported
+    - host_key_not_verifiable
+    - connection_lost
+    - by_application
+    - too_many_connections
+    - auth_cancelled_by_user
+    - no_more_auth_methods_available
+    - illegal_user_name
+field_domains:
+  msg.number:
+    min: 0
+    max: 255
+    canonical:
+    - 80
+  kexinit.common_kex_count:
+    min: 0
+    max: 32
+consistency_rules: []
+locator_hints:
+  packet_protocol:
+    keywords:
+    - process_packet
+    - MAX_UNAUTH_PACKET_TYPE
+    - authdone
+    - dropbear_exit
+    entry_points:
+    - process_packet
+    paths:
+    - src/process-packet.c
+    - src/packet.c
+  kex:
+    keywords:
+    - read_kex_algos
+    - buf_match_algo
+    - erralgo
+    - dropbear_exit
+    entry_points:
+    - read_kex_algos
+    paths:
+    - src/common-kex.c
+build_flags:
+- --disable-pam
+sut:
+  repo: https://github.com/mkj/dropbear
+  commit: 68c9c93930f4985fd92e1133817cc332e3b7ddf6
+  recipe: sut/dropbear.yaml
+  start:
+    role: server
+    port: 2222
+references:
+- dropbear-ref
+code_scope:
+  include:
+  - src/**
+  exclude:
+  - test/**
+  - fuzz/**
+examples: examples/*.yaml
+build_config_complete: true

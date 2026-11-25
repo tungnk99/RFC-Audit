@@ -1,0 +1,12 @@
+id: ssh.userauth.msg_before_auth_plain
+requirement_types: [C]
+rfc_refs: ["RFC4252§6"]
+checks_behavior: "receive(msg, number >= 80) trước khi xác thực xong → close"
+variant_class: message_order
+runner: asyncssh
+steps:
+  - {op: connect}
+  - {op: send_raw_record, args: {msg_number: "$msg.number", body: zeros, encrypted: false}}
+  - {op: expect, args: {within_ms: 2000}}
+bindings: {msg.number: from_variant}
+oracle: {pass: "closed and no USERAUTH_SUCCESS", fail: "otherwise", error: "sanity_failed"}

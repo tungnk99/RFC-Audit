@@ -1,0 +1,14 @@
+implementation: ngtcp2
+repo: https://github.com/ngtcp2/ngtcp2
+roles:
+  server:
+    cmd: "/sut/rfcv_ngtcp2_srv {port}"
+    docker_cmd: "/sut/rfcv_ngtcp2_srv {port}"
+    port: 4433
+    transport: udp
+    workdir: /sut
+lifecycle:
+  per_case_process: false
+  ready_check: {kind: udp_query, port: "{port}", timeout_s: 5}
+  sanity_case: "aioquic:sanity"
+  stop_signal: SIGTERM

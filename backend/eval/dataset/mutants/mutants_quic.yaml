@@ -1,0 +1,70 @@
+protocol: quic
+sut: ngtcp2
+items:
+- id: Q1
+  family: D
+  requirement: QUIC-0001
+  expected: VIOLATION
+  operator: DEL_DGRAM_CHECK
+  adapter: eval/adapters/quic-Q1
+  code_root: runs/real/src/ngtcp2-Q1
+  commit: 169db3f2166f8e3a4e566047418154db00064187
+  image: rfcv/sut-ngtcp2:169db3f2166f
+  why: Bỏ kiểm tra pktlen < NGTCP2_MAX_UDP_PAYLOAD_SIZE trong ngtcp2_accept (RFC 9000
+    §14.1).
+  fix_location:
+    files:
+      lib/ngtcp2_conn.c:
+      - - 10230
+        - 10233
+    symbols:
+    - ngtcp2_accept
+- id: Q2
+  family: D
+  requirement: QUIC-0001
+  expected: VIOLATION
+  operator: THRESH_LOW
+  adapter: eval/adapters/quic-Q2
+  code_root: runs/real/src/ngtcp2-Q2
+  commit: 14c080969bbaf2bf6632d39f2f6c960efcada652
+  image: rfcv/sut-ngtcp2:14c080969bba
+  why: Hạ ngưỡng kích thước datagram Initial từ 1200 xuống 600 trong ngtcp2_accept
+    (RFC 9000 §14.1).
+  fix_location:
+    files:
+      lib/ngtcp2_conn.c:
+      - - 10230
+        - 10233
+    symbols:
+    - ngtcp2_accept
+- id: Q3
+  family: D
+  requirement: QUIC-0001
+  expected: VIOLATION
+  operator: MACRO_SHIFT
+  adapter: eval/adapters/quic-Q3
+  code_root: runs/real/src/ngtcp2-Q3
+  commit: 08fd2421c26c29288f04b5dade36e4c827ef1e7d
+  image: rfcv/sut-ngtcp2:08fd2421c26c
+  why: Hạ macro NGTCP2_MAX_UDP_PAYLOAD_SIZE từ 1200 xuống 512 khiến ngtcp2_accept
+    chấp nhận gói < 1200 byte.
+  fix_location:
+    files:
+      lib/includes/ngtcp2/ngtcp2.h:
+      - - 303
+        - 303
+      lib/ngtcp2_conn.c:
+      - - 10230
+        - 10233
+    symbols:
+    - ngtcp2_accept
+- id: Q4
+  family: D
+  requirement: QUIC-0001
+  expected: COMPLIANT
+  operator: BASELINE
+  adapter: eval/adapters/quic-Q4
+  code_root: runs/real/src/ngtcp2-head
+  commit: f4f531634299fb6dc9dffaee2e7f6cbff00fe676
+  image: rfcv/sut-ngtcp2:head
+  why: ngtcp2 v1.9.1 gốc tuân thủ RFC 9000 §14.1 (bỏ mọi datagram Initial < 1200 byte).

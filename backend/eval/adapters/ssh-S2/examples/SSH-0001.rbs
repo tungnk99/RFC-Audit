@@ -1,0 +1,9 @@
+requirement SSH-0001 from RFC4252§6#p2s1 modal MUST type C
+actor server
+state authenticating
+# "the server MUST respond by disconnecting, preferably with a proper disconnect message": ngắt là bắt buộc, thông điệp
+# SSH_MSG_DISCONNECT chỉ là nên có, nên oracle chỉ đòi đóng; mã lý do nếu có vẫn được đối chiếu với REACTION của T1.
+trigger receive(msg) where msg.number >= 80
+expect close within 2000ms
+forbid send(userauth_success)
+variants boundary(msg.number, 80), max(msg.number), random(msg.number, k=6, stratified)

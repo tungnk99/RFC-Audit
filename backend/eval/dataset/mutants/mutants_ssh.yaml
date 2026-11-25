@@ -1,0 +1,96 @@
+protocol: ssh
+sut: dropbear
+items:
+- id: S1
+  family: P
+  requirement: SSH-0001
+  expected: VIOLATION
+  operator: DEL_EXIT
+  adapter: eval/adapters/ssh-S1
+  code_root: runs/real/src/dropbear-S1
+  commit: 4c8fa3b1a467ea62e687757c31bd81d9f4507011
+  image: rfcv/sut-dropbear:4c8fa3b1a467
+  why: Bỏ dropbear_exit khi nhận gói có mã >= 80 trước userauth (RFC 4252 §6).
+  fix_location:
+    files:
+      src/process-packet.c:
+      - - 139
+        - 141
+    symbols:
+    - process_packet
+- id: S2
+  family: P
+  requirement: SSH-0001
+  expected: VIOLATION
+  operator: THRESH_HIGH
+  adapter: eval/adapters/ssh-S2
+  code_root: runs/real/src/dropbear-S2
+  commit: 68c9c93930f4985fd92e1133817cc332e3b7ddf6
+  image: rfcv/sut-dropbear:68c9c93930f4
+  why: Nâng ngưỡng kiểm tra gói trước userauth từ MAX_UNAUTH_PACKET_TYPE lên 255 nên
+    không ngắt kết nối.
+  fix_location:
+    files:
+      src/process-packet.c:
+      - - 139
+        - 141
+    symbols:
+    - process_packet
+- id: S3
+  family: K
+  requirement: SSH-0002
+  expected: VIOLATION
+  operator: KEX_NO_DISCONNECT
+  adapter: eval/adapters/ssh-S3
+  code_root: runs/real/src/dropbear-S3
+  commit: 605b972fbdfb088ae4e3e48009712d0759bbab64
+  image: rfcv/sut-dropbear:605b972fbdfb
+  why: Không nhảy tới error để ngắt kết nối khi không có thuật toán KEX chung (RFC
+    4253 §7.1).
+  fix_location:
+    files:
+      src/common-kex.c:
+      - - 888
+        - 892
+    symbols:
+    - read_kex_algos
+- id: S4
+  family: K
+  requirement: SSH-0002
+  expected: VIOLATION
+  operator: KEX_ERR_NO_EXIT
+  adapter: eval/adapters/ssh-S4
+  code_root: runs/real/src/dropbear-S4
+  commit: 8b4abafbc7aeacf4b89e6422ee86688667c43b56
+  image: rfcv/sut-dropbear:8b4abafbc7ae
+  why: Nhãn error của read_kex_algos trả về thay vì gọi dropbear_exit khi không khớp
+    thuật toán KEX.
+  fix_location:
+    files:
+      src/common-kex.c:
+      - - 1043
+        - 1044
+    symbols:
+    - read_kex_algos
+- id: S5
+  family: P
+  requirement: SSH-0001
+  expected: COMPLIANT
+  operator: BASELINE
+  adapter: eval/adapters/ssh-S5
+  code_root: runs/real/src/dropbear-head
+  commit: 2ad9f3caa3e821dc576291d4348219469f222754
+  image: rfcv/sut-dropbear:head
+  why: Dropbear 2024.86 gốc tuân thủ RFC 4252 §6 (ngắt kết nối khi nhận gói >= 80
+    trước userauth).
+- id: S6
+  family: K
+  requirement: SSH-0002
+  expected: COMPLIANT
+  operator: BASELINE
+  adapter: eval/adapters/ssh-S6
+  code_root: runs/real/src/dropbear-head
+  commit: 2ad9f3caa3e821dc576291d4348219469f222754
+  image: rfcv/sut-dropbear:head
+  why: Dropbear 2024.86 gốc tuân thủ RFC 4253 §7.1 (ngắt kết nối khi không có KEX
+    chung).
