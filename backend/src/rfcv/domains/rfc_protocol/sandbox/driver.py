@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from rfcv.common.hashing import content_hash
@@ -163,6 +163,12 @@ class TestDriver:
                     if not await self._backend.sanity(ep):
                         return CaseResult(Outcome.ERROR, None, "sanity_failed")
                     trace = await self._backend.run(scenario, params, ep, seed)
+                    if coverage and not trace.lcov:
+                        collect_cov: Any = getattr(self._launcher, "collect_coverage", None)
+                        if collect_cov is not None:
+                            lcov_bytes = await collect_cov(ep)
+                            if isinstance(lcov_bytes, bytes) and lcov_bytes:
+                                trace = replace(trace, lcov=lcov_bytes)
                 break
             except NotImplementedError:
                 raise  # khoảng trống cài đặt chứ không phải lỗi môi trường: phải lộ ra, không giấu thành ERROR

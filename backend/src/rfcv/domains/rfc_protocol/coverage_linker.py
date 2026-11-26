@@ -82,14 +82,42 @@ def link(t1_id: str, t1: T1Payload, coverage: LineCoverage) -> CoverageLink:
     return CoverageLink(t1=t1_id, lines_hit=tuple(sorted(hit)), linked=linked and bool(hit))
 
 
+def causal_diff(fail_covs: list[LineCoverage], pass_covs: list[LineCoverage]) -> dict[str, dict[str, list[int]]]:
+    """Độ phủ vi sai nhân quả (gen-43 / E4 & D8): tách dòng thực thi trên ca FAIL vs ca PASS.
+
+    Trả về `{file: {"fail_executed": [...], "fail_only": [...], "pass_only": [...]}}` giúp xác minh
+    hàm/nhánh nào thực sự chạy trên đường đi gây lỗi (giải bài toán nhiều điểm kiểm tra trùng như QUIC ngtcp2).
+    """
+    all_files: set[str] = set()
+    for cov in (*fail_covs, *pass_covs):
+        all_files.update(cov.files.keys())
+    out: dict[str, dict[str, list[int]]] = {}
+    for f in sorted(all_files):
+        f_lines: set[int] = set()
+        for cov in fail_covs:
+            f_lines |= cov.executed(f)
+        p_lines: set[int] = set()
+        for cov in pass_covs:
+            p_lines |= cov.executed(f)
+        if f_lines or p_lines:
+            out[f] = {
+                "fail_executed": sorted(f_lines),
+                "fail_only": sorted(f_lines - p_lines),
+                "pass_only": sorted(p_lines - f_lines),
+            }
+    return out
+
+
 def link_pending(store: EvidenceStore, artifacts: ArtifactStore, run_id: str, requirement_id: str) -> int:
-    """Ghi bản ghi liên kết cho mọi cặp (T3 PASS có dữ liệu độ phủ, T1) chưa được xét. Trả số bản ghi mới."""
+    """Ghi bản ghi liên kết cho mọi cặp (T3 PASS/FAIL có dữ liệu độ phủ, T1) chưa được xét. Trả số bản ghi mới."""
     evidence = store.for_requirement(requirement_id)
     t1s = [(e.evidence_id, e.payload) for e in evidence if isinstance(e.payload, T1Payload)]
     t3s = [
         (e.evidence_id, e.payload)
         for e in evidence
-        if isinstance(e.payload, T3Payload) and e.payload.outcome is Outcome.PASS and "lcov" in e.payload.artifacts
+        if isinstance(e.payload, T3Payload)
+        and e.payload.outcome in (Outcome.PASS, Outcome.FAIL)
+        and "lcov" in e.payload.artifacts
     ]
     done = {(e.payload.t3, e.payload.t1) for e in evidence if isinstance(e.payload, T3LinkPayload)}
     written = 0

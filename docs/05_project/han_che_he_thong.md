@@ -2,7 +2,7 @@
 
 Tệp này ghi lại mọi hạn chế đã phát hiện, kèm bằng chứng, ảnh hưởng và hướng xử lý. Mỗi khi phát hiện hạn chế mới, hoặc xử lý xong một hạn chế, cập nhật tệp này.
 
-- **Cập nhật lần cuối:** 26/11/2026 (sau `gen-42`: hoàn thiện 8/8 thao tác DSL `mutate`/`reorder`/`repeat` trong `tlsfuzzer`)
+- **Cập nhật lần cuối:** 26/11/2026 (sau `gen-43`: thu thập độ phủ dòng LCOV thực tế trong Docker & Causal Coverage Diff — chốt Chặng B)
 - **Cột "Báo cáo 02":** ✅ đã nêu trong báo cáo tiến độ 02 · ❌ chưa nêu · ⚠️ báo cáo đang ghi sai hoặc thiếu
 - **Mức độ:** 🔴 thầy hoặc hội đồng dễ hỏi, ảnh hưởng tới kết luận chính · 🟡 nên nêu · ⚪ chi tiết kỹ thuật, biết để trả lời khi bị hỏi
 
@@ -82,7 +82,7 @@ Tệp này ghi lại mọi hạn chế đã phát hiện, kèm bằng chứng, �
 | E1 🟡 | **Ca đối chứng sát ngưỡng thiết kế chưa đúng.** Ở 16 639 và 16 640 byte, cả OpenSSL và GnuTLS đều FAIL. Lý do có thể là runner tạo phần nội dung bên trong vượt giới hạn 2^14+1. Hệ thống đã tự loại các ca này khỏi căn cứ. | `run-64c4619f0763`, bằng chứng #1, sự kiện #12–13, #72–73 | Ca đối chứng mất tác dụng ở sát ngưỡng | Sửa cách runner tạo bản ghi sát ngưỡng | ❌ |
 | E2 🟡 | **Bản tham chiếu HTTP/2 là chính nghttp2 bản gốc**, không phải một bản triển khai độc lập. Ở TLS, bản tham chiếu là OpenSSL và GnuTLS, thay cho rustls như thiết kế ban đầu. | `docker_launcher.py`: `nghttp2-ref`; `docker/eval-ref.Dockerfile` | Đối chứng HTTP/2 yếu hơn TLS | Thêm một máy chủ HTTP/2 độc lập làm tham chiếu | ❌ |
 | E3 ⚪ | **Kết quả tham chiếu lấy từ bộ nhớ đệm** của lượt chạy trước, khoá là mã băm image. | `cache_hit: true` trong trace | Hợp lệ, nhưng cần nói rõ khi bị hỏi | — | ❌ |
-| E4 🟡 | **Chưa thu gói tin (pcap) và chưa đo độ phủ mã.** Chỉ lưu nhật ký server và kết quả quan sát. Mức bảo đảm cao nhất hiện là `BEHAVIORAL`. | `docker_launcher.py`: tham số `coverage` bị bỏ qua | Không liên kết được ca chạy với dòng mã đã chạy | Dựng image có đo độ phủ | ❌ |
+| E4 🟢 | ~~**Chưa đo độ phủ mã.**~~ **Đã xử lý ở `gen-43` (`L6 ADD_CAPABILITY`):** bật thu thập `gcov`/`lcov` thực tế trong container `--read-only` (`GCOV_PREFIX=/tmp/gcov`, `DockerSutLauncher.collect_coverage()`, `TestDriver` tự gắn `trace.lcov`), bổ sung `causal_diff()` và liên kết cả `T3 FAIL` trong `coverage_linker.py`. Xác minh thật trên `rfcv/sut-ngtcp2:cov-head` (`192 KB` LCOV): `ngtcp2_accept:10230` → **`linked=True`**, còn `conn_recv_pkt:6108–6116` → **`linked=False`** (nâng mức bảo đảm lên **`LINKED`** thật). *(Pcap thô vẫn là tuỳ chọn mở rộng sau.)* | `gen-43.yaml`, `docker_launcher.py`, `driver.py`, `coverage_linker.py`, `eval-ngtcp2-cov.Dockerfile` | Đã chứng minh liên kết nhân quả giữa ca chạy T3 và dòng mã T1 thực thi | Đã xử lý phần độ phủ & LINKED (`gen-43`) | ❌ |
 | E5 ⚪ | **Client và server chạy chung một container**, chia chung giới hạn CPU và bộ nhớ. | `docker_launcher.py`, phần docstring | Có thể ảnh hưởng thời gian phản hồi | Tách thành 2 container nối mạng nội bộ | ❌ |
 | E6 ⚪ | **Các lần chạy lại chỉ khác tên máy**, chưa đổi đồng hồ hệ thống. | `docker_launcher.py`, phần docstring | Chưa phát hiện được lỗi phụ thuộc thời gian | Dùng libfaketime hoặc máy ảo | ❌ |
 | E7 ⚪ | **Docker không phải ranh giới bảo mật tuyệt đối**, vì container dùng chung nhân hệ điều hành với máy chủ. | — | Chỉ nên nói "giảm rủi ro" | Dùng gVisor hoặc máy ảo nếu cần | ❌ |

@@ -29,9 +29,10 @@ HEX_PORT = f"{PORT:04X}"  # /proc/net/tcp ghi cổng dạng hex; trạng thái 0
 LISTENING = f"grep -qE ':{HEX_PORT} .* 0A ' /proc/net/tcp /proc/net/tcp6"
 SERVER_LOG = "/tmp/server.log"
 SERVER_EXIT = "/tmp/server.exit"  # mã thoát của server (có tệp = server đã thoát)
+SERVER_PID = "/tmp/server.pid"  # PID tiến trình server để gửi SIGTERM xả .gcda khi đo độ phủ (gen-43 / E4)
 # Chạy server như tiến trình RIÊNG (không phải PID 1): server ví dụ của wolfSSL thoát sau mỗi lỗi, nếu là PID 1 thì container
 # chết và `docker exec` của client bị giết trước khi đọc được cảnh báo. Mã thoát ≥128 (trừ 137/143 do ta dừng) là sập.
-SERVER_WRAPPER = f'"$@" >{SERVER_LOG} 2>&1; echo $? >{SERVER_EXIT}'
+SERVER_WRAPPER = f'"$@" >{SERVER_LOG} 2>&1 & echo $! >{SERVER_PID}; wait $!; echo $? >{SERVER_EXIT}'
 
 
 class LauncherError(RuntimeError):
@@ -164,16 +165,18 @@ class DockerSutLauncher:
         return res.stdout.decode("utf-8", "replace").strip() or None if res.ok else None
 
     def start(self, impl: str, *, coverage: bool, environment: int) -> AbstractAsyncContextManager[Endpoint]:
-        # `coverage` bị bỏ qua có chủ đích: image chưa dựng kèm đo độ phủ (nhãn tối đa BEHAVIORAL).
-        return self._session(impl, environment)
+        return self._session(impl, environment, coverage=coverage)
 
     @asynccontextmanager
-    async def _session(self, impl: str, environment: int) -> AsyncGenerator[Endpoint]:
+    async def _session(self, impl: str, environment: int, *, coverage: bool = False) -> AsyncGenerator[Endpoint]:
         spec = self.specs.get(impl)
         if spec is None:
             raise LauncherError(f"không biết cài đặt '{impl}'; có: {sorted(self.specs)}")
         name = f"rfcv-{impl}-{uuid.uuid4().hex[:10]}"
         argv = ["run", "-d", "--rm", "--name", name, *hardening(environment)]
+        if coverage:
+            # Ghi .gcda vào /tmp/gcov (tmpfs ghi được ngay cả khi rootfs là --read-only).
+            argv += ["-e", "GCOV_PREFIX=/tmp/gcov", "-e", "GCOV_PREFIX_STRIP=0"]
         if spec.workdir:
             argv += ["-w", spec.workdir]
         await self.cli.check(*argv, spec.image, "sleep", "infinity", timeout=60)
@@ -185,6 +188,24 @@ class DockerSutLauncher:
         finally:
             # `--rm` ở lệnh run: Docker tự huỷ container khi dừng, nên không cần lệnh xoá nào.
             await self.cli("stop", "-t", "1", name, timeout=30)
+
+    async def collect_coverage(self, endpoint: Endpoint) -> bytes | None:
+        """Thu thập dữ liệu độ phủ LCOV từ container đã dựng kèm `--coverage` (gen-43 / E4).
+
+        Trả về `None` ngay nếu image không có `/sut/.cov_dir` (không làm chậm các image thường).
+        """
+        chk = await self.cli("exec", endpoint.host, "test", "-f", "/sut/.cov_dir", timeout=10)
+        if not chk.ok:
+            return None
+        # Gửi SIGTERM để tiến trình C xả dữ liệu .gcda vào /tmp/gcov, ghép .gcno rồi xuất LCOV.
+        script = (
+            f"if [ -f {SERVER_PID} ]; then kill -TERM $(cat {SERVER_PID}) 2>/dev/null || true; sleep 0.35; fi; "
+            "if [ -d /sut/cov_gcno ]; then cp -rn /sut/cov_gcno/. /tmp/gcov/ 2>/dev/null || true; fi; "
+            "lcov --capture --directory /tmp/gcov --output-file /tmp/cov.info "
+            "--ignore-errors source,gcov --quiet 2>/dev/null && cat /tmp/cov.info"
+        )
+        res = await self.cli("exec", endpoint.host, "sh", "-c", script, timeout=30)
+        return res.stdout if res.ok and b"SF:" in res.stdout else None
 
     async def _wait_ready(self, name: str, spec: ServerSpec) -> None:
         hex_port = f"{spec.port:04X}"
