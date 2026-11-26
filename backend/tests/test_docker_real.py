@@ -206,7 +206,15 @@ def test_validate_accepts_the_canonical_scenario_and_rejects_the_unsupported() -
         }
     )
     res = backend.validate(mutate)
-    assert not res.ok and any("chưa hỗ trợ bước 'mutate'" in e for e in res.errors)
+    assert res.ok
+    bad_mutate = ScenarioProposal.model_validate(
+        {
+            "requirement_id": "R",
+            "reach_state": "connected",
+            "steps": [{"op": "mutate", "args": {}}, {"op": "expect"}],
+        }
+    )
+    assert not backend.validate(bad_mutate).ok
 
 
 def test_request_substitutes_the_variant_value() -> None:

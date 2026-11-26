@@ -1,8 +1,8 @@
 role: code_reader
 zone: quarantine
-context_fields: [behavior.diagnosis, code.candidates, requirement.structured, rfc.sentence, rfc.context_pack, task.focus, task.recheck_location, task.prior_findings, adapter.build_flags, adapter.vocabulary]
-tools: [locator.suggest, code.find_alert_sites, code.grep, code.glob, code.read, code.eval]
-skills: [locate-alert-sites, resolve-c-macro-thresholds, check-ifdef-compiled-lines, trace-all-entry-paths, "@adapter"]
+context_fields: [behavior.diagnosis, code.candidates, code.coverage_hotspots, requirement.structured, rfc.sentence, rfc.context_pack, task.focus, task.recheck_location, task.prior_findings, adapter.build_flags, adapter.vocabulary]
+tools: [locator.suggest, coverage.hotspots, code.find_alert_sites, code.grep, code.glob, code.read, code.eval]
+skills: [locate-alert-sites, coverage-guided-localization, resolve-c-macro-thresholds, check-ifdef-compiled-lines, trace-all-entry-paths, "@adapter"]
 output_schema: LocationClaim@1
 prompt: prompt.md
 budget_per_task: {tool_calls: 30, tokens: 400000, seconds: 900}

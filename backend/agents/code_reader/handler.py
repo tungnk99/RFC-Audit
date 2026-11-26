@@ -16,7 +16,16 @@ from agents.common import RBS_KEY
 from agents.locator.service import requirement_keywords
 from rfcv.core.execution_loop import Investigation
 from rfcv.core.ifc import Labeled, TrustLabel
-from rfcv.domains.rfc_protocol.coverage_linker import LineCoverage, link_pending, ochiai_scores, parse_lcov
+from rfcv.domains.rfc_protocol.coverage_linker import (
+    LineCoverage,
+    link_pending,
+    ochiai_scores,
+    parse_lcov,
+    repo_rel_path,
+)
+from rfcv.domains.rfc_protocol.coverage_linker import (
+    link as link_cov,
+)
 from rfcv.domains.rfc_protocol.diagnosis import (
     NO_CLOSE,
     NONE,
@@ -31,6 +40,7 @@ from rfcv.domains.rfc_protocol.payloads import (
     AspectValue,
     Outcome,
     Producer,
+    T1Payload,
     T2SuspiciousPayload,
     T3Payload,
     Tier,
@@ -109,19 +119,23 @@ class LocationHandler:
         if fail_covs:
             hotspots = ochiai_scores(fail_covs, pass_covs, top_k=12)
             if hotspots:
-                context["code.coverage_hotspots"] = Labeled(
-                    [
-                        {
-                            "file": h.file,
-                            "line": h.line,
-                            "ochiai": h.score,
-                            "fail_hits": h.fail_hits,
-                            "pass_hits": h.pass_hits,
-                        }
-                        for h in hotspots
-                    ],
-                    TrustLabel.DERIVED,
-                )
+                ci: Any = getattr(getattr(self._rt, "providers", None), "code_index", None)
+                known_files: set[str] = {str(f) for f in ci.files()} if ci is not None else set()
+                items_out: list[dict[str, Any]] = []
+                for h in hotspots:
+                    rel = repo_rel_path(h.file, known_files)
+                    sym = ci.containing_symbol(rel, h.line) if (ci is not None and rel in known_files) else None
+                    entry: dict[str, Any] = {
+                        "file": rel,
+                        "line": h.line,
+                        "ochiai": h.score,
+                        "fail_hits": h.fail_hits,
+                        "pass_hits": h.pass_hits,
+                    }
+                    if sym is not None:
+                        entry["symbol"] = sym.name
+                    items_out.append(entry)
+                context["code.coverage_hotspots"] = Labeled(items_out, TrustLabel.DERIVED)
         if (
             diagnosis.signature in (REACTION_ABSENT, WRONG_ALERT, NO_CLOSE)
             and (expected or diagnosis.observed_alerts)
@@ -472,6 +486,23 @@ class LocationHandler:
             t3s = [e.payload for e in self._rt.store.for_requirement(req_id) if isinstance(e.payload, T3Payload)]
             exp_alert = _expected_alert(inv)
             diag = diagnose(exp_alert, t3s)
+            fail_covs, _ = self._load_coverages(t3s)
+            if fail_covs:
+                t1_probe = T1Payload(
+                    file=output.file,
+                    symbol=output.symbol,
+                    line_start=output.line_start,
+                    line_end=output.line_end,
+                    finding=output.finding,
+                    aspects=(),
+                    call_path=tuple(output.call_path),
+                )
+                if not any(link_cov("_probe", t1_probe, cov).linked for cov in fail_covs):
+                    errors.append(
+                        f"UNEXECUTED_SITE: các dòng {output.line_start}–{output.line_end} trong `{output.file}` "
+                        f"(`{output.symbol}`) KHÔNG chạy trong ca kiểm thử FAIL (độ phủ LCOV = 0). "
+                        "Hãy gọi `coverage__hotspots` (hoặc xem `code.coverage_hotspots`) để định vị đúng hàm thực sự đã chạy trên đường dẫn lỗi."
+                    )
             if not any(a.value is AspectValue.MISMATCH for a in output.aspects):
                 if diag.signature in (REACTION_ABSENT, WRONG_ALERT, NO_CLOSE):
                     errors.append(

@@ -34,6 +34,7 @@ HUB_FIELDS = {
     "verdict.record",  # bước giải thích sau kết luận (ExecutionLoop.explain), chỉ Report nhận
     "behavior.diagnosis",  # Code Reader: chẩn đoán từ T3 do handler chuẩn bị bằng luật
     "code.candidates",  # Code Reader: gói ứng viên mã do handler chuẩn bị bằng luật
+    "code.coverage_hotspots",  # Code Reader: điểm nóng độ phủ SBFL Ochiai từ LCOV do handler chuẩn bị (gen-44/45)
     "critique.unresolved",  # như trên: vấn đề phản biện còn ngỏ khi hết số vòng đuổi theo
     "evidence.cited",
     "divergence.points",  # Verifier: điểm rẽ nhánh lập luận do miền trích xuất an toàn IFC

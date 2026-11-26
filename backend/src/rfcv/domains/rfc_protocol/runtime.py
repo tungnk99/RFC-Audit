@@ -116,6 +116,9 @@ class ProtocolRuntime:
             locator = Locator(index, rt.manifest)
             self._locators[rt.run_id] = locator
             specs.append(locator.tool_spec())
+        from rfcv.domains.rfc_protocol.coverage_linker import coverage_hotspots_tool_spec
+
+        specs.append(coverage_hotspots_tool_spec(rt))
         return specs
 
     def attach_driver(self, driver: TestDriver) -> None:

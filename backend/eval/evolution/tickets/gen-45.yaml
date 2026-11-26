@@ -1,0 +1,29 @@
+generation: gen-45
+level: L6
+operator: ADD_TOOL
+target: backend/src/rfcv/domains/rfc_protocol/coverage_linker.py (coverage.hotspots), backend/skills/core/coverage-guided-localization/SKILL.md, backend/agents/code_reader/handler.py (UNEXECUTED_SITE)
+contribution_type: Công cụ chủ động `coverage.hotspots` + kỹ năng trung lập giao thức `coverage-guided-localization` + phản hồi nhân quả `UNEXECUTED_SITE` cho Agent
+capability_rung: "bậc 4 (Agent tự dùng độ phủ SBFL Ochiai + phản hồi UNEXECUTED_SITE để lật QUIC Q1 từ 0/1 sang 1/1 STRICT)"
+summary: >
+  Đóng gói SBFL Ochiai thành công cụ chủ động `coverage.hotspots` (đăng ký trong `rfc_protocol/__init__.py`,
+  `runtime.py`, `code_reader/role.yaml`), kỹ năng trung lập giao thức `skills/core/coverage-guided-localization/SKILL.md`,
+  chuẩn hóa đường dẫn repo-relative + tên hàm trong `code.coverage_hotspots`, và thêm phản hồi nhân quả
+  `UNEXECUTED_SITE` trong `LocationHandler.precheck` khi dòng trích dẫn có LCOV = 0 trên ca FAIL.
+  Chạy thực tế trên Docker `rfcv/sut-ngtcp2:cov-Q1`: cả 2 nhánh tự điều chỉnh từ `conn_recv_handshake_pkt:6108-6116`
+  (LCOV=0) sang đúng `ngtcp2_accept` (`lib/ngtcp2_conn.c:10230-10232`, `executed_in_fail=true`), nâng `Q1` lên
+  `defect_hit_strict = 1/1 (100.0%)`.
+motivation: >
+  Đặt Agent làm trọng tâm (Agent-Centric Tooling): thay vì áp đặt luật cứng, cung cấp công cụ `coverage.hotspots`,
+  kỹ năng `coverage-guided-localization` và tín hiệu nhân quả `UNEXECUTED_SITE` để Agent tự suy luận và hội tụ
+  vào đúng hàm thực sự chạy trên đường lỗi.
+invariants_touched: []
+metrics_before:
+  quic_q1_defect_hit_strict: 0.0
+  quic_q1_cited_symbol: conn_recv_pkt
+  coverage_hotspots_tool_registered: false
+metrics_after:
+  quic_q1_defect_hit_strict: 1.0
+  quic_q1_cited_symbol: ngtcp2_accept
+  quic_q1_cited_lines: "lib/ngtcp2_conn.c:10230-10232"
+  quic_q1_executed_in_fail: true
+  coverage_hotspots_tool_registered: true

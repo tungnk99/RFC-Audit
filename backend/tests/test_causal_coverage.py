@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 from typing import Any
 
@@ -9,7 +10,14 @@ from agents.code_reader.handler import LocationHandler
 from agents.code_reader.schema import AspectClaim, CheckKind, LocationClaim
 from agents.common import RBS_KEY
 from rfcv.core.execution_loop import Investigation
-from rfcv.domains.rfc_protocol.coverage_linker import causal_diff, link, ochiai_scores, parse_lcov
+from rfcv.domains.rfc_protocol.coverage_linker import (
+    CoverageHotspotsParams,
+    causal_diff,
+    coverage_hotspots_tool_spec,
+    link,
+    ochiai_scores,
+    parse_lcov,
+)
 from rfcv.domains.rfc_protocol.payloads import (
     AspectName,
     AspectValue,
@@ -156,3 +164,96 @@ def test_ochiai_sbfl_ranks_fail_only_lines_first_and_guides_select_branch() -> N
     assert summary["winner"] == "branch_b"
     assert summary["branches"][0]["executed_in_fail"] is False
     assert summary["branches"][1]["executed_in_fail"] is True
+    # precheck chặn nhánh chưa từng chạy (UNEXECUTED_SITE) nhưng chấp nhận nhánh thực sự chạy trên ca FAIL.
+    errs_unexec = handler.precheck(inv, c_unexec, sess)
+    assert any("UNEXECUTED_SITE" in e for e in errs_unexec)
+    errs_exec = handler.precheck(inv, c_exec, sess)
+    assert not any("UNEXECUTED_SITE" in e for e in errs_exec)
+
+
+def test_coverage_hotspots_tool_returns_ranked_lines_and_registers_shown_lines(tmp_path: Any) -> None:
+    src_file = tmp_path / "lib" / "ngtcp2_conn.c"
+    src_file.parent.mkdir(parents=True, exist_ok=True)
+    src_file.write_text(
+        "\n".join([
+            "int ngtcp2_accept(int n) {",
+            "  if (n < 1200) return -1;",
+            "  return 0;",
+            "}",
+        ]) + "\n",
+        encoding="utf-8",
+    )
+    lcov_fail = (
+        "SF:/src/ngtcp2/lib/ngtcp2_conn.c\n"
+        "DA:1,1\n"
+        "DA:2,1\n"
+        "DA:3,1\n"
+        "end_of_record\n"
+    )
+    lcov_pass = (
+        "SF:/src/ngtcp2/lib/ngtcp2_conn.c\n"
+        "DA:1,1\n"
+        "DA:2,1\n"
+        "DA:3,0\n"
+        "end_of_record\n"
+    )
+    t3_fail = T3Payload(
+        scenario="sc",
+        oracle="o",
+        variant="boundary:1199",
+        variant_class="required",
+        side="trigger",
+        trigger_reached=True,
+        consistent=True,
+        outcome=Outcome.FAIL,
+        observed={"alert": "none"},
+        witness=Witness(positive=(WitnessRun(impl="ngtcp2-ref", outcome=Outcome.PASS),)),
+        artifacts={"lcov": "sha256:fail"},
+    )
+    t3_pass = T3Payload(
+        scenario="sc",
+        oracle="o",
+        variant="boundary:1200",
+        variant_class="required",
+        side="valid",
+        trigger_reached=True,
+        consistent=True,
+        outcome=Outcome.PASS,
+        observed={"alert": "none"},
+        witness=Witness(positive=(WitnessRun(impl="ngtcp2-ref", outcome=Outcome.PASS),)),
+        artifacts={"lcov": "sha256:pass"},
+    )
+    arts = {"sha256:fail": lcov_fail.encode("utf-8"), "sha256:pass": lcov_pass.encode("utf-8")}
+
+    def _files() -> list[str]:
+        return ["lib/ngtcp2_conn.c"]
+
+    def _lines(_p: str, s: int, e: int) -> list[str]:
+        return src_file.read_text("utf-8").splitlines()[s - 1 : e]
+
+    def _containing(_p: str, _ln: int) -> Any:
+        return SimpleNamespace(name="ngtcp2_accept", line_start=1, line_end=4)
+
+    def _for_req(_r: str) -> list[Any]:
+        return [SimpleNamespace(payload=t3_fail), SimpleNamespace(payload=t3_pass)]
+
+    def _get(k: str) -> bytes:
+        return arts[k]
+
+    fake_ci = SimpleNamespace(root=tmp_path, files=_files, lines=_lines, containing_symbol=_containing)
+    rt = SimpleNamespace(
+        store=SimpleNamespace(for_requirement=_for_req),
+        artifacts=SimpleNamespace(get=_get),
+        providers=SimpleNamespace(code_index=fake_ci),
+    )
+    spec = coverage_hotspots_tool_spec(rt)  # type: ignore[arg-type]
+    sess = ToolSession("r1", "code_reader", "QUIC-0001", max_tool_calls=10)
+
+    async def _call() -> Any:
+        return await spec.handler(CoverageHotspotsParams(top_k=5), sess)
+
+    res = asyncio.run(_call())
+    assert "ngtcp2_accept" in res.text
+    assert "lib/ngtcp2_conn.c:3" in res.text
+    assert "ochiai=1.000" in res.text
+    assert ("lib/ngtcp2_conn.c", 3) in res.shown_lines

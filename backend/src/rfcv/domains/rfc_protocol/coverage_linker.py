@@ -10,7 +10,11 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from pathlib import PurePosixPath
+from typing import Any
 
+from pydantic import BaseModel, Field
+
+from rfcv.core.ifc import TrustLabel
 from rfcv.domains.rfc_protocol.payloads import (
     CoverageLink,
     Outcome,
@@ -23,6 +27,7 @@ from rfcv.domains.rfc_protocol.payloads import (
 from rfcv.evidence.artifacts import ArtifactStore
 from rfcv.evidence.models import EvidenceDraft
 from rfcv.evidence.store import EvidenceStore
+from rfcv.gates.tool_gateway import ToolResult, ToolSession, ToolSpec
 
 
 @dataclass(frozen=True)
@@ -125,6 +130,105 @@ def ochiai_scores(
         ranked.append(SuspiciousLine(file=f, line=ln, score=score, fail_hits=ef, pass_hits=ep))
     ranked.sort(key=lambda s: (-s.score, -s.fail_hits, s.pass_hits, s.file, s.line))
     return ranked[:top_k]
+
+
+class CoverageHotspotsParams(BaseModel):
+    top_k: int = Field(default=12, ge=1, le=40, description="Số dòng điểm nóng Ochiai tối đa cần trả về.")
+    file_filter: str = Field(default="", description="Chuỗi con lọc theo tên tệp (để trống nếu xem toàn kho mã).")
+
+
+def repo_rel_path(raw_file: str, known_files: set[str]) -> str:
+    norm = raw_file.replace("\\", "/")
+    if norm in known_files:
+        return norm
+    parts = PurePosixPath(norm).parts
+    for kf in known_files:
+        kparts = PurePosixPath(kf.replace("\\", "/")).parts
+        if len(parts) >= len(kparts) and parts[-len(kparts) :] == kparts:
+            return kf
+    return norm
+
+
+_repo_rel = repo_rel_path
+
+
+def coverage_hotspots_tool_spec(rt: Any) -> ToolSpec:
+    """Công cụ chủ động `coverage.hotspots` cho Agent gọi (gen-45 / Agent-Centric Tooling).
+
+    Trả về top dòng mã nghi ngờ nhất theo SBFL Ochiai kèm tên hàm bao quanh và đoạn mã thật,
+    đồng thời đánh dấu `shown_lines` để SchemaGate chấp nhận ngay.
+    """
+
+    async def handler(p: BaseModel, session: ToolSession) -> ToolResult:
+        params = CoverageHotspotsParams.model_validate(p.model_dump())
+        store: Any = getattr(rt, "store", None)
+        artifacts: Any = getattr(rt, "artifacts", None)
+        if store is None or artifacts is None:
+            return ToolResult("tool=coverage.hotspots: không có dữ liệu độ phủ LCOV.", TrustLabel.DERIVED)
+        t3s = [e.payload for e in store.for_requirement(session.requirement_id) if isinstance(e.payload, T3Payload)]
+        fail_covs: list[LineCoverage] = []
+        pass_covs: list[LineCoverage] = []
+        for t3 in t3s:
+            lcov_id = t3.artifacts.get("lcov")
+            if not lcov_id:
+                continue
+            try:
+                cov = parse_lcov(artifacts.get(lcov_id).decode("utf-8", "replace"))
+            except Exception:
+                continue
+            if t3.outcome is Outcome.FAIL:
+                fail_covs.append(cov)
+            elif t3.outcome is Outcome.PASS:
+                pass_covs.append(cov)
+        if not fail_covs:
+            return ToolResult(
+                "tool=coverage.hotspots: không có dữ liệu độ phủ LCOV trên ca FAIL cho lần chạy này.",
+                TrustLabel.DERIVED,
+            )
+        index: Any = getattr(getattr(rt, "providers", None), "code_index", None)
+        known_files: set[str] = {str(f) for f in index.files()} if index is not None else set()
+        ranked = ochiai_scores(fail_covs, pass_covs, top_k=max(params.top_k * 3, 30))
+        lines_out: list[str] = []
+        shown: set[tuple[str, int]] = set()
+        for item in ranked:
+            rel = _repo_rel(item.file, known_files)
+            if params.file_filter and params.file_filter.lower() not in rel.lower():
+                continue
+            if known_files and rel not in known_files:
+                continue
+            sym_tag = ""
+            snippet = ""
+            if index is not None:
+                sym = index.containing_symbol(rel, item.line)
+                if sym is not None:
+                    sym_tag = f" | symbol: {sym.name} ({sym.line_start}-{sym.line_end})"
+                src_lines = index.lines(rel, item.line, item.line)
+                if src_lines:
+                    snippet = f" | {src_lines[0].strip()[:100]}"
+                    shown.add((rel, item.line))
+            lines_out.append(
+                f"#{len(lines_out) + 1} ochiai={item.score:.4f} [{rel}:{item.line}{sym_tag}] "
+                f"fail={item.fail_hits}/{len(fail_covs)} pass={item.pass_hits}/{len(pass_covs)}{snippet}"
+            )
+            if len(lines_out) >= params.top_k:
+                break
+        if not lines_out:
+            return ToolResult("tool=coverage.hotspots: không có dòng thực thi nào khớp bộ lọc.", TrustLabel.DERIVED)
+        body = "\n".join(lines_out)
+        return ToolResult(
+            f"[UNTRUSTED CODE] tool=coverage.hotspots (SBFL Ochiai, {len(fail_covs)} FAIL / {len(pass_covs)} PASS)\n{body}",
+            TrustLabel.UNTRUSTED,
+            shown_lines=frozenset(shown),
+        )
+
+    return ToolSpec(
+        "coverage.hotspots",
+        "Xếp hạng top dòng mã nghi ngờ lỗi theo phổ độ phủ thực thi thực tế (SBFL Ochiai từ LCOV các ca FAIL/PASS), "
+        "kèm tên hàm bao quanh và mã nguồn. Gọi khi có nhiều hàm kiểm tra trùng hoặc phản ứng bị xoá hẳn.",
+        CoverageHotspotsParams,
+        handler,
+        title="Điểm nóng độ phủ SBFL Ochiai",
+    )
 
 
 def causal_diff(fail_covs: list[LineCoverage], pass_covs: list[LineCoverage]) -> dict[str, dict[str, list[int]]]:
