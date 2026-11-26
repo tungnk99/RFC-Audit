@@ -16,7 +16,7 @@ from agents.common import RBS_KEY
 from agents.locator.service import requirement_keywords
 from rfcv.core.execution_loop import Investigation
 from rfcv.core.ifc import Labeled, TrustLabel
-from rfcv.domains.rfc_protocol.coverage_linker import link_pending
+from rfcv.domains.rfc_protocol.coverage_linker import LineCoverage, link_pending, ochiai_scores, parse_lcov
 from rfcv.domains.rfc_protocol.diagnosis import (
     NO_CLOSE,
     NONE,
@@ -26,7 +26,15 @@ from rfcv.domains.rfc_protocol.diagnosis import (
     diagnose,
 )
 from rfcv.domains.rfc_protocol.multi_hypothesis import score_claim
-from rfcv.domains.rfc_protocol.payloads import AspectName, AspectValue, Producer, T2SuspiciousPayload, T3Payload, Tier
+from rfcv.domains.rfc_protocol.payloads import (
+    AspectName,
+    AspectValue,
+    Outcome,
+    Producer,
+    T2SuspiciousPayload,
+    T3Payload,
+    Tier,
+)
 from rfcv.domains.rfc_protocol.schema_gate import SchemaGate
 from rfcv.domains.rfc_protocol.suspicious import canonical_values, scan_symbols
 from rfcv.evidence.models import EvidenceDraft
@@ -97,6 +105,23 @@ class LocationHandler:
         if diagnosis.signature == NONE:
             return context, shown
         context["behavior.diagnosis"] = Labeled(diagnosis.to_json(), TrustLabel.DERIVED)
+        fail_covs, pass_covs = self._load_coverages(t3s)
+        if fail_covs:
+            hotspots = ochiai_scores(fail_covs, pass_covs, top_k=12)
+            if hotspots:
+                context["code.coverage_hotspots"] = Labeled(
+                    [
+                        {
+                            "file": h.file,
+                            "line": h.line,
+                            "ochiai": h.score,
+                            "fail_hits": h.fail_hits,
+                            "pass_hits": h.pass_hits,
+                        }
+                        for h in hotspots
+                    ],
+                    TrustLabel.DERIVED,
+                )
         if (
             diagnosis.signature in (REACTION_ABSENT, WRONG_ALERT, NO_CLOSE)
             and (expected or diagnosis.observed_alerts)
@@ -113,6 +138,28 @@ class LocationHandler:
             requirement_id=req_id,
         )
         return context, shown
+
+    def _load_coverages(self, t3s: Sequence[T3Payload]) -> tuple[list[LineCoverage], list[LineCoverage]]:
+        """Nạp LCOV thực thi từ ArtifactStore (nếu image SUT bật đo độ phủ, gen-43/44)."""
+        artifacts: Any = getattr(self._rt, "artifacts", None)
+        if artifacts is None:
+            return [], []
+        fail_covs: list[LineCoverage] = []
+        pass_covs: list[LineCoverage] = []
+        for t3 in t3s:
+            lcov_id = t3.artifacts.get("lcov")
+            if not lcov_id:
+                continue
+            try:
+                blob = artifacts.get(lcov_id)
+                cov = parse_lcov(blob.decode("utf-8", "replace"))
+            except Exception:
+                continue
+            if t3.outcome is Outcome.FAIL:
+                fail_covs.append(cov)
+            elif t3.outcome is Outcome.PASS:
+                pass_covs.append(cov)
+        return fail_covs, pass_covs
 
     async def _candidates(
         self, expected: str | None, observed_alerts: Sequence[str], req_id: str
@@ -254,6 +301,7 @@ class LocationHandler:
         is_server_ch = "client_hello" in trig_args
 
         index: Any = getattr(getattr(self._rt, "providers", None), "code_index", None)
+        fail_covs, _ = self._load_coverages(t3s)
         wrong_obs = [a for a in diag.observed_alerts if a and a != "none" and a != _expected_alert(inv)]
         fn_counts: dict[tuple[str, str], int] = {}
         for _, out_c, _ in candidates:
@@ -287,6 +335,15 @@ class LocationHandler:
             if index is not None and wrong_obs:
                 src_blob = "\n".join(index.lines(output.file, output.line_start, output.line_end)).lower()
                 obs_in_source = int(any(o.lower() in src_blob for o in wrong_obs))
+            # gen-44 (SBFL / Causal Coverage): nếu có LCOV ca FAIL, ưu tiên tuyệt đối nhánh có dòng thực sự chạy.
+            executed_in_fail = 1
+            if fail_covs:
+                executed_in_fail = int(
+                    any(
+                        any(output.line_start <= ln <= output.line_end for ln in cov.executed(output.file))
+                        for cov in fail_covs
+                    )
+                )
             sym_low = output.symbol.lower()
             note_low = (output.note or "").lower()
             # Phạt nặng nếu yêu cầu phía SERVER (`receive(client_hello)`) nhưng nhánh lại trỏ nhầm hàm phía CLIENT (`ServerHello`).
@@ -319,6 +376,7 @@ class LocationHandler:
 
             key: tuple[int, ...] = (
                 int(res.accepted),
+                executed_in_fail,
                 -wrong_dir,
                 -enc_only_penalty,
                 obs_in_source,
@@ -334,6 +392,7 @@ class LocationHandler:
                 {
                     "branch": bname,
                     "accepted": res.accepted,
+                    "executed_in_fail": bool(executed_in_fail),
                     "symbol": output.symbol,
                     "file": output.file,
                     "lines": [output.line_start, output.line_end],

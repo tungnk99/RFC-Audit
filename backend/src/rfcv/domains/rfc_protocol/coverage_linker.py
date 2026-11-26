@@ -7,6 +7,7 @@ dòng trong khối #ifdef bị tắt không có DA (tài liệu khả thi, mục
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
@@ -80,6 +81,50 @@ def link(t1_id: str, t1: T1Payload, coverage: LineCoverage) -> CoverageLink:
             linked = False
         hit |= in_range
     return CoverageLink(t1=t1_id, lines_hit=tuple(sorted(hit)), linked=linked and bool(hit))
+
+
+@dataclass(frozen=True)
+class SuspiciousLine:
+    """Một dòng mã xếp hạng nghi ngờ lỗi theo công thức SBFL Ochiai (gen-44)."""
+
+    file: str
+    line: int
+    score: float
+    fail_hits: int
+    pass_hits: int
+
+
+def ochiai_scores(
+    fail_covs: list[LineCoverage], pass_covs: list[LineCoverage], *, top_k: int = 15
+) -> list[SuspiciousLine]:
+    """Định vị lỗi theo phổ độ phủ (SBFL — Ochiai, gen-44): `e_f / sqrt(N_f * (e_f + e_p))`.
+
+    Chỉ xét các dòng thực sự chạy ở ít nhất một ca FAIL (`e_f > 0`), giúp thu hẹp kho mã lớn xuống
+    top `top_k` dòng nghi ngờ nhất và loại bỏ hoàn toàn các hàm không thực thi trên đường gây lỗi.
+    """
+    n_fail = len(fail_covs)
+    if n_fail == 0:
+        return []
+    fail_counts: dict[tuple[str, int], int] = {}
+    pass_counts: dict[tuple[str, int], int] = {}
+    for cov in fail_covs:
+        for f, hits in cov.files.items():
+            for ln, cnt in hits.items():
+                if cnt > 0:
+                    fail_counts[(f, ln)] = fail_counts.get((f, ln), 0) + 1
+    for cov in pass_covs:
+        for f, hits in cov.files.items():
+            for ln, cnt in hits.items():
+                if cnt > 0:
+                    pass_counts[(f, ln)] = pass_counts.get((f, ln), 0) + 1
+    ranked: list[SuspiciousLine] = []
+    for (f, ln), ef in fail_counts.items():
+        ep = pass_counts.get((f, ln), 0)
+        denom = math.sqrt(n_fail * (ef + ep))
+        score = round(ef / denom, 4) if denom > 0 else 0.0
+        ranked.append(SuspiciousLine(file=f, line=ln, score=score, fail_hits=ef, pass_hits=ep))
+    ranked.sort(key=lambda s: (-s.score, -s.fail_hits, s.pass_hits, s.file, s.line))
+    return ranked[:top_k]
 
 
 def causal_diff(fail_covs: list[LineCoverage], pass_covs: list[LineCoverage]) -> dict[str, dict[str, list[int]]]:

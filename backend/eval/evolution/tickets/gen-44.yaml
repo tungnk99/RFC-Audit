@@ -1,0 +1,22 @@
+generation: gen-44
+level: L6
+operator: ADD_TECHNIQUE
+target: backend/src/rfcv/domains/rfc_protocol/coverage_linker.py (ochiai_scores) & backend/agents/code_reader/handler.py (SBFL + executed_in_fail)
+contribution_type: Định vị lỗi theo phổ độ phủ SBFL (Ochiai) & chấm điểm nhánh theo đường thực thi nhân quả
+capability_rung: "bậc 3 (tự động loại nhánh không thực thi trên đường gây lỗi như conn_recv_pkt vs ngtcp2_accept)"
+summary: >
+  Bổ sung công thức định vị theo phổ độ phủ SBFL Ochiai (`ochiai_scores`) trong `coverage_linker.py`
+  và nối trực tiếp vào `Code Reader`: (1) `enrich()` nạp top 12 điểm nóng `code.coverage_hotspots`
+  (0 token LLM) khi có LCOV; (2) `select_branch()` dùng tín hiệu `executed_in_fail` ưu tiên tuyệt đối
+  nhánh thực sự chạy trên ca FAIL, giải quyết triệt để bẫy đa điểm kiểm tra trùng (`ngtcp2_accept` vs `conn_recv_pkt`).
+motivation: >
+  Mở rộng ngoài giải đấu 2 nhánh (theo yêu cầu người dùng và phát hiện multi-site ở QUIC `gen-39`):
+  kết hợp phổ độ phủ SBFL Ochiai với định vị đa tác tử để thu hẹp không gian tìm kiếm và loại bỏ
+  nhánh không thực thi một cách tất định.
+invariants_touched: []
+metrics_before:
+  sbfl_ochiai_integrated: false
+  branch_ranking_uses_causal_coverage: false
+metrics_after:
+  sbfl_ochiai_integrated: true
+  branch_ranking_uses_causal_coverage: true
