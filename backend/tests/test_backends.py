@@ -183,3 +183,26 @@ def test_specs_from_adapter_loads_new_library_without_launcher_edits(tmp_path: A
     assert specs["coredns"].port == 5354 and specs["coredns"].udp is True
     assert specs["coredns"].image == f"rfcv/sut-coredns:{commit[:12]}" and specs["coredns"].expect_rev == commit
     assert specs["coredns-ref"].image == "rfcv/sut-coredns:head" and specs["coredns-ref"].expect_rev is None
+
+
+def test_tlsfuzzer_supports_all_eight_dsl_ops_including_mutate_reorder_repeat() -> None:
+    tls = backend("tlsfuzzer")
+    sc_reorder = scenario({"op": "connect"}, {"op": "reorder", "args": {"msgs": "finished,client_hello"}}, EXPECT)
+    assert tls.validate(sc_reorder).ok
+    assert type(tls).request(sc_reorder, {}, 4433)["reorder"] == ["finished", "client_hello"]  # type: ignore[attr-defined]
+
+    sc_repeat = scenario({"op": "connect"}, {"op": "repeat", "args": {"msg": "client_hello"}}, EXPECT)
+    assert tls.validate(sc_repeat).ok
+    assert type(tls).request(sc_repeat, {}, 4433)["repeat"] == "client_hello"  # type: ignore[attr-defined]
+
+    sc_mutate = scenario(
+        {"op": "connect"},
+        {"op": "mutate", "args": {"field": "record.content_type", "op": "set", "value": "type_99"}},
+        {"op": "send_raw_record", "args": {"content_type": "type_0", "encrypted": False, "length": 4}},
+        EXPECT,
+    )
+    assert tls.validate(sc_mutate).ok
+    req_mut: dict[str, Any] = type(tls).request(sc_mutate, {}, 4433)  # type: ignore[attr-defined]
+    assert req_mut["content_type"] == "type_99" and req_mut["mutations"] == [
+        {"field": "record.content_type", "op": "set", "value": "type_99"}
+    ]

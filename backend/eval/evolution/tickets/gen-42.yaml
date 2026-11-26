@@ -1,0 +1,20 @@
+generation: gen-42
+level: L6
+operator: ADD_CAPABILITY
+target: backend/src/rfcv/backends/tlsfuzzer/__init__.py & backend/src/rfcv/backends/tlsfuzzer/runner.py
+contribution_type: Hoàn thiện đủ 8/8 thao tác DSL cho backend TLS (`mutate`, `reorder`, `repeat` — Chặng B, xử lý C7 🔴)
+capability_rung: "bậc 3 (mở khoá kiểm thử yêu cầu loại C về thứ tự/lặp thông điệp và đột biến trường trên TLS 1.3)"
+summary: >
+  Hiện thực đủ 3 thao tác DSL còn thiếu (`mutate`, `reorder`, `repeat`) trong `TlsfuzzerBackend` và
+  `tlsfuzzer/runner.py`, nâng mức hỗ trợ từ 5/8 lên 8/8 thao tác DSL chuẩn (`validate()`, `request()`,
+  `run_sequence()`, wire-level `truncate`/`append_bytes`/`duplicate`). Xác minh cả unit test lẫn chạy
+  thật trong Docker trên OpenSSL (`reorder: ["finished", "client_hello"]` và `repeat: "client_hello"`
+  đều kích hoạt `unexpected_message` + đóng kết nối).
+motivation: >
+  Mục C7 (🔴) trong `docs/05_project/han_che_he_thong.md` chỉ ra rằng backend TLS mới chỉ hỗ trợ 5/8
+  thao tác DSL, khiến các yêu cầu loại C (thứ tự, lặp gói tin, sửa trường) bị từ chối ngay ở bước kiểm tra cú pháp.
+invariants_touched: []
+metrics_before:
+  tlsfuzzer_supported_dsl_ops: "5/8"
+metrics_after:
+  tlsfuzzer_supported_dsl_ops: "8/8"

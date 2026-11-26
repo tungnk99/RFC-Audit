@@ -200,7 +200,17 @@ def run_plain_record(req: dict[str, Any]) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         return {**base, "reason": f"connect_failed: {type(exc).__name__}: {exc}"[:200]}
     state = runner.state
-    generator = RawMessageGenerator(ctype, bytearray(max(0, int(req["length"]))))
+    payload = bytearray(max(0, int(req["length"])))
+    for mut in req.get("mutations") or ():
+        op = str(mut.get("op", ""))
+        val = mut.get("value")
+        if op == "truncate" and val is not None:
+            payload = payload[: max(0, int(val))]
+        elif op == "append_bytes" and val is not None:
+            payload.extend(b"\x00" * max(0, int(val)))
+        elif op == "duplicate":
+            payload.extend(bytes(payload))
+    generator = RawMessageGenerator(ctype, payload)
     message = generator.generate(state)
     t0 = time.monotonic()
     send_error = False
@@ -252,10 +262,59 @@ def run_client_hello(req: dict[str, Any]) -> dict[str, Any]:
     return {**base, "trigger_reached": True, **observe(runner.state, t0, within_ms), "app_data": False}
 
 
+def _msg_node(name: str, cipher: int) -> Any:
+    """Dựng node tlsfuzzer cho một thông điệp TLS dùng trong thao tác `reorder` / `repeat` (gen-42 / C7)."""
+    from tlsfuzzer.messages import ApplicationDataGenerator, FinishedGenerator, RawMessageGenerator
+
+    low = name.strip().lower()
+    if low == "client_hello":
+        return ClientHelloGenerator(
+            [cipher, CipherSuite.TLS_EMPTY_RENEGOTIATION_INFO_SCSV], extensions=handshake_extensions([GroupName.secp256r1])
+        )
+    if low == "finished":
+        # Bản tin Handshake Finished (type=20, 32-byte verify_data) gửi sai thứ tự hoặc lặp
+        return RawMessageGenerator(ContentType.handshake, bytearray([20, 0, 0, 32]) + bytearray(32))
+    if low == "application_data":
+        return ApplicationDataGenerator(b"rfcv-order-probe")
+    if low == "change_cipher_spec":
+        return RawMessageGenerator(ContentType.change_cipher_spec, bytearray([1]))
+    return FinishedGenerator()
+
+
+def run_sequence(req: dict[str, Any], seq: list[str]) -> dict[str, Any]:
+    """Chạy chuỗi thông điệp `reorder` hoặc `repeat` (yêu cầu loại C, RFC 8446 §4), có tuỳ chọn bắt tay trước."""
+    within_ms = int(req.get("within_ms", 2000))
+    base: dict[str, Any] = {"trigger_reached": False, "reason": "", "send_error": False}
+    cipher = CIPHERS.get(req.get("cipher", ""), CipherSuite.TLS_AES_128_GCM_SHA256)
+    conversation = handshake("127.0.0.1", int(req["port"]), cipher) if req.get("handshake") else Connect("127.0.0.1", int(req["port"]))
+    runner = Runner(conversation)
+    try:
+        runner.run()
+    except Exception as exc:  # noqa: BLE001
+        return {**base, "reason": f"connect_failed: {type(exc).__name__}: {exc}"[:200]}
+    state = runner.state
+    t0 = time.monotonic()
+    send_error = False
+    for mname in seq:
+        gen = _msg_node(mname, cipher)
+        try:
+            msg = gen.generate(state)
+            state.msg_sock.sendMessageBlocking(msg)
+        except (TLSAbruptCloseError, OSError):
+            send_error = True
+            break
+    return {**base, "trigger_reached": True, "send_error": send_error, **observe(state, t0, within_ms)}
+
+
 def main() -> None:
     req = json.loads(sys.argv[1])
     if req["mode"] == "sanity":
         result = run_sanity(req)
+    elif req.get("reorder"):
+        result = run_sequence(req, list(req["reorder"]))
+    elif req.get("repeat"):
+        m = str(req["repeat"])
+        result = run_sequence(req, [m, m])
     elif "client_hello" in req:
         result = run_client_hello(req)
     elif req.get("encrypted", True) is False:

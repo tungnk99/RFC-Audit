@@ -60,8 +60,8 @@ DSL = DslSpec(
     },
 )
 
-# Tập con DSL mà runner hiện thực thi được. Ngoài tập này, validate() từ chối để Test agent biết và đổi kịch bản.
-SUPPORTED = {"connect", "complete_handshake", "send_raw_record", "send_msg", "expect"}
+# Tập con DSL mà runner hiện thực thi được (gen-42 / C7: đủ 8/8 thao tác DSL).
+SUPPORTED = {"connect", "complete_handshake", "send_raw_record", "send_msg", "mutate", "reorder", "repeat", "expect"}
 RUNNER_SOURCE = Path(__file__).with_name("runner.py")
 PYTHON_IN_IMAGE = "/opt/venv/bin/python3"
 RESULT_PREFIX = "RFCV_RESULT "
@@ -102,11 +102,19 @@ class TlsfuzzerBackend(DslBackend):
         plain = [s for s in scenario.steps if s.op == "send_raw_record" and s.args.get("encrypted", True) is not True]
         if (plain or any(s.op == "send_msg" for s in scenario.steps)) and handshakes:
             errors.append("bản ghi rõ / ClientHello được gửi trước bắt tay: không kết hợp với complete_handshake")
-        if sum(step.op in ("send_raw_record", "send_msg") for step in scenario.steps) != 1:
-            errors.append("kịch bản phải có đúng một bước kích hoạt (send_raw_record hoặc send_msg client_hello)")
+        triggers = sum(step.op in ("send_raw_record", "send_msg", "reorder", "repeat") for step in scenario.steps)
+        if triggers < 1:
+            errors.append("kịch bản phải có ít nhất một bước kích hoạt (send_raw_record, send_msg, reorder hoặc repeat)")
         for step in scenario.steps:
             if step.op == "send_msg" and step.args.get("type") != "client_hello":
                 errors.append("send_msg: chỉ hỗ trợ type=client_hello")
+            if step.op == "reorder":
+                raw_msgs = step.args.get("msgs")
+                parts = [p.strip() for p in str(raw_msgs).split(",") if p.strip()] if isinstance(raw_msgs, str) else []
+                if len(parts) < 2:
+                    errors.append("reorder: cần chuỗi msgs phân tách bằng dấu phẩy gồm ít nhất 2 thông điệp")
+            if step.op == "repeat" and not step.args.get("msg"):
+                errors.append("repeat: thiếu đối số msg")
         return ValidationResult(base.ok and not errors, tuple(errors))
 
     # ---- chạy -----------------------------------------------------------------------------------------------
@@ -140,10 +148,13 @@ class TlsfuzzerBackend(DslBackend):
             return params[raw[1:]] if isinstance(raw, str) and raw.startswith("$") else raw
 
         req: dict[str, Any] = {"mode": "run", "port": port, "within_ms": DEFAULT_WITHIN_MS}
+        mutations: list[dict[str, Any]] = []
         for step in scenario.steps:
             args = {k: value(v) for k, v in step.args.items()}
-            if step.op == "complete_handshake" and "cipher" in args:
-                req["cipher"] = str(args["cipher"])
+            if step.op == "complete_handshake":
+                req["handshake"] = True
+                if "cipher" in args:
+                    req["cipher"] = str(args["cipher"])
             elif step.op == "send_raw_record":
                 req["length"] = int(args["length"])
                 req["encrypted"] = args.get("encrypted", True) is True
@@ -153,8 +164,34 @@ class TlsfuzzerBackend(DslBackend):
                     "key_share": str(args.get("key_share", "valid")),
                     "groups": str(args.get("groups", "overlap")),
                 }
+            elif step.op == "mutate":
+                mutations.append(
+                    {"field": str(args.get("field", "")), "op": str(args.get("op", "set")), "value": args.get("value")}
+                )
+            elif step.op == "reorder":
+                raw_msgs = args.get("msgs")
+                req["reorder"] = (
+                    [p.strip() for p in raw_msgs.split(",") if p.strip()]
+                    if isinstance(raw_msgs, str)
+                    else [str(m) for m in (raw_msgs or ())]
+                )
+            elif step.op == "repeat":
+                req["repeat"] = str(args.get("msg", ""))
             elif step.op == "expect":
                 req["within_ms"] = int(args.get("within_ms", args.get("timeout_ms", DEFAULT_WITHIN_MS)))
+        if mutations:
+            req["mutations"] = mutations
+            for mut in mutations:
+                fld, op, val = mut["field"], mut["op"], mut["value"]
+                if op == "set":
+                    if fld == "record.length" and val is not None:
+                        req["length"] = int(val)
+                    elif fld == "record.content_type" and val is not None:
+                        req["content_type"] = str(val)
+                    elif fld == "client_hello.key_share" and val is not None:
+                        req.setdefault("client_hello", {"key_share": "valid", "groups": "overlap"})["key_share"] = str(val)
+                    elif fld == "client_hello.groups" and val is not None:
+                        req.setdefault("client_hello", {"key_share": "valid", "groups": "overlap"})["groups"] = str(val)
         return req
 
     @staticmethod
