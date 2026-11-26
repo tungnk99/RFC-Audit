@@ -1,0 +1,22 @@
+generation: gen-41
+level: L2
+operator: EVAL_ZERO_TEMPLATE
+target: backend/scripts/run_tester_zero_template_c8.py (Tester LLM zero-template authoring benchmark)
+contribution_type: Chứng minh tính linh hoạt tự soạn kịch bản của Tester LLM không cần template (Chặng A, xử lý C3/C8 🔴)
+capability_rung: "bậc 3 (5/5 = 100% kịch bản do Tester LLM tự soạn từ 0 template qua kiểm chứng bản tham chiếu trên 4 giao thức)"
+summary: >
+  Chạy thí nghiệm `C8` xoá sạch thư mục `templates/` (0 mẫu sẵn) trên 5 yêu cầu thuộc 4 giao thức khác nhau
+  (`TLS 1.3 R9 & OU2`, `HTTP/2 H1`, `DNS D3`, `QUIC Q1`) dùng `DeepSeek-V4-Flash`: `Tester LLM` tự đọc RBS + DSL
+  của từng backend, tự chọn đúng chuỗi thao tác theo trạng thái giao thức (`complete_handshake` cho `connected`,
+  bỏ qua cho `initial`/DNS/QUIC, dùng `mutate` + `send_msg` cho DNS), đạt `5/5 = 100.0%` (0 lần `gate_reject`,
+  96 bằng chứng T3 qua bản tham chiếu, `5/5` kết luận `VIOLATION (V2)` chính xác).
+motivation: >
+  Mục C3 (🟡) và C8 (🔴) trong `docs/05_project/han_che_he_thong.md` yêu cầu chứng minh `Tester LLM` có thể
+  tự soạn kịch bản kiểm thử cho yêu cầu chưa có mẫu sẵn và vượt qua bước kiểm chứng trên bản tham chiếu.
+invariants_touched: []
+metrics_before:
+  tester_zero_template_verified_rate: unmeasured
+metrics_after:
+  tester_zero_template_verified_rate: "5/5 (100.0%, 4 protocols)"
+  tester_zero_template_gate_rejects: 0
+  tester_zero_template_end_to_end_verdict: "5/5 (100.0%)"
