@@ -613,8 +613,30 @@ class LocationHandler:
             )
             return 0
         self._rt.store.append(result.draft)
+        self._post_location(inv, output, session)
         return (
             1 + link_pending(self._rt.store, self._rt.artifacts, self._rt.run_id, req_id) + self._scan(output, req_id)
+        )
+
+    def _post_location(self, inv: Investigation, claim: LocationClaim, session: ToolSession) -> None:
+        """Đăng vị trí đã qua Schema gate lên war-room; chỉ trường cấu trúc, không kèm `note` tự do của agent."""
+        entry = inv.blackboard.post(
+            "code_reader",
+            "location_hypothesis",
+            file=claim.file,
+            symbol=claim.symbol,
+            line=claim.line_start,
+            status="verified",
+            note=f"T1 accepted {claim.line_start}-{claim.line_end}",
+        )
+        if entry is None:
+            return
+        self._rt.trace.append(
+            self._rt.run_id,
+            "blackboard_post",
+            {"entries": [entry.model_dump(mode="json", exclude_none=True)]},
+            role=session.role,
+            requirement_id=inv.requirement.requirement_id,
         )
 
     def _scan(self, claim: LocationClaim, req_id: str) -> int:

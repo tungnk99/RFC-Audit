@@ -1,0 +1,28 @@
+generation: gen-47
+level: L5
+operator: ADD_COMM_PATTERN
+target: backend/src/rfcv/core/blackboard.py (HypothesisBoard), backend/src/rfcv/core/execution_loop.py, backend/agents/tester/handler.py, backend/agents/code_reader/handler.py & role.yaml
+contribution_type: "Bảng đen cộng tác hai chiều War-Room (HypothesisBoard an toàn IFC TrustLabel.DERIVED) giữa Tester và Code Reader"
+capability_rung: "bậc 4 (giao tiếp có cấu trúc hai chiều Tester <-> Code Reader qua bảng đen DERIVED, xác thực sạch IFC trên U5/Q1/Q4)"
+summary: >
+  Thiết kế kiến trúc (Antigravity) và giao `claude` CLI thực thi mô hình giao tiếp War-Room Blackboard:
+  (1) tạo `rfcv/core/blackboard.py` trung lập miền với `HypothesisEntry` đóng băng, tự động khử trùng lặp,
+  lọc chuỗi an toàn IFC (chặn văn bản tự do/mã nguồn thô, chỉ chấp nhận định danh đơn và từ vựng adapter);
+  (2) gắn `Investigation.blackboard` vào `ExecutionLoop._shared_context` dưới nhãn `TrustLabel.DERIVED` (`warroom.blackboard`);
+  (3) nối luồng cộng tác hai chiều: `Tester` đăng `behavioral_signal`, `coverage_hotspot` (Ochiai), `branch_candidate` (`open` -> `verified`/`refuted`) và `probe_result`, còn `Code Reader` đọc `warroom.blackboard` và đăng `location_hypothesis` sau khi `SchemaGate` duyệt.
+  Xác thực thực tế trên Docker: `U5` (`wolfssl-U5`, `type_77`) `VIOLATION (V2)` với chuỗi `hb-001`->`hb-002`->`hb-003` và `leak_scan.clean == true`; `Q1` đăng 18 mục hai chiều; `Q4` đối chứng `COMPLIANT (V6)` với `0% False VIOLATION` và `0` mục nhiễu.
+motivation: >
+  Hoàn thiện bộ 3 thế hệ đặt Agent làm trọng tâm (`gen-45` Active Tool/Skill, `gen-46` Peer Review Organization,
+  `gen-47` War-Room Blackboard Communication) để các tác tử chuyên môn chia sẻ giả thuyết có cấu trúc hai chiều
+  mà vẫn bảo toàn tuyệt đối 6 hợp đồng kiến trúc và ranh giới IFC.
+invariants_touched: []
+metrics_before:
+  warroom_blackboard_enabled: false
+  tester_to_code_reader_shared_hypotheses: false
+metrics_after:
+  warroom_blackboard_enabled: true
+  tester_to_code_reader_shared_hypotheses: true
+  u5_verdict_violation: true
+  u5_leak_scan_clean: true
+  q4_compliant_false_violation: 0.0
+  import_linter_contracts_kept: 6

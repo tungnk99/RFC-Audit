@@ -38,6 +38,7 @@ HUB_FIELDS = {
     "critique.unresolved",  # như trên: vấn đề phản biện còn ngỏ khi hết số vòng đuổi theo
     "evidence.cited",
     "divergence.points",  # Verifier: điểm rẽ nhánh lập luận do miền trích xuất an toàn IFC
+    "warroom.blackboard",  # bảng giả thuyết war-room, chỉ siêu dữ liệu có cấu trúc đã làm sạch (gen-47)
 }
 
 # Khoảng trống năng lực đã biết: vai trò khai báo nhưng chưa có nguồn cung cấp.

@@ -26,6 +26,7 @@ from pydantic import BaseModel
 
 from rfcv.agents.schemas import Critique, Explanation, PlanAction, TaskSpec
 from rfcv.core.advisor import adherence, advise, situation_from_context
+from rfcv.core.blackboard import HypothesisBoard
 from rfcv.core.budget import BudgetTracker, LoopDetector, RequirementBudget
 from rfcv.core.context_builder import ContextBuilder, summarize_evidence, to_jsonable
 from rfcv.core.envelope import Envelope, EnvelopeFactory, MessageKind
@@ -76,6 +77,8 @@ class Investigation:
     feasible: dict[str, bool] = field(default_factory=lambda: {"T1": True, "T2": True, "T3": True})
     # Trạng thái riêng của miền cho handler (ví dụ oracle đã biên dịch); lõi không đọc.
     domain_state: dict[str, Any] = field(default_factory=dict[str, Any])
+    # War-room (gen-47): giả thuyết có cấu trúc các handler chia sẻ trong phạm vi yêu cầu này; không phải bằng chứng.
+    blackboard: HypothesisBoard = field(default_factory=HypothesisBoard)
 
 
 class TaskHandler(Protocol):
@@ -652,7 +655,8 @@ class ExecutionLoop:
 
         evidence.summary     bằng chứng đã có, đã tóm tắt an toàn (Planner, Verifier);
         verdict.sufficiency  báo cáo độ đủ đầy đủ, kèm feasible (Planner, Verifier);
-        verdict.missing      chỉ phần còn thiếu, không lộ bằng chứng hay nhãn tạm (Test).
+        verdict.missing      chỉ phần còn thiếu, không lộ bằng chứng hay nhãn tạm (Test);
+        warroom.blackboard   giả thuyết có cấu trúc đã làm sạch; DERIVED vì bảng không chở mã nguồn hay văn xuôi.
         """
         # Bằng chứng được nhãn tạm hay xung đột trích dẫn giữ hàng riêng; phần còn lại có thể được gộp (BL-12).
         cited = {i for c in report.conflicts for i in c.evidence_ids}
@@ -662,6 +666,7 @@ class ExecutionLoop:
             "evidence.summary": summarize_evidence(evidence, inv.vocabulary_terms, cited),
             "verdict.sufficiency": Labeled(report_json(report, inv.feasible), TrustLabel.DERIVED),
             "verdict.missing": Labeled(missing_json(report, inv.feasible), TrustLabel.DERIVED),
+            "warroom.blackboard": Labeled(inv.blackboard.snapshot(), TrustLabel.DERIVED),
         }
         if self._extra_shared_context is not None:
             out.update(self._extra_shared_context(report, evidence, inv))
