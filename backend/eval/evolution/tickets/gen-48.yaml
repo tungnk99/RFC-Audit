@@ -1,0 +1,25 @@
+generation: gen-48
+level: L6
+operator: FIX_FALSE_POSITIVE
+target: backend/src/rfcv/gates/leak_scan.py & backend/tests/test_leak_scan.py
+contribution_type: "Loại bỏ false positive trùng chuỗi con trong phạm vi và dòng phân cách của bộ quét rò rỉ leak_scan.py"
+capability_rung: "bậc 4 (xác minh 0 rò rỉ thật trên lịch sử chạy và đưa rescan Q1 về clean=True)"
+summary: >
+  Pháp y toàn bộ các cảnh báo `leak_scan.clean = false` trên `Q1`/OpenSSL/wolfSSL cho thấy 0 rò rỉ thật:
+  100% đến từ dòng phân cách (`====`) hoặc dòng ngoài phạm vi là chuỗi con của một dòng trong phạm vi
+  (vd `tests/ngtcp2_transport_params_test.c:126` nằm trong `lib/ngtcp2_transport_params.c`).
+  Giao `claude.cmd` bổ sung bộ lọc `_is_marker` (`MIN_ALNUM_CHARS = 12`) và kiểm tra đối chiếu chuỗi con
+  lười (lazy in-scope substring check) trong `leak_scan.py`, giữ nguyên toàn bộ phát hiện khoá API và dòng
+  đặc trưng ngoài phạm vi (17/17 `test_leak_scan.py` PASS, rescan `Q1` đạt `clean = True`).
+motivation: >
+  Đảm bảo nền an toàn IFC/leak_scan không có cảnh báo giả trước khi mở rộng chuỗi đột biến kiến trúc
+  `gen-49` → `gen-51` và bảo vệ luận điểm an toàn trước hội đồng.
+invariants_touched: []
+metrics_before:
+  q1_out_of_scope_rescan_clean: false
+  leak_scan_unit_tests_passed: 12
+metrics_after:
+  q1_out_of_scope_rescan_clean: true
+  leak_scan_unit_tests_passed: 17
+  pyright_errors: 0
+  import_linter_contracts_kept: 6

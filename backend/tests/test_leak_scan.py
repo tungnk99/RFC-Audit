@@ -158,3 +158,29 @@ def test_the_same_line_in_the_trace_is_still_a_leak(run_dir: Path, repo: Path) -
     TraceLog(run_dir / "trace.db").append("run-1", "tool_call", {"output": PRIVATE_LINE})
     leaks = scan(run_dir, repo, secrets={}).leaks
     assert [(x.kind, x.file) for x in leaks] == [("out_of_scope", "certs/server.key")]
+
+
+def test_a_fragment_of_a_longer_in_scope_line_is_not_a_leak(run_dir: Path, repo: Path) -> None:
+    """Hồi quy từ lần chạy thật trên ngtcp2: một dòng của tệp test (ngoài phạm vi) chỉ là một phần của dòng dài hơn
+    trong tệp thư viện (trong phạm vi)."""
+    fragment = "varint_paramlen(TRANSPORT_PARAM_MAX_UDP_PAYLOAD_SIZE,"
+    (repo / "src" / "params.c").write_text(f"  len += {fragment} params->max_udp);\n", encoding="utf-8")
+    (repo / "certs" / "params_test.c").write_text(f"    {fragment}\n", encoding="utf-8")
+    TraceLog(run_dir / "trace.db").append("run-1", "tool_call", {"output": f"len += {fragment} params->max_udp);"})
+    assert scan(run_dir, repo, secrets={}).clean
+
+
+def test_a_shared_fragment_does_not_hide_a_unique_line_of_the_same_file(run_dir: Path, repo: Path) -> None:
+    fragment = "int GetRecordHeader(void) { return 0; /*"  # chuỗi con của dòng trong src/internal.c
+    (repo / "certs" / "mixed.txt").write_text(f"{fragment}\n{PRIVATE_LINE}\n", encoding="utf-8")
+    (repo / "certs" / "server.key").unlink()
+    (run_dir / "notes.txt").write_text(f"{fragment}\n{PRIVATE_LINE}\n", encoding="utf-8")
+    leaks = scan(run_dir, repo, secrets={}).leaks
+    assert [(x.kind, x.file, x.detail) for x in leaks] == [("out_of_scope", "certs/mixed.txt", "dòng 2")]
+
+
+@pytest.mark.parametrize("divider", ["-" * 60, "/* " + "=" * 60 + " */", "# ---------------- Notes -----------------"])
+def test_a_divider_line_is_not_a_leak(run_dir: Path, repo: Path, divider: str) -> None:
+    (repo / "certs" / "CONTRIBUTING.md").write_text(divider + "\n", encoding="utf-8")
+    (run_dir / "notes.txt").write_text(divider + "\n", encoding="utf-8")
+    assert scan(run_dir, repo, secrets={}).clean

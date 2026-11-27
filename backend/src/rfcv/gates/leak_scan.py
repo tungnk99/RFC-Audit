@@ -5,6 +5,8 @@ trừ bản sao phạm vi mã và chỉ mục dựng từ nó (`code/repo/`, `co
 chỉ tên biến, tên tệp và số dòng.
 
 Giới hạn đã biết: tìm khớp nguyên văn. Khoá bị mã hoá lại (base64, cắt khúc) hay nội dung bị diễn đạt lại sẽ không thấy.
+Với tệp ngoài phạm vi, dòng có ít hơn `MIN_ALNUM_CHARS` ký tự chữ-số, và dòng là chuỗi con của một tệp trong phạm vi,
+không được coi là dấu hiệu.
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ from rfcv.gates.explore_policy import included_file
 
 MIN_SECRET_LEN = 8  # khoá ngắn hơn dễ trùng ngẫu nhiên: không quét
 MIN_LINE_LEN = 40  # dòng mã ngắn hơn (dấu ngoặc, từ khoá, #include) quá phổ biến để làm dấu hiệu
+MIN_ALNUM_CHARS = 12  # ít chữ-số hơn: đường kẻ phân cách, dấu câu khuôn mẫu, không nhận diện được tệp nào
 MAX_LINES_PER_FILE = 200
 MAX_FILES = 2000
 MAX_FILE_BYTES = 256 * 1024 * 1024
@@ -100,11 +103,16 @@ def scan_secrets(run_dir: Path, secrets: Mapping[str, str]) -> tuple[list[Leak],
     return leaks, scanned, notes
 
 
-def _in_scope_lines(code_root: Path, include: Sequence[str], exclude: Sequence[str]) -> set[str]:
-    lines: set[str] = set()
+def _in_scope_files(code_root: Path, include: Sequence[str], exclude: Sequence[str]) -> Iterator[Path]:
     for f in _repo_files(code_root):
         if included_file(f.relative_to(code_root).as_posix(), tuple(include), tuple(exclude)):
-            lines.update(_candidate_lines(f, limit=None))
+            yield f
+
+
+def _in_scope_lines(code_root: Path, include: Sequence[str], exclude: Sequence[str]) -> set[str]:
+    lines: set[str] = set()
+    for f in _in_scope_files(code_root, include, exclude):
+        lines.update(_candidate_lines(f, limit=None))
     return lines
 
 
@@ -114,15 +122,23 @@ def _repo_files(code_root: Path) -> Iterator[Path]:
             yield p
 
 
-def _candidate_lines(path: Path, limit: int | None) -> list[str]:
+def _read_text(path: Path) -> str:
     try:
-        text = path.read_text(encoding="utf-8", errors="ignore")
+        return path.read_text(encoding="utf-8", errors="ignore")
     except OSError:
-        return []
+        return ""
+
+
+def _is_marker(line: str) -> bool:
+    """Dòng (đã cắt khoảng trắng hai đầu) đủ dài và đủ chữ-số để làm dấu hiệu nhận diện nội dung."""
+    return len(line) >= MIN_LINE_LEN and sum(ch.isalnum() for ch in line) >= MIN_ALNUM_CHARS
+
+
+def _candidate_lines(path: Path, limit: int | None) -> list[str]:
     seen: dict[str, None] = {}
-    for raw in text.splitlines():
+    for raw in _read_text(path).splitlines():
         s = raw.strip()
-        if len(s) >= MIN_LINE_LEN:
+        if _is_marker(s):
             seen.setdefault(s, None)
     out = list(seen)
     return out if limit is None else out[:limit]
@@ -133,7 +149,8 @@ def scan_out_of_scope(
 ) -> tuple[list[Leak], list[str]]:
     """Dòng mã của tệp NGOÀI phạm vi (ví dụ khoá riêng, tệp bị loại) có xuất hiện trong dữ liệu lần chạy không.
 
-    Dòng cũng có mặt ở một tệp trong phạm vi bị bỏ qua (dòng chung như bản quyền), để không báo nhầm.
+    Dòng cũng có mặt ở một tệp trong phạm vi, nguyên dòng hay là một phần của dòng dài hơn, bị bỏ qua (dòng chung như
+    bản quyền, đoạn mã dùng chung), để không báo nhầm.
     """
     blobs = [(f, d) for f in _run_files(run_dir) if (d := _read(f)) is not None]
     outside = [
@@ -146,6 +163,7 @@ def scan_out_of_scope(
         notes.append(f"chỉ quét {MAX_FILES}/{len(outside)} tệp ngoài phạm vi")
         outside = outside[:MAX_FILES]
     shared: set[str] | None = None
+    in_scope_blobs: list[str] | None = None  # chỉ dựng khi có dòng khớp mà không trùng nguyên dòng nào trong phạm vi
     leaks: list[Leak] = []
     for f in outside:
         rel = f.relative_to(code_root).as_posix()
@@ -157,21 +175,21 @@ def scan_out_of_scope(
                 shared = _in_scope_lines(code_root, include, exclude)
             if line in shared:
                 continue
+            if in_scope_blobs is None:
+                in_scope_blobs = [_read_text(p) for p in _in_scope_files(code_root, include, exclude)]
+            if any(line in blob for blob in in_scope_blobs):
+                continue
             leaks.append(Leak("out_of_scope", rel, f"dòng {lineno}"))
             break  # một dấu vết đủ để kết luận tệp này bị lộ
     return leaks, notes
 
 
 def _numbered_candidates(path: Path) -> list[tuple[int, str]]:
-    try:
-        text = path.read_text(encoding="utf-8", errors="ignore")
-    except OSError:
-        return []
     out: list[tuple[int, str]] = []
     seen: set[str] = set()
-    for i, raw in enumerate(text.splitlines(), start=1):
+    for i, raw in enumerate(_read_text(path).splitlines(), start=1):
         s = raw.strip()
-        if len(s) >= MIN_LINE_LEN and s not in seen:
+        if _is_marker(s) and s not in seen:
             seen.add(s)
             out.append((i, s))
             if len(out) >= MAX_LINES_PER_FILE:
