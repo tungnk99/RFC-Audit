@@ -5,7 +5,7 @@
 **Trường:** Trường Công nghệ Thông tin và Truyền thông — Đại học Bách khoa Hà Nội (HUST)
 **Học viên thực hiện:** Nguyễn Kỳ Tùng
 **Giảng viên hướng dẫn:** TS. Tống Văn Vạn
-**Hệ thống thực nghiệm:** `RFC-Audit` (`rfcv`, nhánh `feat/nextgen-agent-research`) · **Ngày hoàn thiện:** 22/11/2026
+**Hệ thống thực nghiệm:** `RFC-Audit` (`rfcv`; `v1.0` trên nhánh `feat/nextgen-agent-research`, `v2.x` trên nhánh `feat/multi-protocol-eval`) · **Ngày cập nhật:** 27/11/2026
 
 ---
 
@@ -15,10 +15,12 @@ Các triển khai thực tế của giao thức mật mã và giao thức mạng
 
 Luận văn đề xuất và xây dựng hệ thống **`RFC-Audit`** theo nguyên tắc cốt lõi ***"Agent đề xuất — Thành phần tất định kiểm chứng"*** kết hợp cơ chế kiểm soát luồng thông tin (IFC) và tiến hoá kiến trúc đa tác tử qua 33 thế hệ (`Gen-1` đến `Gen-33`). Đóng góp trung tâm bao gồm: (i) tách bạch hoàn toàn bước sinh bằng chứng (AI Agent) với bước ra kết luận (`VerdictEngine` tất định V0–V9, chuỗi băm chỉ ghi thêm `EvidenceStore`, cổng kiểm định `SchemaGate`); (ii) **Giải đấu Chuyên gia Định tuyến theo Chữ ký Lỗi (`Best-of-2 Specialist Tournament` + `Adaptive Rescue`)** dẫn hướng từ chẩn đoán thực thi động T3; (iii) mô hình **Đóng gói Phân tích tĩnh thành Năng lực của AI Agent** (`code.find_alert_sites` Tool + `locate-alert-sites` Skill) chịu kiểm soát đầy đủ của `ToolGateway` và IFC (`TrustLabel.UNTRUSTED`); và (iv) cổng tự phản hồi `precheck()` kết hợp kiểm chứng mã nguồn tất định `obs_in_source`.
 
-Đánh giá thực nghiệm trên **50 phiên bản Docker thật** của wolfSSL và OpenSSL 3.x (chia 4 tầng chống rò rỉ gồm `basic`, `intermediate` với 7 commit lỗi thật từ lịch sử Git wolfSSL, `advanced` với 8 ca OpenSSL 3.x đa tệp, và **19 ca đóng băng `held_out`** chưa từng chạm) cùng **29 kiểm thử an toàn/đặc tả (`CT08-injection`, `CT26-bad-rbs`)** và **266 kiểm thử đơn vị CI** cho thấy:
+Đánh giá thực nghiệm của mốc `v1.0-tls13-graduated` trên **50 phiên bản Docker thật** của wolfSSL và OpenSSL 3.x (chia 4 tầng chống rò rỉ gồm `basic`, `intermediate` với 7 commit lỗi thật từ lịch sử Git wolfSSL, `advanced` với 8 ca OpenSSL 3.x đa tệp, và **19 ca đóng băng `held_out`** chưa từng chạm) cùng **29 kiểm thử an toàn/đặc tả (`CT08-injection`, `CT26-bad-rbs`)** và **266 kiểm thử đơn vị CI** cho thấy:
 - Độ chính xác kết luận (**`verdict_acc`**) đạt **`50/50 = 100,0%`**, với **`0/28 = 0,0%` bỏ sót lỗi (`false_compliant`)** và **`0/22 = 0,0%` báo nhầm (`false_violation`)**.
 - Độ chính xác định vị đúng dòng sửa lỗi (**`defect_hit_strict`**) đạt **`80,0%`** trên `basic`, **`90,9%`** (`10/11`, `Gen-18`) trên `intermediate`, **`85,7%`** (`6/7` ổn định 3 lượt liên tiếp `Gen-28..30`) trên `advanced` (OpenSSL 3.x), và đặc biệt **`5/5 = 100,0% ALL STRICT`** cùng **`19/19 = 100,0%` verdict** trên tập đóng băng `held_out` (`Gen-33`, trung bình chỉ `117.638` token và `37,9s`/ca).
 - Trong thực nghiệm đối chứng đối đầu trên 27 ca thật (`8` OpenSSL `advanced` + `19` `held_out`), **`RFC-Audit` dù chỉ dùng mô hình gọn `DeepSeek-V4-Flash`** đã áp đảo toàn diện cả **Single-Agent chạy trên flagship Reasoning model `deepseek-v4-pro` (bật full Thinking)**: **`100,0%` vs `74,1%` verdict**, **`0,0%` vs `33,3%` bỏ sót lỗi**, **`0,0%` vs `20,0%` báo nhầm**, **`91,7%` vs `41,7%` định vị strict** (riêng `held_out`: **`100,0%` vs `20,0%`** — gấp 5 lần), đồng thời **nhanh hơn 2,1 lần** (`37,9s` vs `81,3s`/ca), chứng minh rõ rệt luận điểm **`System > Model`**.
+
+Sau mốc `v1.0`, **14 thế hệ tiến hoá có phiếu kiểm toán (`gen-34` → `gen-47`, ba mốc `v2.0-stage-a-complete`, `v2.1-stage-b-complete`, `v2.2-agent-org-complete`)** mở rộng hệ thống theo ba hướng: đa giao thức và đối chứng kiến trúc; hoàn thiện DSL kiểm thử và thu độ phủ dòng khi thực thi; công cụ và mô hình tổ chức đa tác tử. Trên hai giao thức giữ ngoài quá trình phát triển, kết luận đạt `4/4` với SSH (chỉ tính các ca không tương đương, ghép từ hai lượt chạy) và `4/4` với QUIC, nhưng **định vị strict ở lượt đánh giá này bằng `0`**. Trên 6 ca OpenSSL được chọn, giải đấu hai nhánh đạt `6/6` định vị strict (số liệu `Gen-28`), phản biện tuần tự đạt `4/6`, hai cấu hình một tác tử cùng đạt `1/6`; so sánh này không được chạy trên cùng một phiên bản mã. Các kết quả `v2.x` là thực nghiệm cỡ mẫu nhỏ, và tập 50 ca của `v1.0` **chưa được đo lại** trên `v2.x` (điều kiện chi tiết ở các Mục 5.6–5.9).
 
 ---
 
@@ -43,6 +45,10 @@ Luận văn hướng tới ba mục tiêu cụ thể:
 2. **Cơ chế Giải đấu Chuyên gia Định tuyến theo Chữ ký Lỗi (`Signature-Routed Best-of-2 Tournament` + `Adaptive Rescue`):** định tuyến tự động cặp tác tử bổ trợ theo chữ ký chẩn đoán từ T3 (`WRONG_ALERT` vs `REACTION_ABSENT`/`NO_CLOSE`), phá vỡ hiệu ứng đường hầm (tunnel vision) và giảm `39%` chi phí token so với đơn-agent.
 3. **Mô hình "Phân tích tĩnh như Năng lực của AI Agent" (Static Analysis as Agentic Tool + Skill):** thay vì tiền xử lý tĩnh ẩn ngoài vòng lặp (Hybrid), đóng gói quét điểm phát cảnh báo toàn cục thành công cụ chỉ-đọc `code.find_alert_sites` + kỹ năng `locate-alert-sites/SKILL.md` để AI Agent tự chủ triệu gọi dưới kiểm soát IFC (`TrustLabel.UNTRUSTED`), kết hợp kiểm chứng mã nguồn tất định `obs_in_source`.
 4. **Bộ thực nghiệm phân tầng 50 ca Docker thật và đối chứng `System > Model`:** chứng minh thực nghiệm qua 33 thế hệ tiến hoá có kiểm soát (`KEEP`/`REVERT`), đạt `100%` trên 19 ca đóng băng `held_out` và đánh bại flagship Reasoning model `deepseek-v4-pro` chạy đơn lẻ trên mọi chỉ số.
+5. **Bằng chứng mở rộng đa giao thức và tự soạn kịch bản (`gen-35` → `gen-41`):** gỡ tên hàm/tệp/macro đặc thù wolfSSL/OpenSSL khỏi `Code Reader`; đánh giá thêm SSH và QUIC (đủ 5 giao thức trên Docker); thí nghiệm `Tester` tự soạn kịch bản khi không có mẫu.
+6. **Chiến lược hai chiều `Code-First → Targeted Dynamic Verify` (`gen-38`):** trích hằng số nhánh từ mã nguồn một cách tất định rồi bắt buộc kiểm chứng lại bằng `T3` và bản tham chiếu, phát hiện được ca lỗi giá trị đặc biệt `U5` mà kiểm thử một chiều bỏ sót.
+7. **Liên kết nhân quả bằng độ phủ thực thi (`gen-43` → `gen-45`):** thu `gcov`/`lcov` trong container chỉ-đọc, tích hợp điểm SBFL Ochiai thành công cụ `coverage.hotspots`, kèm phản hồi `UNEXECUTED_SITE`.
+8. **Khảo sát mô hình tổ chức và giao tiếp đa tác tử (`gen-40`, `gen-46`, `gen-47`):** đối sánh một tác tử, phản biện ngang hàng tuần tự và giải đấu song song; bổ sung bảng đen `HypothesisBoard` có kiểm soát IFC.
 
 ---
 
@@ -123,11 +129,15 @@ Trên thư viện đa tệp đa hình như OpenSSL 3.x (hơn 15 tệp dưới `s
 ### 4.2. Giao thức tiến hoá có kiểm soát (`KEEP` / `REVERT`)
 Mọi thế hệ tiến hoá (`Gen-1` đến `Gen-33`) tuân thủ chính sách bất biến trong `backend/eval/meta_policy.yaml`: tuyệt đối không sửa `verdict_engine.py`, `rules.py`, `schema_gate.py`, `ifc.py`, `tool_gateway.py` hay dữ liệu chuẩn; mọi thay đổi đều được kiểm chứng qua `eval_score.py` (CI + kiểm thử bất biến) và lưu vết đầy đủ quyết định `KEEP` hoặc `REVERT` vào `evolution_log.jsonl` và `knowledge_base.md`.
 
+Từ `gen-34`, mỗi thế hệ có một phiếu `backend/eval/evolution/tickets/gen-NN.yaml` (mức và phép đột biến, động cơ, chỉ số trước/sau) và được ghi vào `innovation_log.md`; thành phần bị gỡ được lưu vào `gene_bank.yaml` để có thể đưa trở lại.
+
 ---
 
 ## CHƯƠNG 5. KẾT QUẢ THỰC NGHIỆM VÀ PHÂN TÍCH CHUYÊN SÂU
 
 ### 5.1. Tổng hợp kết quả toàn bộ 50 ca Docker thật trên 4 tầng
+
+Các Mục 5.1–5.5 là số liệu của mốc `v1.0-tls13-graduated` (`Gen-1` → `Gen-33`). Các Mục 5.6–5.9 trình bày giai đoạn `gen-34` → `gen-47`.
 
 | Tầng kiểm chuẩn | Tập mẫu | Verdict Accuracy | `false_compliant` | `false_violation` | `defect_hit` (`strict`) | Trạng thái |
 |---|---|---|---|---|---|---|
@@ -194,21 +204,143 @@ Toàn bộ tiêu chuẩn kỹ thuật và an toàn đều vượt qua `100%` ở
 - **Chất lượng phần mềm & kiến trúc:** `266/266 pytest passed`, `ruff check` & `ruff format` sạch `100%`, `pyright` strict **`0 errors, 0 warnings`**, `lint-imports` giữ trọn **`6/6` hợp đồng kiến trúc**.
 - **Tính tái lập:** trên Tầng `advanced` OpenSSL, `3` lượt chạy liên tiếp (`Gen-28, Gen-29, Gen-30`) cho kết quả đồng nhất `100%` (`8/8` verdict và `6/7 = 85,7%` strict trên cùng 6 ca); trên Tầng `intermediate`, `6` lượt chạy liên tiếp đạt `96/96 = 100%` verdict.
 
+### 5.6. Chặng A: Đa giao thức, gỡ mã cứng và đối chứng kiến trúc (`gen-34` → `gen-41`, mốc `v2.0-stage-a-complete`)
+
+#### 5.6.1. Tinh gọn, tổng quát hoá và bổ sung năng lực (`gen-34` → `gen-38`)
+
+**Bảng 5.6a. Năm thế hệ đầu của Chặng A**
+
+| Thế hệ | Phép đột biến | Thay đổi | Kết quả ghi nhận |
+|---|---|---|---|
+| `gen-34` | `L4 REMOVE_AGENT` | Tắt `Planner LLM` dự phòng khi sổ tay gặp lỗi tác vụ; lưu vào `gene_bank.yaml` | Trên `held_out` của `Gen-33`, thành phần này được gọi 2 lần và trả `output=null` cả 2. Lần cắt quá rộng ban đầu làm hỏng 3 test của miền độc lập `toy_domain`; phải thu hẹp điều kiện để giữ tính tổng quát |
+| `gen-35` | `L2 REMOVE_HARDCODE` | Gỡ tên hàm/tệp/macro đặc thù wolfSSL/OpenSSL khỏi `code_reader/handler.py`; trung lập hoá kỹ năng `locate-alert-sites` | Số ký hiệu mã cứng theo phiếu: `11 → 0`; `test_skills_protocol_neutral` từ FAIL sang PASS; hồi quy 4 ca trên 4 thư viện C (Bảng 5.6b) |
+| `gen-36` | `L3 ADD_STEP` | Thêm `_check_reaction_consistency` vào `_ExplanationGate.precheck()`, không sửa `output_gate.py` | Cổng tất định chặn lời giải thích thiếu cặp mã (`ALERT_PAIR_MISSING`) hoặc đảo chiều mã yêu cầu và mã quan sát (`ALERT_DIRECTION_INVERTED`) |
+| `gen-37` | `L6 ADD_CAPABILITY` | `specs_from_adapter()` đọc cấu hình chạy SUT từ `sut/*.yaml` | Theo phiếu, thêm thư viện mới không còn phải sửa `docker_launcher.py` |
+| `gen-38` | `L6 ADD_STRATEGY` | `Code-First → Targeted Dynamic Verify` (`code_probe.py`) | `U5` từ `COMPLIANT` sai sang `VIOLATION (V2)` |
+
+**Bảng 5.6b. Hồi quy sau khi gỡ mã cứng (các lượt chạy `reg_gen37`, trên mã đã gồm `gen-35`)**
+
+| Ca | Giao thức / thư viện | Kết luận và định vị | Vị trí được trích dẫn | Ghi chú |
+|---|---|---|---|---|
+| `H1` | HTTP/2, `nghttp2` | `VIOLATION (V2)`, strict | `lib/nghttp2_session.c` | Đạt ở lượt chạy lại; lượt đầu `UNVERIFIABLE (V9)` với 0 token |
+| `D3` | DNS, `Knot DNS` | `VIOLATION (V2)`, strict | `src/knot/nameserver/process_query.c` | Đạt ở lượt chạy lại; lượt đầu `UNVERIFIABLE (V9)` với 0 token; lượt đạt có `leak_scan.clean = false` |
+| `R9` | TLS 1.3, `wolfSSL` | `VIOLATION (V2)`, trúng dòng sửa | `src/internal.c:[26276, 26292]` | Trích dẫn chứa dòng chuẩn `26290`; `matrix.csv` để trống cột chấm tự động, được đối chiếu thủ công |
+| `OU2` | TLS 1.3, `OpenSSL` | `VIOLATION (V2)`, strict | `ssl/record/rec_layer_s3.c:[846, 857]` | Chấm tự động |
+
+Nhật ký tiến hoá tổng hợp kết quả này là **`4/4 ALL STRICT`**.
+
+Với `gen-38`, khi mọi ca kích hoạt hộp đen đều PASS, hệ thống trích tất định hằng số của nhánh `if`/`switch`/`case` quanh điểm phát phản ứng kỳ vọng, sinh biến thể `type_77` cho `wolfssl-U5` và chạy `T3` trên SUT cùng các bản tham chiếu (bằng chứng `T3` ghi nhân chứng `openssl`, `gnutls`, `wolfssl`). Kết quả là **`VIOLATION (V2)`**, trích dẫn `src/internal.c:[26218, 26222]` chứa dòng sửa chuẩn `26218` (tài liệu đúc kết tiến hoá ghi nhận `ALL STRICT`), `leak_scan.clean = true`. Chiến lược chỉ chuyển hằng số trích tất định từ mã nguồn sang `Tester`, và nhãn vẫn do `VerdictEngine` quyết định. `U5` thuộc nhóm đột biến bị loại khỏi bộ chính, và chiến lược được thiết kế để xử lý đúng điểm mù này, nên đây là kiểm chứng khả năng, chưa phải đo tổng quát hoá.
+
+#### 5.6.2. Hai giao thức giữ ngoài quá trình phát triển (`gen-39`)
+
+Sau ba giao thức phát triển (TLS 1.3, HTTP/2, DNS), hệ thống được chạy trên SSH và QUIC với lõi và tác tử đóng băng. Hai lỗi hạ tầng được sửa trong quá trình chạy, không chạm lõi: đồng bộ `docker_cmd` cho `<impl>-ref` và biên timeout UDP 1 ms của backend QUIC.
+
+**Bảng 5.6c. Kết quả trên SSH và QUIC**
+
+| Giao thức / SUT | Ca | Kết luận | Định vị strict | Điều kiện |
+|---|---|---|---|---|
+| SSH, `Dropbear 2024.86` | `S3, S4` đúng `VIOLATION (V2)`; `S5, S6` đúng `COMPLIANT (V6)` | **`4/4 (100%)`** ca không tương đương; báo nhầm `0%` | `0/2` | `S5, S6` lấy từ lượt đối chứng chạy lại (lượt đầu `UNVERIFIABLE`). `S1, S2` bị kết luận `COMPLIANT` so với nhãn ban đầu `VIOLATION`, được xác định là đột biến tương đương do `requirenext` chặn trước dòng 139. Điểm thô lượt đầu trên 6 ca là `2/6` |
+| QUIC, `ngtcp2 v1.11.0` | `Q1, Q2, Q3` đúng `VIOLATION (V2)`; `Q4` đúng `COMPLIANT (V6)` | **`4/4 (100%)`**; bỏ sót `0%`, báo nhầm `0%` | `0/3` | Số liệu của lượt `heldout_quic_gen39_v3`; 2/4 thư mục chạy có `leak_scan.clean = false` |
+
+Hai nguyên nhân định vị đã được ghi nhận. Ở `S3`, `Code Reader` tìm đến đúng dòng `src/common-kex.c:[888, 891]` nhưng `SchemaGate` từ chối (`LINES_OUTSIDE_SYMBOL`) vì `tree-sitter` cắt thiếu biên hàm C kiểu K&R chứa `#ifdef`. Ở QUIC, tác tử dừng tại điểm kiểm tra trùng không nằm trên đường gây lỗi (nhóm `conn_recv_pkt:6109`, trong khi chỗ lỗi là `ngtcp2_accept:10230`). Mỗi giao thức chỉ có 4 ca được tính nên khoảng tin cậy rất rộng (với QUIC `4/4`, Wilson 95% là `51%–100%`).
+
+#### 5.6.3. Đối chứng tách thành phần (`gen-40`)
+
+**Bảng 5.6d. Ablation trên 6 ca OpenSSL `OU2, OU3, OG1, OG2, OG4, OR1`, mô hình `DeepSeek-V4-Flash`**
+
+| Cấu hình | Verdict | `defect_hit` | `defect_hit_strict` (Wilson 95%) | Token trung bình (`all_role`) |
+|---|---|---|---|---|
+| `A2` `no_diagnosis`: một tác tử, không chẩn đoán, không giải đấu | `6/6` | `2/6` | **`1/6 = 16,7%`** (`3%–56%`) | ~189k |
+| `A1` `single_branch`: một tác tử có chẩn đoán | `6/6` | `1/6` | **`1/6 = 16,7%`** (`3%–56%`) | ~167k |
+| `C0` `full`: giải đấu 2 nhánh chuyên biệt + `obs_in_source` (số liệu `Gen-28`) | `6/6` | `6/6` | **`6/6 = 100,0%`** (`61%–100%`) | ~244k |
+
+Chênh lệch đo được giữa `C0` và hai cấu hình một tác tử là **`+83,3` điểm %**, hai khoảng tin cậy 95% **không giao nhau**. Cả ba cấu hình đều đạt `6/6` verdict, nên khác biệt nằm ở định vị; `C0` tốn nhiều token hơn.
+
+**Giới hạn của phép so sánh:**
+
+- `A1`, `A2` chạy ở `gen-40`, còn `C0` không được chạy lại mà lấy từ `Gen-28`, trước khi `gen-35` gỡ mã cứng (gồm tên tệp, tên hàm OpenSSL) khỏi `Code Reader` và kỹ năng định vị. Chênh lệch vì vậy không thể quy hoàn toàn cho kiến trúc.
+- Sáu ca này đúng là sáu ca `C0` định vị đúng trong 7 ca `VIOLATION` của tầng `advanced`; ca `C0` trượt (`OU4`) không nằm trong ablation. Đây là thiên lệch chọn mẫu theo hướng có lợi cho `C0`.
+- Tầng `advanced` đã được dùng để tinh chỉnh ở `Gen-19` → `Gen-28`.
+- Số liệu ablation của mỗi cấu hình `A1`, `A2` đến từ một lượt.
+
+Kết quả là bằng chứng ủng hộ vai trò của giải đấu hai nhánh, chưa phải phép đối chứng có kiểm soát đầy đủ.
+
+#### 5.6.4. `Tester` tự soạn kịch bản không dùng mẫu (`gen-41`)
+
+Thư mục `templates/` được xoá về 0 mẫu cho 5 yêu cầu trên 4 giao thức: `R9` và `OU2` (TLS 1.3), `H1` (HTTP/2), `D3` (DNS), `Q1` (QUIC). Theo phiếu `gen-41`, kết quả là **`5/5 = 100%`** kịch bản do LLM tự soạn được xác minh trên bản tham chiếu Docker, `0` `gate_reject`, tổng **`96`** bằng chứng `T3`, và **`5/5 VIOLATION (V2)`**.
+
+**Điều kiện đi kèm:** tệp tổng hợp `summary.json` lưu **`3/5`** (`R9, OU2, H1`). `D3` và `Q1` ở lượt đầu không cho ra đầu ra hợp lệ của `Tester` và kết thúc `UNVERIFIABLE (V9)` do hết ngân sách; cả hai đạt `VIOLATION (V2)` ở lượt chạy lại, và `summary.json` không được cập nhật. Do đó `5/5` là kết quả **sau khi chạy lại**, còn tỷ lệ của lượt đầu là `3/5`. Lượt chạy lại của `D3` có `leak_scan.clean = false`. Thí nghiệm đo khả năng soạn kịch bản và kết luận, không dùng để khẳng định độ chính xác định vị.
+
+### 5.7. Chặng B: Mở rộng DSL và độ phủ thực thi (`gen-42` → `gen-43`, mốc `v2.1-stage-b-complete`)
+
+1. **Đủ `8/8` thao tác DSL cho `tlsfuzzer` (`gen-42`):** bổ sung `mutate`, `reorder`, `repeat` (trước đó `5/8`). Phiếu ghi nhận kiểm thử đơn vị và chạy thật trên OpenSSL trong Docker: `reorder: ["finished", "client_hello"]` và `repeat: "client_hello"` đều gây `unexpected_message` kèm đóng kết nối. Thay đổi này mở đường kiểm thử các yêu cầu về thứ tự, lặp thông điệp và đột biến trường; chưa có số liệu benchmark riêng cho lớp yêu cầu đó.
+2. **Thu độ phủ dòng `gcov`/`lcov` trong container `--read-only` (`gen-43`):** dùng `GCOV_PREFIX=/tmp/gcov`, thu `192.480` byte LCOV trên ảnh `rfcv/sut-ngtcp2:cov-head`. Liên kết độ phủ phân biệt tất định `ngtcp2_accept:10230` (`linked=True`) với `conn_recv_pkt:6108–6116` (`linked=False`), tạo cơ sở nhân quả cho mức bảo đảm `LINKED`. Đây là xác minh năng lực trên một trường hợp `ngtcp2`, chưa phải phép đo tỷ lệ đạt `LINKED` trên toàn bộ benchmark.
+
+### 5.8. Chặng C: Công cụ, tổ chức và giao tiếp đa tác tử (`gen-44` → `gen-47`, mốc `v2.2-agent-org-complete`)
+
+#### 5.8.1. SBFL Ochiai, `coverage.hotspots` và phản hồi `UNEXECUTED_SITE` (`gen-44`, `gen-45`)
+
+`gen-44` đưa điểm định vị theo phổ độ phủ **SBFL Ochiai** vào `Code Reader` và dùng `executed_in_fail` khi xếp hạng nhánh. `gen-45` đóng gói thành công cụ chủ động `coverage.hotspots`, kỹ năng trung lập giao thức `coverage-guided-localization/SKILL.md`, và thêm phản hồi `UNEXECUTED_SITE` trong `LocationHandler.precheck` khi dòng trích dẫn có LCOV bằng 0 trên ca FAIL.
+
+Trên ảnh `rfcv/sut-ngtcp2:cov-Q1`, phiếu `gen-45` ghi nhận cả hai nhánh tự chuyển từ `conn_recv_handshake_pkt:6108–6116` (LCOV bằng 0) sang **`ngtcp2_accept` (`lib/ngtcp2_conn.c:10230–10232`, `executed_in_fail=true`)**, đưa `Q1` từ **`0/1` (`gen-39`) lên `1/1 = 100%` strict**.
+
+**Điều kiện đi kèm:** kết quả đạt ở lượt thứ ba (`v3`), hai lượt trước vẫn trích dẫn `conn_recv_handshake_pkt`; thư mục chạy đạt có `leak_scan.clean = false`; `Q1` đã được dùng để phát triển công cụ nên không còn là ca giữ ngoài; lượt `Q1` của `gen-47` lại trích dẫn `conn_recv_handshake_pkt` (`0/1` strict). Đây là bằng chứng cơ chế có thể lật được ca này, chưa chứng minh tính ổn định.
+
+#### 5.8.2. Phản biện ngang hàng và đối sánh ba mô hình tổ chức (`gen-46`)
+
+`RFCV_ORG_MODE=peer_review` bật quy trình tuần tự `Investigator → Skeptic Reviewer`; giải đấu song song vẫn là mặc định.
+
+**Bảng 5.8. Ba mô hình tổ chức trên 6 ca `OU2, OU3, OG1, OG2, OG4, OR1`**
+
+| Mô hình tổ chức | Nguồn số liệu | Verdict | `defect_hit_strict` | Chênh lệch so với một tác tử |
+|---|---|---|---|---|
+| Một tác tử (`A1`, `A2`) | `gen-40` | `6/6` | **`1/6 = 16,7%`** | mốc so sánh |
+| Phản biện ngang hàng tuần tự | `gen-46` | `6/6` | **`4/6 = 66,7%`** (Wilson 95%: `30%–90%`) | **`+50,0` điểm %** |
+| Giải đấu độc lập song song (`C0`) | `Gen-28`, dùng trong `gen-40` | `6/6` | **`6/6 = 100,0%`** | **`+83,3` điểm %** |
+
+Giải đấu song song cao hơn phản biện tuần tự **`33,3` điểm %**. Phản biện tuần tự dùng trung bình khoảng `201k` token theo cột `tokens` (chỉ số ghi trong phiếu), tương ứng khoảng `222k` theo `all_role`; khi so với Bảng 5.6d phải dùng số `all_role`.
+
+Hai ca trượt là `OU3` và `OG1`. Với `OU3`, phiếu `gen-46` quy nguyên nhân cho **thiên lệch neo (anchoring bias)** khi `Reviewer` xem trước bản nháp của `Investigator`. Cách giải thích này dựa trên một ca, chưa có thí nghiệm tách riêng yếu tố neo và không giải thích ca `OG1`. Khoảng tin cậy của `4/6` giao với khoảng của cả hai cấu hình còn lại, và số liệu `C0` đến từ phiên bản mã cũ hơn, nên thứ hạng giữa ba mô hình là kết quả sơ bộ.
+
+#### 5.8.3. Bảng đen War-Room `HypothesisBoard` an toàn IFC (`gen-47`)
+
+`rfcv/core/blackboard.py` bổ sung bảng đen cộng tác hai chiều, gắn vào `ExecutionLoop._shared_context` dưới nhãn `TrustLabel.DERIVED` (`warroom.blackboard`). Bảng chỉ nhận định danh đơn và từ vựng adapter, chặn văn bản tự do và mã nguồn thô; mục trùng được khử. `Tester` đăng tín hiệu hành vi, điểm nóng độ phủ, ứng viên nhánh và kết quả thăm dò; `Code Reader` đọc bảng và đăng giả thuyết vị trí sau khi `SchemaGate` duyệt.
+
+- **`U5`:** `VIOLATION (V2)` với chuỗi cộng tác `Tester (hb-001 → verified, hb-002) ↔ Code Reader (hb-003)` và **`leak_scan.clean = true`**. Vị trí mã được trích trong lượt này (`src/internal.c`, quanh dòng `26840`) không trùng dòng sửa chuẩn `26216/26218`, nên không được tính là định vị đúng.
+- **`Q1`:** ghi nhận 18 mục cộng tác hai chiều, kết luận `VIOLATION (V2)`; định vị strict `0/1` và `leak_scan.clean = false`.
+- **`Q4` (đối chứng):** `COMPLIANT (V6)`, báo nhầm `0%`, `0` mục nhiễu trên bảng.
+
+Các kết quả này xác nhận kênh giao tiếp hoạt động; chưa có số liệu cho thấy bảng đen làm tăng độ chính xác kết luận hay định vị.
+
+### 5.9. Điều kiện diễn giải kết quả `gen-34` → `gen-47`
+
+1. **Phạm vi của số liệu `v1.0`:** kết quả `50/50` và `19/19 held_out` thuộc mốc `v1.0`, chưa được chạy lại trọn bộ sau 14 thế hệ mới. Trace của `held_out` đã được dùng làm đầu vào chẩn đoán cho `gen-34` (`U8, U13`) và `gen-36` (`R9`), `R9` còn được dùng để hồi quy ở các thế hệ sau. Vì vậy, đối với `v2.x`, tập này không còn là tập đóng băng chưa chạm.
+2. **Chạy lại:** một số kết quả chỉ đạt sau khi chạy lại (`H1`, `D3` ở hồi quy; `S5, S6`; `D3, Q1` ở `gen-41`; `Q1` ở `gen-45`). Các tỷ lệ tương ứng không đại diện cho xác suất thành công trong một lượt.
+3. **Quét rò rỉ:** không phải mọi lượt đều sạch. Trong các thư mục kết quả được đối chiếu, `leak_scan.clean = false` xuất hiện ở `A1` (`3/6`), phản biện ngang hàng (`1/6`), QUIC `gen-39` (`2/4`), `Q1` của `gen-45` và `gen-47`, hồi quy `D3`, `gen-41` (`1/7` thư mục chạy), và cả lượt `Gen-28` cung cấp số liệu `C0` (`1/8`). Loại cảnh báo `out_of_scope` nghĩa là một dòng của tệp ngoài phạm vi xuất hiện trong dữ liệu lần chạy. Nguyên nhân từng trường hợp (lộ thật hay trùng dòng ngẫu nhiên) **chưa được phân tích**, nên chưa thể khẳng định mọi lần chạy đều đạt bảo đảm không lộ dữ liệu ngoài phạm vi.
+4. **Bằng chứng lưu vết:** số liệu của `gen-42` và `gen-43` dựa trên phiếu tiến hoá, nhật ký và sổ giới hạn hệ thống; không tìm thấy thư mục lần chạy riêng của hai thế hệ này để đối chiếu lại.
+5. **Cỡ mẫu:** các thí nghiệm giai đoạn này nhỏ (thường vài ca), phần lớn không có lượt lặp để đo độ ổn định.
+
 ---
 
 ## CHƯƠNG 6. MỐI ĐE DOẠ TÍNH HỢP LỆ, GIỚI HẠN VÀ HƯỚNG PHÁT TRIỂN
 
-1. **Mối đe doạ tính hợp lệ nội tại & ngoại tại:** thực nghiệm Docker tập trung vào giao thức TLS 1.3 trên 2 thư viện C công nghiệp có kiến trúc trái ngược nhau (`wolfSSL` đơn tệp lớn và `OpenSSL 3.x` đa tệp đa hình), giúp giảm thiên lệch theo một thư viện nhưng chưa chạy thực nghiệm quy mô lớn trên QUIC/HTTP2/DNS trong khuôn khổ đợt đo này (dù kiến trúc adapter tách biệt hoàn toàn với lõi đã sẵn sàng).
+1. **Mối đe doạ tính hợp lệ nội tại & ngoại tại:** benchmark phân tầng 50 ca (`v1.0`) chỉ gồm TLS 1.3 trên 2 thư viện C công nghiệp có kiến trúc trái ngược nhau (`wolfSSL` đơn tệp lớn và `OpenSSL 3.x` đa tệp đa hình). Giai đoạn `v2.x` đã chạy thật trên 5 giao thức (TLS 1.3, HTTP/2, DNS, SSH, QUIC) nhưng với số ca nhỏ, chưa phải thực nghiệm quy mô lớn. Trường hợp `S1, S2` cho thấy mọi đột biến mới cần được xác minh bằng thực thi độc lập trước khi gán nhãn. Các giới hạn về so sánh khác phiên bản, chọn mẫu, chạy lại và quét rò rỉ được nêu ở Mục 5.6.3 và 5.9.
 2. **Giới hạn còn tồn tại:** dạng lỗi xoá hoàn toàn lệnh gửi cảnh báo (`DEL_ALERT` / `REACTION_ABSENT` như `OU4` trong hàm 500 dòng `ssl3_read_bytes` có một nhánh `default:` vẫn gửi cảnh báo ở cuối hàm) vẫn là bài toán khó nhất cho mô hình `Flash` vì không có ký hiệu cảnh báo sai trực tiếp tại dòng đột biến.
+   Giai đoạn `v2.x` bộc lộ thêm: định vị strict bằng `0` trên SSH và QUIC ở lượt đánh giá giữ ngoài (`gen-39`); biên hàm C kiểu K&R chứa `#ifdef` bị cắt sai; bẫy nhiều điểm kiểm tra trùng trên `ngtcp2` mới được giải ở một lượt (`gen-45`) và không lặp lại ở lượt `gen-47`.
 3. **Hướng phát triển tương lai:**
-   - Kết hợp dấu vết độ phủ động mức dòng (`gcov`/`LLVM source-based coverage`) của các ca `T3` FAIL/PASS làm một công cụ chỉ-đọc bổ sung (`code.diff_coverage`) cho AI Agent để giải quyết triệt để dạng lỗi `DEL_ALERT` (`OU4`) hướng tới `100%` trên mọi tầng.
-   - Mở rộng adapter thực thi sang các giao thức QUIC (`ngtcp2`/`quiche`), HTTP/2 (`nghttp2`) và DNS (`Knot DNS`), cũng như đánh giá chéo với nhiều họ mô hình khác (Claude, Gemini, Qwen).
+   - Mở rộng thu thập độ phủ (đã có từ `gen-43`) cho các SUT khác và đánh giá `coverage.hotspots` trên dạng lỗi `DEL_ALERT` (`OU4`), hiện chưa có số liệu.
+   - Chạy lại trọn bộ 50 ca trên `v2.2` và xây dựng một tập đóng băng mới chưa từng dùng.
+   - Chạy lại `C0`, `A1`, `A2` và phản biện ngang hàng trên cùng một phiên bản mã, gồm cả `OU4`, có lượt lặp; tách riêng yếu tố thiên lệch neo bằng cấu hình `Reviewer` không xem bản nháp.
+   - Phân tích từng cảnh báo `leak_scan` loại `out_of_scope`; cải thiện việc xác định biên hàm trong `CodeIndex`.
+   - Tăng số ca trên HTTP/2, DNS, SSH, QUIC và đánh giá chéo với nhiều họ mô hình khác (Claude, Gemini, Qwen).
 
 ---
 
 ## CHƯƠNG 7. KẾT LUẬN
 
 Luận văn đã thiết kế, xây dựng và kiểm chứng thành công hệ thống kiểm chứng tuân thủ giao thức mạng **`RFC-Audit`** dựa trên bằng chứng và an toàn trước mã nguồn đối thủ. Qua 33 thế hệ tiến hoá có kiểm soát trên **50 phiên bản Docker thật** của wolfSSL và OpenSSL 3.x, hệ thống đạt **`100,0%` độ chính xác kết luận (`0%` bỏ sót lỗi, `0%` báo nhầm)**, **`100,0% ALL STRICT`** trên trọn bộ **19 ca đóng băng `held_out`**, vượt qua **100% cổng an toàn IFC & kiểm thử kỹ thuật (`266/266 pytest`, `29/29` test an toàn)**, và chứng minh thực nghiệm luận điểm **`System > Model`** khi dùng mô hình gọn `DeepSeek-V4-Flash` nhưng áp đảo toàn diện cả flagship Reasoning model `deepseek-v4-pro` chạy đơn lẻ.
+
+Qua 14 thế hệ tiếp theo (`gen-34` → `gen-47`), hệ thống được tinh gọn và gỡ mã cứng theo thư viện, mở rộng đánh giá sang 5 giao thức, hoàn thiện `8/8` thao tác DSL, thu được độ phủ thực thi trong sandbox chỉ-đọc, và bổ sung công cụ định vị theo độ phủ, chế độ phản biện ngang hàng cùng bảng đen cộng tác có kiểm soát IFC. Kết quả đáng chú ý gồm phát hiện được `U5` bằng chiến lược hai chiều, định vị đúng `Q1` ở một lượt có độ phủ (`gen-45`), và chênh lệch lớn về định vị giữa giải đấu hai nhánh với cấu hình một tác tử trên 6 ca OpenSSL. Các kết quả này chủ yếu cho thấy tính khả thi: cỡ mẫu còn nhỏ, một số số liệu phụ thuộc lượt chạy lại hoặc so sánh khác phiên bản, còn định vị trên giao thức mới và cảnh báo quét rò rỉ là các vấn đề mở. Việc đo lại có kiểm soát trên `v2.2` là bước cần thiết trước khi mở rộng các khẳng định của `v1.0` sang phiên bản mới.
 
 ---
 
