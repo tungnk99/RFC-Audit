@@ -216,3 +216,27 @@ def test_select_branch_prefers_claim_whose_source_lines_emit_observed_alert() ->
     assert summary["winner"] == "bottom_up_alert_hunter"
     assert summary["branches"][0]["obs_in_source"] is True
     assert summary["branches"][1]["obs_in_source"] is False
+
+
+def test_peer_review_config_activates_on_env_and_builds_skeptic_reviewer(monkeypatch: Any) -> None:
+    inv = _make_inv(trigger_arg="record", expected_alert="unexpected_message")
+    rt = SimpleNamespace(
+        store=_FakeStore([_make_t3_fail("decode_error")]),
+        run_id="r1",
+        providers=None,
+    )
+    handler = LocationHandler(rt, _FakeGate())  # type: ignore[arg-type]
+    task = SimpleNamespace(task_type="LOCATE")
+
+    monkeypatch.delenv("RFCV_ORG_MODE", raising=False)
+    assert handler.peer_review_config(inv, task) is None
+
+    monkeypatch.setenv("RFCV_ORG_MODE", "peer_review")
+    cfg = handler.peer_review_config(inv, task)
+    assert cfg is not None
+    assert cfg["investigator"]["name"] == "investigator"
+    draft = _claim("ssl3_read_bytes", file="ssl/record/rec_layer_s3.c", observed="send_alert(decode_error)")
+    rev = cfg["build_reviewer"](inv, task, draft, {"branches": [{"obs_in_source": False, "accepted": True}]})
+    assert rev["name"] == "skeptic_reviewer"
+    assert rev["extra_focus"]["peer_review_draft"]["symbol"] == "ssl3_read_bytes"
+    assert rev["extra_focus"]["peer_review_audit_flags"]["obs_in_source"] is False

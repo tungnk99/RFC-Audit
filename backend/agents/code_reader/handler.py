@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel
 
@@ -204,6 +204,71 @@ class LocationHandler:
             parts.append(res.text)
             shown |= set(res.shown_lines)
         return "\n".join(parts), frozenset(shown)
+
+    def peer_review_config(self, inv: Investigation, task: Any) -> dict[str, Any] | None:
+        """Kích hoạt mô hình tổ chức Phản biện ngang hàng (gen-46 / L5 ADD_ORG_PATTERN) khi `RFCV_ORG_MODE=peer_review`.
+
+        Mô phỏng quy trình kỹ thuật phần mềm thực tế:
+        1) Investigator nộp bản nháp `LocationClaim` đầu tiên;
+        2) Skeptic Reviewer nhận bản nháp + tín hiệu kiểm toán tất định (obs_in_source, executed_in_fail, errors)
+           để soi lỗi và xác nhận hoặc hiệu đính sang vị trí nguyên nhân gốc chính xác hơn.
+        """
+        if os.environ.get("RFCV_ORG_MODE", "").strip().lower() != "peer_review":
+            return None
+        specs = list(self.branches(inv, task))
+        if len(specs) < 2:
+            return None
+        inv_spec = {**specs[0], "name": "investigator"}
+        alt_hint = str(specs[1].get("instruction", ""))
+
+        def _build_reviewer(
+            _inv: Investigation,
+            _task: Any,
+            draft_output: BaseModel | None,
+            inv_audit: Mapping[str, Any],
+        ) -> dict[str, Any]:
+            draft_info: dict[str, Any]
+            if isinstance(draft_output, LocationClaim):
+                draft_info = {
+                    "file": draft_output.file,
+                    "symbol": draft_output.symbol,
+                    "line_start": draft_output.line_start,
+                    "line_end": draft_output.line_end,
+                    "finding": draft_output.finding.value,
+                    "aspects": [a.model_dump(mode="json") for a in draft_output.aspects],
+                    "call_path": list(draft_output.call_path),
+                }
+            else:
+                draft_info = {"status": "NO_OUTPUT"}
+            branches_raw = inv_audit.get("branches")
+            audit_flags: dict[str, Any] = {}
+            if isinstance(branches_raw, list) and branches_raw:
+                first_raw = cast("Any", branches_raw)[0]
+                if isinstance(first_raw, Mapping):
+                    audit_flags = dict(cast("Mapping[str, Any]", first_raw))
+            return {
+                "name": "skeptic_reviewer",
+                "max_tool_calls": 10,
+                "max_tokens": 100_000,
+                "extra_focus": {
+                    "peer_review_draft": draft_info,
+                    "peer_review_audit_flags": audit_flags,
+                },
+                "instruction": (
+                    "Vai trò PHẢN BIỆN NGANG HÀNG HOÀI NGHI (Skeptic Peer Reviewer): đồng nghiệp (Investigator) vừa nộp "
+                    "bản nháp `peer_review_draft` kèm cờ kiểm toán `peer_review_audit_flags`. "
+                    "Nhiệm vụ của bạn là phản biện nghiêm khắc: "
+                    "(1) Đọc kỹ các dòng trong `peer_review_draft` bằng `code__read` (nếu có); "
+                    "(2) Kiểm tra xem bản nháp có bỏ sót mã lỗi/cảnh báo quan sát được trong mã (`obs_in_source=false`), "
+                    "chọn nhầm nhánh không chạy (`executed_in_fail=false`), nhầm chiều/giai đoạn, hoặc dừng ở hàm xử lý muộn thay vì điểm gốc; "
+                    "(3) Đối chiếu theo góc nhìn bổ trợ: "
+                    + alt_hint
+                    + " (4) Nếu bản nháp đã hoàn toàn chính xác, xác nhận bằng `LocationClaim@1` tương ứng; "
+                    "nếu phát hiện lỗi hoặc vị trí chính xác hơn, nộp `LocationClaim@1` đã hiệu đính."
+                ),
+            }
+
+        return {"investigator": inv_spec, "build_reviewer": _build_reviewer}
 
     def branches(self, inv: Investigation, task: Any) -> Sequence[dict[str, Any]]:
         """Khi T3 đã chứng minh vi phạm, chạy song song 2 AI Agent chuyên biệt tối ưu theo chữ ký lỗi (tổng ~170k-200k token)."""
