@@ -53,6 +53,7 @@ from rfcv.spi import LoopPolicy, TaskDefinition
 HUB = "execution_loop"
 MAX_LOGGED_OUTPUT_CHARS = 6000
 PRIOR_FINDINGS = 2  # số bằng chứng gần nhất cấp cho `task.prior_findings`
+CONSENSUS_LINE_SLACK = 5  # hai khoảng dòng cách nhau không quá chừng này vẫn coi là cùng một vị trí
 
 
 def _clip(value: Any) -> Any:
@@ -65,6 +66,20 @@ def _clip(value: Any) -> Any:
 
 def _evidence_count(_report: SufficiencyReport, count: int) -> Hashable:
     return count
+
+
+def _same_site(a: BaseModel | None, b: BaseModel | None) -> bool:
+    """Tiêu chí đồng thuận trung lập miền: cùng `file` và hai khoảng `line_start..line_end` chồng hoặc gần nhau."""
+    file_a: Any = getattr(a, "file", None)
+    if not file_a or file_a != getattr(b, "file", None):
+        return False
+    start_a: Any = getattr(a, "line_start", None)
+    end_a: Any = getattr(a, "line_end", None)
+    start_b: Any = getattr(b, "line_start", None)
+    end_b: Any = getattr(b, "line_end", None)
+    if not all(isinstance(n, int) for n in (start_a, end_a, start_b, end_b)):
+        return False
+    return start_a <= end_b + CONSENSUS_LINE_SLACK and start_b <= end_a + CONSENSUS_LINE_SLACK
 
 
 @dataclass
@@ -736,11 +751,27 @@ class ExecutionLoop:
         if enrich is not None:
             extra, seed_shown = await enrich(inv, task)
             available = {**available, **extra}
-        # Handler có thể kích hoạt mô hình tổ chức Phản biện ngang hàng (Peer Review: Investigator -> Skeptic Reviewer)
+        # Handler có thể kích hoạt mô hình tổ chức Tranh biện (hai điều tra viên độc lập + trọng tài mù khi bất đồng),
+        # Phản biện ngang hàng (Peer Review: Investigator -> Skeptic Reviewer)
         # hoặc Giải đấu đa giả thuyết song song (Tournament: Best-of-K).
+        debate_fn: Any = getattr(handler, "debate_config", None)
         peer_review_fn: Any = getattr(handler, "peer_review_config", None)
         branches_fn: Any = getattr(handler, "branches", None)
         select_fn: Any = getattr(handler, "select_branch", None)
+        debate_cfg: Mapping[str, Any] | None = debate_fn(inv, task) if debate_fn is not None else None
+        if debate_cfg is not None and select_fn is not None:
+            return await self._run_debate(
+                role,
+                inv,
+                body,
+                available,
+                tracker,
+                handler=handler,
+                task=task,
+                seed_shown=seed_shown,
+                debate_cfg=debate_cfg,
+                select_fn=select_fn,
+            )
         peer_cfg: Mapping[str, Any] | None = peer_review_fn(inv, task) if peer_review_fn is not None else None
         if peer_cfg is not None and select_fn is not None:
             return await self._run_peer_review(
@@ -895,6 +926,82 @@ class ExecutionLoop:
                 "investigator_site": inv_site,
                 "reviewer_site": rev_site,
                 "revised": revised,
+                **summary,
+            },
+            inv.requirement.requirement_id,
+            round=tracker.rounds,
+        )
+        _, win_outcome, win_session, win_msg_id = results[win_idx]
+        new = await handler.handle(inv, task, win_outcome.output, win_session, win_msg_id)
+        self._log_task_result(inv, task, new, round=tracker.rounds, msg_id=win_msg_id)
+        return win_outcome, new
+
+    async def _run_debate(
+        self,
+        role: str,
+        inv: Investigation,
+        body: dict[str, Any],
+        available: Mapping[str, Labeled[Any]],
+        tracker: BudgetTracker,
+        *,
+        handler: TaskHandler,
+        task: TaskSpec,
+        seed_shown: frozenset[tuple[str, int]],
+        debate_cfg: Mapping[str, Any],
+        select_fn: Any,
+    ) -> tuple[RoleOutcome, int]:
+        """Mô hình tổ chức Tranh biện (gen-49 / L5 ADD_ORG_PATTERN): hai điều tra viên song song, không thấy nhau;
+        đồng thuận thì dừng sớm, bất đồng thì thêm một trọng tài soi cả hai. Trọng tài tất định `select_fn` chọn cuối cùng."""
+        specs = cast("Sequence[Mapping[str, Any]]", debate_cfg["investigators"])
+        agree_fn = cast(
+            "Callable[[BaseModel | None, BaseModel | None], bool]", debate_cfg.get("claims_agree") or _same_site
+        )
+
+        async def _run_one(spec: Mapping[str, Any]) -> tuple[str, RoleOutcome, ToolSession, str]:
+            return await self._run_branch_spec(
+                role, inv, body, available, tracker, handler=handler, seed_shown=seed_shown, spec=spec
+            )
+
+        def _judge(rows: Sequence[tuple[str, RoleOutcome, ToolSession, str]]) -> tuple[int, dict[str, Any]]:
+            raw_idx, raw_summary = select_fn(inv, task, [(n, o.output, s) for n, o, s, _ in rows])
+            summary: dict[str, Any] = (
+                dict(cast("Mapping[str, Any]", raw_summary)) if isinstance(raw_summary, Mapping) else {}
+            )
+            return int(raw_idx), summary
+
+        results: list[tuple[str, RoleOutcome, ToolSession, str]] = list(
+            await asyncio.gather(*(_run_one(s) for s in specs[:2]))
+        )
+        win_idx, summary = _judge(results)
+        # Đồng thuận chỉ tính giữa hai đầu ra hợp lệ: hai nhánh giống nhau nhưng bị cổng bác thì vẫn cần trọng tài.
+        raw_branches = summary.get("branches")
+        rejected = isinstance(raw_branches, Sequence) and any(
+            isinstance(b, Mapping) and cast("Mapping[str, Any]", b).get("accepted") is False
+            for b in cast("Sequence[Any]", raw_branches)
+        )
+        first, second = results[0][1], results[1][1]
+        agreed = (
+            not rejected
+            and first.output is not None
+            and second.output is not None
+            and agree_fn(first.output, second.output)
+        )
+        if not agreed:
+            adj_spec = cast(
+                "Mapping[str, Any]",
+                debate_cfg["build_adjudicator"](inv, task, [(n, o.output) for n, o, _, _ in results], summary),
+            )
+            results.append(await _run_one(adj_spec))
+            win_idx, summary = _judge(results)
+        self._log(
+            "debate",
+            {
+                "role": role,
+                "task_type": body.get("task_type"),
+                "consensus": agreed,
+                "adjudicated": not agreed,
+                "adjudicator_won": not agreed and win_idx == 2,
+                "winner_index": win_idx,
                 **summary,
             },
             inv.requirement.requirement_id,

@@ -1,0 +1,28 @@
+generation: gen-49
+level: L5
+operator: ADD_ORG_PATTERN
+target: backend/src/rfcv/core/execution_loop.py (_run_debate) & backend/agents/code_reader/handler.py (debate_config)
+contribution_type: "Mô hình tổ chức Debate + Blind Adjudicator (2 nhánh độc lập dừng sớm khi đồng thuận, gọi Trọng tài mù thứ 3 khi bất đồng/bị cổng từ chối)"
+capability_rung: "bậc 4 (vượt thiên lệch neo trên OU3 bằng đồng thuận sớm 52s và cứu ca OG1 bằng Adjudicator sửa đúng tên hàm bao quanh)"
+summary: >
+  Thiết kế kiến trúc (Antigravity) và giao `claude.cmd` triển khai mô hình tổ chức thứ 4 `RFCV_ORG_MODE=debate`:
+  (1) chạy song song 2 nhánh độc lập (zero anchoring); (2) nếu cả 2 được `SchemaGate` duyệt và đồng thuận vị trí
+  thì dừng sớm không tốn ngân sách tác tử thứ 3; (3) nếu bất đồng hoặc có nhánh bị cổng từ chối, kích hoạt
+  `adjudicator` mù đọc đối chất cả 2 đoạn mã để chọn/hiệu đính vị trí gốc.
+  Xác thực sống trên Docker (OpenSSL `OU3, OU4, OG1`): 3/3 `Verdict VIOLATION (V2)` và **3/3 `leak_scan.clean = True` (0 rò rỉ)**;
+  `OU3` đạt `consensus=True` (dừng sớm 52s) và lật thành **`defect_hit_strict=True`** (`ssl3_read_bytes:846-857`, khắc phục
+  lỗi anchoring bias của Peer Review `gen-46`); trên `OG1`, cả 2 nhánh đều bị `SchemaGate` từ chối vì sai tên hàm
+  nhưng **`adjudicator` thắng (`adjudicator_won=True`)** cứu về đúng hàm `extract_keyshares:704-707` (`accepted=True`).
+motivation: >
+  Trải rộng đột biến mô hình tổ chức (thứ 4 sau Single Agent, Peer Review, Parallel Tournament) để kết hợp
+  tính độc lập chống neo của Tournament với khả năng cứu hộ/đối chất của tác tử thứ 3 khi bất đồng.
+invariants_touched: []
+metrics_before:
+  org_patterns_supported: 2
+  ou3_peer_review_strict: false
+metrics_after:
+  org_patterns_supported: 3
+  ou3_debate_strict: true
+  ou3_debate_consensus_early_exit: true
+  og1_adjudicator_rescued_accepted: true
+  openssl_3_leak_scan_clean: 1.0

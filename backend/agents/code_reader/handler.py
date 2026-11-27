@@ -89,6 +89,46 @@ def _expected_alert(inv: Investigation) -> str | None:
     return None
 
 
+_CONSENSUS_LINE_SLACK = 5
+# Gói đối chất mang nhãn DERIVED: chuỗi do mô hình vùng cách ly nộp chỉ qua khi là một token không khoảng trắng.
+_PACKET_TOKEN = re.compile(r"[A-Za-z0-9_.:#=+\-/(),~*]{1,200}")
+
+
+def _safe_token(value: str) -> str | None:
+    return value if _PACKET_TOKEN.fullmatch(value) else None
+
+
+def _candidate_packet(output: BaseModel | None) -> dict[str, Any]:
+    """Phần cấu trúc của một ứng viên cho trọng tài: không `note`, `unexplored` hay chuỗi văn xuôi (bị thay bằng None)."""
+    if not isinstance(output, LocationClaim):
+        return {"status": "NO_OUTPUT"}
+    return {
+        "file": _safe_token(output.file),
+        "symbol": _safe_token(output.symbol),
+        "line_start": output.line_start,
+        "line_end": output.line_end,
+        "finding": output.finding.value,
+        "aspects": [
+            {
+                "aspect": a.aspect.value,
+                "value": a.value.value,
+                "observed": _safe_token(a.observed) if isinstance(a.observed, str) else a.observed,
+                "lines": list(a.lines),
+            }
+            for a in output.aspects
+        ],
+    }
+
+
+def _claims_agree(a: BaseModel | None, b: BaseModel | None) -> bool:
+    """Đồng thuận: cùng tệp, và cùng hàm hoặc hai khoảng dòng chồng/cách nhau không quá 5 dòng."""
+    if not isinstance(a, LocationClaim) or not isinstance(b, LocationClaim) or a.file != b.file:
+        return False
+    return a.symbol == b.symbol or (
+        a.line_start <= b.line_end + _CONSENSUS_LINE_SLACK and b.line_start <= a.line_end + _CONSENSUS_LINE_SLACK
+    )
+
+
 class LocationHandler:
     """LOCATE, TRACE_PATHS, RECHECK."""
 
@@ -270,6 +310,73 @@ class LocationHandler:
 
         return {"investigator": inv_spec, "build_reviewer": _build_reviewer}
 
+    def debate_config(self, inv: Investigation, task: Any) -> dict[str, Any] | None:
+        """Kích hoạt mô hình tổ chức Tranh biện (gen-49 / L5 ADD_ORG_PATTERN) khi `RFCV_ORG_MODE=debate`.
+
+        Hai chuyên gia của `branches` điều tra độc lập (không neo vào nhau). Chỉ khi bất đồng mới gọi trọng tài; trọng tài
+        thấy hai ứng viên ở dạng cấu trúc (không có `note` hay văn xuôi tự do) và phải tự đọc lại cả hai vị trí mã.
+        """
+        if os.environ.get("RFCV_ORG_MODE", "").strip().lower() != "debate":
+            return None
+        specs = list(self.branches(inv, task))
+        if len(specs) < 2:
+            return None
+
+        def _build_adjudicator(
+            _inv: Investigation,
+            _task: Any,
+            results: Sequence[tuple[str, BaseModel | None]],
+            pre_audit: Mapping[str, Any],
+        ) -> dict[str, Any]:
+            req_id = _inv.requirement.requirement_id
+            t3s = [e.payload for e in self._rt.store.for_requirement(req_id) if isinstance(e.payload, T3Payload)]
+            diag = diagnose(_expected_alert(_inv), t3s)
+            # `select_branch` gán mặc định khi không đo được; trọng tài phải thấy null thay vì tưởng đó là kết quả đo.
+            has_cov = bool(self._load_coverages(t3s)[0])
+            has_source_check = getattr(getattr(self._rt, "providers", None), "code_index", None) is not None and any(
+                a and a != "none" and a != _expected_alert(_inv) for a in diag.observed_alerts
+            )
+            raw_board = pre_audit.get("branches")
+            board = cast("list[Any]", raw_board) if isinstance(raw_board, list) else []
+            candidates: list[dict[str, Any]] = []
+            flags: list[dict[str, Any]] = []
+            for idx, (label, (bname, output)) in enumerate(zip(("A", "B"), results, strict=False)):
+                candidates.append({"candidate": label, "branch": bname, **_candidate_packet(output)})
+                row: Mapping[str, Any] = (
+                    cast("Mapping[str, Any]", board[idx])
+                    if idx < len(board) and isinstance(board[idx], Mapping)
+                    else {}
+                )
+                errors = [str(e).split(":", 1)[0] for e in cast("Sequence[Any]", row.get("errors") or ())]
+                flags.append(
+                    {
+                        "candidate": label,
+                        "accepted": row.get("accepted"),
+                        "obs_in_source": row.get("obs_in_source") if has_source_check else None,
+                        "executed_in_fail": row.get("executed_in_fail") if has_cov else None,
+                        "errors": [t for e in errors if (t := _safe_token(e)) is not None],
+                    }
+                )
+            return {
+                "name": "adjudicator",
+                "max_tool_calls": 8,
+                "max_tokens": 90_000,
+                "extra_focus": {"debate_candidates": candidates, "debate_audit_flags": flags},
+                "instruction": (
+                    "Vai trò TRỌNG TÀI ĐỐI CHẤT (Blind Adjudicator): hai điều tra viên làm việc độc lập đã KHÔNG đồng thuận. "
+                    "`debate_candidates` là hai ứng viên A và B, `debate_audit_flags` là cờ kiểm toán tất định của từng ứng viên "
+                    "(giá trị null nghĩa là không đo được, không phải bằng chứng bác bỏ). Không mặc định ứng viên nào đúng. "
+                    "(1) BẮT BUỘC dùng `code__read` đọc CẢ HAI vị trí mã đang tranh chấp (ứng viên có `status: NO_OUTPUT` thì bỏ qua); "
+                    "nếu có LCOV, dùng `coverage__hotspots` để xem vị trí nào thực sự chạy trong ca FAIL; "
+                    "(2) Đối chất: kiểm `obs_in_source`, `executed_in_fail`, `errors`, và phân biệt phép kiểm tra sớm với phép kiểm tra muộn "
+                    "trên đường xử lý, để xác định vị trí nào là NGUYÊN NHÂN GỐC gây ra hành vi T3 quan sát được; "
+                    "(3) Nộp `LocationClaim@1` cuối cùng: chọn A, chọn B, hoặc tổng hợp vị trí đúng hơn nếu cả hai sai. "
+                    "Chỉ dẫn những dòng bạn đã đọc trong phiên này."
+                ),
+            }
+
+        return {"investigators": specs[:2], "claims_agree": _claims_agree, "build_adjudicator": _build_adjudicator}
+
     def branches(self, inv: Investigation, task: Any) -> Sequence[dict[str, Any]]:
         """Khi T3 đã chứng minh vi phạm, chạy song song 2 AI Agent chuyên biệt tối ưu theo chữ ký lỗi (tổng ~170k-200k token)."""
         if str(getattr(task, "task_type", "")) != "LOCATE":
@@ -382,22 +489,28 @@ class LocationHandler:
         index: Any = getattr(getattr(self._rt, "providers", None), "code_index", None)
         fail_covs, _ = self._load_coverages(t3s)
         wrong_obs = [a for a in diag.observed_alerts if a and a != "none" and a != _expected_alert(inv)]
+        checks = [
+            self._gate.check_location(
+                out_c, sess_c, run_id=self._rt.run_id, requirement_id=req_id, msg_id="", threshold=_threshold_of(inv)
+            )
+            if isinstance(out_c, LocationClaim)
+            else None
+            for _, out_c, sess_c in candidates
+        ]
+        # Chỉ đếm nhận định đã qua cổng: một nhánh hỏng thêm vào không được làm đổi thứ hạng giữa các nhánh hợp lệ.
         fn_counts: dict[tuple[str, str], int] = {}
-        for _, out_c, _ in candidates:
-            if isinstance(out_c, LocationClaim):
+        for (_, out_c, _), res_c in zip(candidates, checks, strict=True):
+            if isinstance(out_c, LocationClaim) and res_c is not None and res_c.accepted:
                 k = (out_c.file, out_c.symbol)
                 fn_counts[k] = fn_counts.get(k, 0) + 1
 
         best_idx = 0
         best_key: tuple[int, ...] | None = None
         board: list[dict[str, Any]] = []
-        for idx, (bname, output, session) in enumerate(candidates):
-            if not isinstance(output, LocationClaim):
+        for idx, ((bname, output, _), res) in enumerate(zip(candidates, checks, strict=True)):
+            if not isinstance(output, LocationClaim) or res is None:
                 board.append({"branch": bname, "accepted": False, "reason": "NO_OUTPUT"})
                 continue
-            res = self._gate.check_location(
-                output, session, run_id=self._rt.run_id, requirement_id=req_id, msg_id="", threshold=_threshold_of(inv)
-            )
             sc = score_claim(output, res.errors)
             has_mismatch = int(any(a.value is AspectValue.MISMATCH for a in output.aspects))
             matches_obs = int(
