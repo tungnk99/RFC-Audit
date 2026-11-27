@@ -1,0 +1,25 @@
+generation: gen-50
+level: L6
+operator: ADD_TOOL
+target: backend/src/rfcv/domains/rfc_protocol/call_chain.py (code.call_chain), backend/skills/core/call-chain-tracing/SKILL.md, backend/agents/code_reader/role.yaml
+contribution_type: "Công cụ truy vết đồ thị gọi hàm & luồng định danh `code.call_chain` + kỹ năng trung lập giao thức `call-chain-tracing`"
+capability_rung: "bậc 3 (hoàn thiện công cụ BFS caller/callee + filter_identifier trên SQLite index, phát hiện bài học thực nghiệm về tool adoption)"
+summary: >
+  Thiết kế kiến trúc (Antigravity) và giao `claude.cmd` triển khai công cụ chủ động `code.call_chain`
+  (BFS 1–3 bước trên `code_index.callees`/`references`, lọc dòng điều kiện `if`/`switch`/`return` theo `filter_identifier`,
+  tự động ghi nhận `shown_edges` & `shown_lines` cho `SchemaGate`) cùng kỹ năng trung lập giao thức
+  `skills/core/call-chain-tracing/SKILL.md` (32/32 targeted tests PASS, 0 lỗi pyright/ruff, 6/6 import-linter).
+  Chạy thử sống trên Docker ca khó OpenSSL `OU4`: `VIOLATION (V2)`, `leak_scan.clean = True (0 leaks)`, nhưng
+  `code.call_chain` được gọi `0` lần vì `prompt.md` và `strategy_instruction` cũ vẫn chỉ định chuỗi `find_alert_sites -> grep -> read` —
+  đúc rút bài học quan trọng cho bản tổng hợp: công cụ mới chỉ phát huy hiệu quả khi được nối vào hướng dẫn tác chiến của Agent.
+motivation: >
+  Trải rộng đột biến sang nhóm công cụ phân tích đồ thị gọi hàm & luồng dữ liệu cho Agent thay vì chỉ dựa vào grep/read thủ công.
+invariants_touched: []
+metrics_before:
+  call_chain_tool_registered: false
+metrics_after:
+  call_chain_tool_registered: true
+  ou4_verdict_violation: true
+  ou4_leak_scan_clean: true
+  ou4_call_chain_invocations_without_prompt_wiring: 0
+  targeted_tests_passed: 32

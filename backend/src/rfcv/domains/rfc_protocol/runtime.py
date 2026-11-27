@@ -27,6 +27,7 @@ from rfcv.core.execution_loop import Investigation
 from rfcv.core.ifc import Labeled, TrustLabel
 from rfcv.domains.rfc_protocol.adapter_view import to_vocabulary, vocabulary_terms
 from rfcv.domains.rfc_protocol.agent_tools import AgentTools
+from rfcv.domains.rfc_protocol.call_chain import call_chain_tool_spec
 from rfcv.domains.rfc_protocol.divergence_audit import extract_divergence_points
 from rfcv.domains.rfc_protocol.multi_hypothesis import (
     HypothesisSpec,
@@ -119,6 +120,7 @@ class ProtocolRuntime:
         from rfcv.domains.rfc_protocol.coverage_linker import coverage_hotspots_tool_spec
 
         specs.append(coverage_hotspots_tool_spec(rt))
+        specs.append(call_chain_tool_spec(rt))
         return specs
 
     def attach_driver(self, driver: TestDriver) -> None:

@@ -28,6 +28,7 @@ TOOLS = (
     ToolDescriptor("tester.run_scenario", Effect.SANDBOXED_RUN),
     ToolDescriptor("locator.suggest", Effect.READ, reads_untrusted=True),
     ToolDescriptor("coverage.hotspots", Effect.READ, reads_untrusted=True),
+    ToolDescriptor("code.call_chain", Effect.READ, reads_untrusted=True),
 )
 
 
