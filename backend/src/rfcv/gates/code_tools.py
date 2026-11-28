@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import fnmatch
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -183,7 +183,9 @@ TOOL_DOCS: dict[str, str] = {
         "hàm theo tên.\n"
         "Khi dùng: đọc quanh dòng khớp của grep, đọc nguyên một hàm hoặc một khối #if. Dòng nào chưa hiện qua công cụ thì không "
         "được dẫn trong LocationClaim; hãy đọc lại đúng các dòng sẽ dẫn.\n"
-        "Trả về: '<số dòng> <mã>'. Cắt thì nêu số dòng để đọc tiếp.\n"
+        "Trả về: '<số dòng> <mã>'. Cắt thì nêu số dòng để đọc tiếp. Khi có độ phủ của ca test FAIL, dòng có thể mang thẻ "
+        "'<số dòng> [EXEC_FAIL]:' (đã chạy trên ca FAIL) hoặc '[EXEC_0]:' (được biên dịch nhưng không chạy trên ca FAIL "
+        "nào); không có thẻ nghĩa là không có dữ liệu.\n"
         'Ví dụ: {"file": "src/internal.c", "offset": 12400, "limit": 200}, {"symbol": "GetRecordHeader"}'
     ),
     "code.eval": (
@@ -243,8 +245,16 @@ def _result(
     return ToolResult(text, TrustLabel.UNTRUSTED, shown)
 
 
+LineAnnotations = Callable[[str, str], Mapping[int, str]]  # (mã yêu cầu, tệp) -> {số dòng: thẻ}
+
+
 def build_cc_tools(
-    index: CodeIndex, executor: SandboxExecutor, build_flags: Sequence[str] = (), closed_world: bool = False
+    index: CodeIndex,
+    executor: SandboxExecutor,
+    build_flags: Sequence[str] = (),
+    closed_world: bool = False,
+    *,
+    line_annotations: LineAnnotations | None = None,
 ) -> list[ToolSpec]:
     known_files = frozenset(index.files())
     defines = {m.group("n"): (m.group("v") or "1") for f in build_flags if (m := _FLAG_D.match(f))}
@@ -495,6 +505,21 @@ def build_cc_tools(
                     else:
                         annotated.append(raw_line)
                 body = "\n".join(annotated)
+        tag_bytes = 0
+        if line_annotations is not None and s.requirement_id is not None:
+            tags: Mapping[int, str]
+            try:
+                tags = line_annotations(s.requirement_id, file)
+            except Exception:  # chú thích chỉ là phần thêm: lỗi của nó không được làm hỏng code.read
+                tags = {}
+            if tags:
+                tagged: list[str] = []
+                for lineno, row in enumerate(body.split("\n"), start):
+                    if tag := tags.get(lineno):
+                        tag_bytes += len(f" {tag}:".encode())
+                        row = f"{row[:6]} {tag}:{row[6:]}"
+                    tagged.append(row)
+                body = "\n".join(tagged)
         total = line_count(file)
         enclosing = index.containing_symbol(file, (start + last) // 2) or index.containing_symbol(file, start)
         sym_note = (
@@ -510,7 +535,8 @@ def build_cc_tools(
             more = f"\n(cắt ở dòng {last} vì dòng dài hoặc quá {READ_BYTES // 1024} KB; đọc tiếp offset={nxt})"
         elif last < limit_end:
             more = f"\n(còn tiếp tới dòng {limit_end}; đọc tiếp offset={nxt})"
-        return _result(head, note + body + more, shown, cap=READ_BYTES + 4096)
+        # Thẻ không được ăn vào ngân sách mã: nới trần đúng bằng số byte đã thêm để không mất dòng đã đọc.
+        return _result(head, note + body + more, shown, cap=READ_BYTES + 4096 + tag_bytes)
 
     # ---- eval -----------------------------------------------------------------------------------------------------
 

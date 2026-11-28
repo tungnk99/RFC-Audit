@@ -209,3 +209,27 @@ async def test_protocol_runtime_locate_best_of_k_runs_through_schema_gate(tmp_pa
         assert events[0]["payload"]["winner_hypothesis"] == tournament.winner_hypothesis
     finally:
         rt.close()
+
+
+async def test_gateway_code_read_shows_exec_tags_from_fail_coverage(tmp_path: Path) -> None:
+    """gen-53: `code.read` mà Code Reader gọi qua Tool gateway phải mang thẻ thực thi (nối muộn trong assembly)."""
+    rt = _make_runtime(tmp_path)
+    try:
+        req = rt.pack.runtime.investigations(rt, ADAPTER_DIR / "examples")[0].requirement.requirement_id
+
+        async def _read() -> str:
+            session = ToolSession(rt.run_id, "code_reader", req, max_tool_calls=5)
+            args: dict[str, object] = {"file": "src/internal.c", "offset": 812, "limit": 2}
+            return (await rt.gateway.call(session, "code.read", args)).text
+
+        assert "[EXEC_" not in await _read()
+        lcov = rt.artifacts.put(b"SF:/src/x/src/internal.c\nDA:812,3\nDA:813,0\nend_of_record\n")
+        draft = t3(requirement_id=req, outcome=Outcome.FAIL)
+        rt.store.append(
+            draft.model_copy(update={"payload": draft.payload.model_copy(update={"artifacts": {"lcov": lcov}})})
+        )
+        text = await _read()
+        assert "   812 [EXEC_FAIL]:" in text
+        assert "   813 [EXEC_0]:" in text
+    finally:
+        rt.close()

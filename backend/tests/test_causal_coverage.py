@@ -14,6 +14,7 @@ from rfcv.domains.rfc_protocol.coverage_linker import (
     CoverageHotspotsParams,
     causal_diff,
     coverage_hotspots_tool_spec,
+    fail_line_annotations,
     link,
     ochiai_scores,
     parse_lcov,
@@ -28,6 +29,9 @@ from rfcv.domains.rfc_protocol.payloads import (
     Witness,
     WitnessRun,
 )
+from rfcv.gates.code_gate import InMemoryCodeIndex, build_code_tools
+from rfcv.gates.code_tools import ReadParams, build_cc_tools
+from rfcv.gates.explore_policy import CodeScope
 from rfcv.gates.tool_gateway import ToolSession
 
 
@@ -257,3 +261,90 @@ def test_coverage_hotspots_tool_returns_ranked_lines_and_registers_shown_lines(t
     assert "lib/ngtcp2_conn.c:3" in res.text
     assert "ochiai=1.000" in res.text
     assert ("lib/ngtcp2_conn.c", 3) in res.shown_lines
+
+
+class _SilentExecutor:
+    async def run(self, pipeline: Any, *, timeout_s: float) -> str:
+        return ""
+
+
+def test_code_read_annotates_exec_fail_and_exec_zero_inline() -> None:
+    source = ["int ngtcp2_accept(int n) {", "  if (n < 1200)", "    return -1;", "  /* note */", "  return 0;", "}"]
+    index = InMemoryCodeIndex({"lib/conn.c": source, "conn.c": ["int other;"]})
+    # Hai ca FAIL: dòng 3 chỉ chạy ở ca thứ hai vẫn là EXEC_FAIL. Ca PASS chạy dòng 5 không được tính.
+    arts = {
+        "sha256:f1": b"SF:/src/x/lib/conn.c\nDA:1,1\nDA:2,1\nDA:3,0\nDA:5,0\nend_of_record\n",
+        "sha256:f2": b"SF:/src/x/lib/conn.c\nDA:3,4\nDA:5,0\nend_of_record\n",
+        "sha256:p": b"SF:/src/x/lib/conn.c\nDA:5,1\nend_of_record\n",
+    }
+
+    def _t3(outcome: Outcome, art: str) -> Any:
+        payload = T3Payload(
+            scenario="sc",
+            oracle="o",
+            variant=art,
+            variant_class="required",
+            side="trigger",
+            trigger_reached=True,
+            consistent=True,
+            outcome=outcome,
+            observed={"alert": "none"},
+            witness=Witness(positive=(WitnessRun(impl="ref", outcome=Outcome.PASS),)),
+            artifacts={"lcov": art},
+        )
+        return SimpleNamespace(payload=payload)
+
+    evidence: list[Any] = []
+
+    def _for_req(_r: str) -> list[Any]:
+        return evidence
+
+    def _get(k: str) -> bytes:
+        return arts[k]
+
+    rt = SimpleNamespace(
+        store=SimpleNamespace(for_requirement=_for_req),
+        artifacts=SimpleNamespace(get=_get),
+        providers=SimpleNamespace(code_index=index),
+    )
+    annotate = fail_line_annotations(rt)
+
+    def _read(annotations: Any) -> Any:
+        tools = {t.name: t for t in build_cc_tools(index, _SilentExecutor(), line_annotations=annotations)}
+        sess = ToolSession("r1", "code_reader", "QUIC-0001", max_tool_calls=10)
+        return asyncio.run(tools["code.read"].handler(ReadParams(file="lib/conn.c"), sess))
+
+    plain = _read(None)
+    evidence.append(_t3(Outcome.PASS, "sha256:p"))
+    assert annotate("QUIC-0001", "lib/conn.c") == {}  # chỉ có PASS: không chú thích
+    assert _read(annotate).text == plain.text
+
+    # T3 FAIL xuất hiện sau khi nguồn chú thích đã dựng vẫn được thấy.
+    evidence.extend([_t3(Outcome.FAIL, "sha256:f1"), _t3(Outcome.FAIL, "sha256:f2")])
+    res = _read(annotate)
+    rows = res.text.split("\n")
+    assert "     1 [EXEC_FAIL]: int ngtcp2_accept(int n) {" in rows
+    assert "     3 [EXEC_FAIL]:     return -1;" in rows
+    assert "     5 [EXEC_0]:   return 0;" in rows
+    assert "     4   /* note */" in rows  # không có bản ghi DA: không gắn thẻ
+    assert res.shown_lines == plain.shown_lines == frozenset(("lib/conn.c", n) for n in range(1, 7))
+    assert annotate("QUIC-0001", "conn.c") == {}  # tệp trùng hậu tố không nhận độ phủ của lib/conn.c
+
+    def _broken(_r: str, _f: str) -> dict[int, str]:
+        raise RuntimeError("boom")
+
+    assert _read(_broken).text == plain.text
+
+
+def test_gateway_code_tools_forward_line_annotations(tmp_path: Any) -> None:
+    """Công cụ agent thật sự gọi được dựng bằng `build_code_tools` (Tool gateway): nó phải chuyển nguồn chú thích đi."""
+
+    def _tags(_r: str, _f: str) -> dict[int, str]:
+        return {1: "[EXEC_0]"}
+
+    index = InMemoryCodeIndex({"a.c": ["int a;"]})
+    specs = build_code_tools(index, _SilentExecutor(), CodeScope(root=tmp_path), line_annotations=_tags)
+    read = next(s for s in specs if s.name == "code.read")
+    sess = ToolSession("r1", "code_reader", "QUIC-0001", max_tool_calls=10)
+    res = asyncio.run(read.handler(ReadParams(file="a.c"), sess))
+    assert "     1 [EXEC_0]: int a;" in res.text

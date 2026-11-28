@@ -8,6 +8,7 @@ dòng trong khối #ifdef bị tắt không có DA (tài liệu khả thi, mục
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any
@@ -142,14 +143,64 @@ def repo_rel_path(raw_file: str, known_files: set[str]) -> str:
     if norm in known_files:
         return norm
     parts = PurePosixPath(norm).parts
+    # Nhiều tệp cùng là hậu tố (`a.c` và `lib/a.c`): lấy hậu tố DÀI nhất, không phụ thuộc thứ tự duyệt của set.
+    best, best_len = norm, 0
     for kf in known_files:
         kparts = PurePosixPath(kf.replace("\\", "/")).parts
-        if len(parts) >= len(kparts) and parts[-len(kparts) :] == kparts:
-            return kf
-    return norm
+        if best_len < len(kparts) <= len(parts) and parts[-len(kparts) :] == kparts:
+            best, best_len = kf, len(kparts)
+    return best
 
 
 _repo_rel = repo_rel_path
+
+
+def fail_line_annotations(rt: Any) -> Callable[[str, str], dict[int, str]]:
+    """Nguồn thẻ theo dòng cho `code.read` (gen-53): `[EXEC_FAIL]` nếu dòng chạy ở ít nhất một ca FAIL, `[EXEC_0]` nếu
+    LCOV của ca FAIL có dòng đó (được biên dịch) nhưng không lần nào chạy. Không có LCOV của ca FAIL thì trả {} ngay.
+
+    Đọc kho bằng chứng ở mỗi lần gọi (T3 có thể xuất hiện giữa chừng). Artifact định địa chỉ theo nội dung nên LCOV đã
+    phân tích được giữ lại, và mỗi đường dẫn LCOV chỉ được quy về đường dẫn kho một lần.
+    """
+    parsed: dict[str, LineCoverage] = {}
+    resolved: dict[str, str] = {}
+    known_files: set[str] = set()
+
+    def annotate(requirement_id: str, rel_file: str) -> dict[int, str]:
+        store: Any = getattr(rt, "store", None)
+        artifacts: Any = getattr(rt, "artifacts", None)
+        if store is None or artifacts is None:
+            return {}
+        lcov_ids = [
+            lcov_id
+            for e in store.for_requirement(requirement_id)
+            if isinstance(e.payload, T3Payload)
+            and e.payload.outcome is Outcome.FAIL
+            and (lcov_id := e.payload.artifacts.get("lcov"))
+        ]
+        if not lcov_ids:
+            return {}
+        if not known_files:
+            index: Any = getattr(getattr(rt, "providers", None), "code_index", None)
+            if index is None:
+                return {}
+            known_files.update(str(f) for f in index.files())
+        hits: dict[int, int] = {}
+        for lcov_id in lcov_ids:
+            if (cov := parsed.get(lcov_id)) is None:
+                try:
+                    cov = parsed[lcov_id] = parse_lcov(artifacts.get(lcov_id).decode("utf-8", "replace"))
+                except Exception:  # một artifact hỏng không làm mất dữ liệu của các ca FAIL khác
+                    continue
+            for raw_file, lines in cov.files.items():
+                if (rel := resolved.get(raw_file)) is None:
+                    rel = resolved[raw_file] = repo_rel_path(raw_file, known_files)
+                if rel == rel_file:
+                    for line, count in lines.items():
+                        hits[line] = max(hits.get(line, 0), count)
+        return {line: "[EXEC_FAIL]" if count > 0 else "[EXEC_0]" for line, count in hits.items()}
+
+    return annotate
 
 
 def coverage_hotspots_tool_spec(rt: Any) -> ToolSpec:

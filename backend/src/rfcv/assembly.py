@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 import uuid
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
@@ -236,6 +236,13 @@ def build_runtime(
 
         # 3. cổng công cụ: chỉ công cụ có khai báo trong registry mới đăng ký được
         gateway = ToolGateway(policy, trace, reg.tools)
+        # Chú thích theo dòng cho code.read do miền cung cấp, nhưng nó cần runtime đã lắp (kho bằng chứng, artifact):
+        # công cụ đăng ký bây giờ, nguồn chú thích gắn sau ở bước đăng ký công cụ của miền.
+        annotation_source: list[Callable[[str, str], Mapping[int, str]]] = []
+
+        def line_annotations(requirement_id: str, file: str) -> Mapping[int, str]:
+            return annotation_source[0](requirement_id, file) if annotation_source else {}
+
         if resolved.code_index is not None and resolved.executor is not None:
             # Bộ chạy lệnh thật gắn bản sao phạm vi làm gốc /repo; kiểm tra đường dẫn của explore phải dùng đúng gốc đó.
             scope = CodeScope(
@@ -249,6 +256,7 @@ def build_runtime(
                 scope,
                 tuple(manifest.build_flags),
                 manifest.build_config_complete,
+                line_annotations=line_annotations,
             ):
                 gateway.register(spec)
         for spec in resolved.extra_tools:
@@ -336,6 +344,9 @@ def build_runtime(
         if domain_tools is not None:
             for spec in domain_tools(rt):
                 gateway.register(spec)
+        annotations_for: Any = getattr(pack.runtime, "line_annotations", None)  # tuỳ chọn: miền có thể không có
+        if annotations_for is not None:
+            annotation_source.append(annotations_for(rt))
         handlers: Mapping[str, Any] = pack.runtime.handlers(rt) if pack.runtime else {}
         loop_policy = pack.loop
         if config.effort == "thorough":

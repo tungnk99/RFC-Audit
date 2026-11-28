@@ -10,7 +10,7 @@ Protocol bên dưới; InMemoryCodeIndex dùng cho kiểm thử.
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol, Self
 
@@ -356,6 +356,8 @@ def build_code_tools(
     scope: explore_policy.CodeScope,
     build_flags: Sequence[str] = (),
     closed_world: bool = False,
+    *,
+    line_annotations: Callable[[str, str], Mapping[int, str]] | None = None,
 ) -> list[ToolSpec]:
     known_files = frozenset(index.files())
 
@@ -608,7 +610,7 @@ def build_code_tools(
         ToolSpec(name, TOOL_DOCS[name], params, handler, title=_TITLES[name], read_only=True)
         for name, params, handler in handlers
     ]
-    return [*legacy, *build_cc_tools(index, executor, build_flags, closed_world)]
+    return [*legacy, *build_cc_tools(index, executor, build_flags, closed_world, line_annotations=line_annotations)]
 
 
 _TITLES = {

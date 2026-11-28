@@ -5,7 +5,8 @@ dòng, kéo theo biến cục bộ bị ghi nhầm là biến phạm vi tệp. K
 (`SYMBOL_NOT_IN_INDEX`/`LINES_OUTSIDE_SYMBOL`) và nhiệm vụ cạn ngân sách.
 
 Quy ước tìm hàm: đầu hàm bắt đầu ở cột 0, dấu `{` mở thân đứng một mình ở cột 0 và dấu `}` đóng thân đứng một mình ở cột 0
-(kiểu định dạng của wolfSSL, OpenSSL, GnuTLS). Chỉ BỔ SUNG hoặc KÉO DÀI ký hiệu; không bao giờ thu hẹp hay xoá ký hiệu
+(kiểu định dạng của wolfSSL, OpenSSL, GnuTLS). Cũng nhận kiểu K&R `kiểu tên(...) {` (dấu `{` cùng dòng với `)`, kiểu của
+Dropbear), với điều kiện chặt hơn vì mẫu này dễ nhầm. Chỉ BỔ SUNG hoặc KÉO DÀI ký hiệu; không bao giờ thu hẹp hay xoá ký hiệu
 hàm của tree-sitter. Tất định: chỉ phụ thuộc nội dung tệp.
 """
 
@@ -17,6 +18,54 @@ from typing import Any
 _NAME = re.compile(r"([A-Za-z_]\w*)\s*\(")
 _NOT_FUNCTIONS = frozenset({"if", "while", "for", "switch", "return", "sizeof", "defined", "typedef", "struct", "enum"})
 Symbol = tuple[str, str, str, int, int, str]
+MAX_HEAD_LINES = 16  # đầu hàm K&R dài nhất được nhận (tên và danh sách tham số)
+
+
+def _start_line(lines: list[str], j: int) -> int:
+    """Dòng đầu (tính từ 1) của hàm có đầu hàm ở chỉ số `j`."""
+    if j > 0 and _NAME.match(lines[j]):
+        prev = lines[j - 1]
+        if prev and prev[0] not in " \t#/*}{;)" and "(" not in prev and not prev.rstrip().endswith((";", ",")):
+            return j  # kiểu "static int\nName(...)": kiểu trả về nằm ở dòng trên
+    return j + 1
+
+
+def _same_line_head(lines: list[str], i: int) -> tuple[int, str] | None:
+    """Kiểu K&R: dòng `i` kết thúc bằng `) {`. Trả (chỉ số dòng đầu hàm ở cột 0, tên), hoặc None nếu không phải đầu hàm."""
+    code = _strip_comments(lines[i])
+    if not code.endswith("{") or not code[:-1].rstrip().endswith(")"):
+        return None
+    j = i
+    # Tham số xuống dòng, thụt lề. Chặn độ dài đầu hàm: nếu không, mỗi `\tif (...) {` trong thân lại lùi ngược cả thân (O(n²)).
+    while j >= 0 and i - j < MAX_HEAD_LINES and lines[j].strip() and lines[j][0] in " \t":
+        j -= 1
+    if j < 0 or not (lines[j][:1].isalpha() or lines[j][:1] == "_"):
+        return None
+    header = " ".join(_strip_comments(x) for x in lines[j : i + 1])[:-1]
+    if any(c in header for c in ";={}#") or header.count("(") != header.count(")"):
+        return None
+    m = _NAME.search(lines[j])
+    return (j, m.group(1)) if m is not None and m.group(1) not in _NOT_FUNCTIONS else None
+
+
+def _same_line_function(lines: list[str], i: int) -> tuple[str, int, int, str] | None:
+    """Hàm K&R có `{` mở thân ở dòng `i`. Mơ hồ thì trả None (thà không sửa còn hơn kéo nhầm khoảng dòng): gặp dòng cột 0
+    khác bắt đầu bằng `}` (`};`, `} else {`), hoặc đầu của một hàm KHÁC tên, trước khi thấy `}` đóng thân.
+    Đầu hàm cùng tên được bỏ qua: đó là các biến thể chữ ký trong `#ifdef`/`#else`."""
+    head = _same_line_head(lines, i)
+    if head is None:
+        return None
+    j, name = head
+    for k in range(i + 1, len(lines)):
+        if lines[k].startswith("}"):
+            if _strip_comments(lines[k]) != "}":
+                return None
+            sig = " ".join(" ".join(x.strip() for x in lines[j : i + 1]).split()).rstrip("{ ")[:200]
+            return name, _start_line(lines, j), k + 1, sig
+        other = _same_line_head(lines, k)
+        if other is not None and other[1] != name:
+            return None
+    return None
 
 
 def find_functions(lines: list[str]) -> list[tuple[str, int, int, str]]:
@@ -26,7 +75,12 @@ def find_functions(lines: list[str]) -> list[tuple[str, int, int, str]]:
     i = 0
     while i < n:
         if lines[i].rstrip() != "{":
-            i += 1
+            knr = _same_line_function(lines, i)
+            if knr is None:
+                i += 1
+            else:
+                found.append(knr)
+                i = knr[2]
             continue
         # Lùi qua các dòng tham số thụt lề tới dòng đầu ở cột 0 có dấu mở ngoặc.
         j = i - 1
@@ -43,11 +97,7 @@ def find_functions(lines: list[str]) -> list[tuple[str, int, int, str]]:
         if m is None or m.group(1) in _NOT_FUNCTIONS:
             i += 1
             continue
-        start = j + 1
-        if j > 0 and _NAME.match(head):
-            prev = lines[j - 1]
-            if prev and prev[0] not in " \t#/*}{;)" and "(" not in prev and not prev.rstrip().endswith((";", ",")):
-                start = j  # kiểu "static int\nName(...)": kiểu trả về nằm ở dòng trên
+        start = _start_line(lines, j)
         k = i + 1
         while k < n and lines[k].rstrip() != "}":
             k += 1

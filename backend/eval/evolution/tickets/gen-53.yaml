@@ -1,0 +1,28 @@
+generation: gen-53
+level: L6
+operator: TACTICAL_TOOL
+target: backend/src/rfcv/codeindex/c_repair.py, backend/src/rfcv/gates/code_tools.py (line_annotations), backend/src/rfcv/domains/rfc_protocol/coverage_linker.py & runtime.py
+contribution_type: "Tầng chiến thuật: gắn nhãn thực thi inline [EXEC_FAIL]/[EXEC_0] trong code.read và sửa lỗi biên hàm C có #ifdef trong codeindex (cứu SSH S3 lên 100% STRICT)"
+capability_rung: "bậc 5 (lật SSH Dropbear S3 từ 0/1 LINES_OUTSIDE_SYMBOL sang 1/1 = 100% STRICT trong 69s)"
+summary: >
+  Thiết kế kiến trúc (Antigravity) và giao `claude.cmd` thực thi 2 nâng cấp chiến thuật cốt lõi:
+  (1) Tiêm callback trung lập miền `line_annotations` vào `code_tools.py` / `code_gate.py` / `assembly.py` và cung cấp
+  `fail_line_annotations(rt)` từ `coverage_linker.py` để `code.read` tự động gắn nhãn `[EXEC_FAIL]` / `[EXEC_0]` ngay cạnh
+  từng dòng mã khi có độ phủ LCOV;
+  (2) Sửa bộ sửa cú pháp `#ifdef` trong `codeindex/c_repair.py` giúp `tree-sitter` tách đúng thân hàm `read_kex_algos (830–1045)`
+  trong Dropbear `src/common-kex.c` (40/40 tests PASS, 0 lỗi pyright/ruff, 6/6 import-linter contracts KEPT).
+  Sau khi build lại `rfcv/code-indexer:latest` (`--target indexer`), chạy sống trên Docker ca **SSH `S3`**:
+  lật từ `0/1` (`LINES_OUTSIDE_SYMBOL` ở `gen-39`) sang **`1/1 = 100% STRICT`** trong **69 giây** (giảm token từ 334k xuống 256k).
+motivation: >
+  Đột biến tầng chiến thuật #1: giải quyết trực tiếp 2 nút thắt đo được ở `gen-39` (SSH `S3` bị `LINES_OUTSIDE_SYMBOL`)
+  và `gen-45` (`Code Reader` đọc mã không thấy ngay dòng nào thực sự chạy trên ca FAIL).
+invariants_touched: []
+metrics_before:
+  ssh_s3_defect_hit_strict: 0.0
+  code_read_inline_lcov_annotations: false
+metrics_after:
+  ssh_s3_defect_hit_strict: 1.0
+  ssh_s3_seconds: 69
+  code_read_inline_lcov_annotations: true
+  pyright_errors: 0
+  import_linter_contracts_kept: 6

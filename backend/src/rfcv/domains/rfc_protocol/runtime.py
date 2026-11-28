@@ -28,6 +28,7 @@ from rfcv.core.ifc import Labeled, TrustLabel
 from rfcv.domains.rfc_protocol.adapter_view import to_vocabulary, vocabulary_terms
 from rfcv.domains.rfc_protocol.agent_tools import AgentTools
 from rfcv.domains.rfc_protocol.call_chain import call_chain_tool_spec
+from rfcv.domains.rfc_protocol.coverage_linker import fail_line_annotations
 from rfcv.domains.rfc_protocol.divergence_audit import extract_divergence_points
 from rfcv.domains.rfc_protocol.multi_hypothesis import (
     HypothesisSpec,
@@ -123,6 +124,10 @@ class ProtocolRuntime:
         specs.append(call_chain_tool_spec(rt))
         return specs
 
+    def line_annotations(self, rt: Any) -> Callable[[str, str], dict[int, str]]:
+        """Thẻ thực thi trên ca FAIL cho `code.read` (nơi lắp ráp gắn vào công cụ đăng ký ở Tool gateway)."""
+        return fail_line_annotations(rt)
+
     def attach_driver(self, driver: TestDriver) -> None:
         """Cho `tester.run_scenario` dùng đúng Test driver của lần chạy (nơi lắp ráp tự dựng driver thay vì gọi `handlers`)."""
         self._driver = driver
@@ -183,7 +188,16 @@ class ProtocolRuntime:
         if index is not None and executor is not None:
             from rfcv.gates.code_tools import build_cc_tools
 
-            cc_tools = {s.name: s for s in build_cc_tools(index, executor, flags, bool(manifest.build_config_complete))}
+            cc_tools = {
+                s.name: s
+                for s in build_cc_tools(
+                    index,
+                    executor,
+                    flags,
+                    bool(manifest.build_config_complete),
+                    line_annotations=fail_line_annotations(rt),
+                )
+            }
         location = LocationHandler(rt, gate, cc_tools)
         scenario = ScenarioHandler(rt, driver, Path(adapter_dir) / "templates" if adapter_dir is not None else None)
         run_id = getattr(rt, "run_id", None) or ""
