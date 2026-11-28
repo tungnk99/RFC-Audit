@@ -1,0 +1,23 @@
+generation: gen-54
+level: L5
+operator: TACTICAL_HARNESS_REVERTED
+decision: REVERT
+target: backend/src/rfcv/runtime/pydantic_ai/runner.py (compact_history vs thin_history)
+contribution_type: "Đối chứng A/B nén lịch sử hội thoại (compact_history) — REVERT do làm tụt STRICT từ 2/2 xuống 0/2 và tăng token"
+capability_rung: "REVERT (bảo vệ `thin_history` hiện có — minh chứng thực nghiệm giữ toàn vẹn mã đọc gần đây vượt trội nén cắt cụt)"
+summary: >
+  Thử nghiệm thay thế `thin_history` bằng `compact_history` (nén mọi `ToolReturnPart` cũ >900 ký tự về 600 ký tự,
+  chỉ giữ nguyên 3 lượt gần nhất). Đối chứng A/B trực tiếp trên Docker (OpenSSL `OU3, OG1`):
+  `thin_history` (`v3.0`) đạt `2/2 = 100% STRICT` (`313k` & `309k` tok), trong khi `compact_history` tụt xuống
+  `0/2 = 0% STRICT` và tăng token lên `316k` & `347k` do cắt mất ngữ cảnh mã nguồn đã đọc.
+  Áp dụng nghiêm ngặt giao thức `KEEP / REVERT`: hoàn tác toàn bộ mã `gen-54` về `thin_history` và lưu vết bài học.
+motivation: >
+  Kiểm chứng giả thuyết nén ngữ cảnh trượt ở tầng chiến thuật; bác bỏ giả thuyết bằng thực nghiệm A/B thật thay vì giữ cảm tính.
+invariants_touched: []
+metrics_before:
+  openssl_ou3_og1_strict: 1.0
+  openssl_ou3_og1_avg_tokens: 311457
+metrics_after:
+  openssl_ou3_og1_strict_candidate: 0.0
+  openssl_ou3_og1_avg_tokens_candidate: 331611
+  decision: REVERT
