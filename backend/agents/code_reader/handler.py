@@ -357,18 +357,27 @@ class LocationHandler:
                         "accepted": row.get("accepted"),
                         "obs_in_source": row.get("obs_in_source") if has_source_check else None,
                         "executed_in_fail": row.get("executed_in_fail") if has_cov else None,
+                        "wrong_dir": row.get("wrong_dir"),
+                        "wrong_stage": row.get("wrong_stage"),
                         "errors": [t for e in errors if (t := _safe_token(e)) is not None],
                     }
                 )
+            premise = (
+                "hai điều tra viên làm việc độc lập đã chỉ cùng một vị trí NHƯNG kiểm toán tất định gắn cờ vị trí đó, "
+                "nên đồng thuận này KHÔNG được chấp nhận. "
+                if pre_audit.get("consensus_vetoed")
+                else "hai điều tra viên làm việc độc lập đã KHÔNG đồng thuận. "
+            )
             return {
                 "name": "adjudicator",
                 "max_tool_calls": 8,
                 "max_tokens": 90_000,
                 "extra_focus": {"debate_candidates": candidates, "debate_audit_flags": flags},
                 "instruction": (
-                    "Vai trò TRỌNG TÀI ĐỐI CHẤT (Blind Adjudicator): hai điều tra viên làm việc độc lập đã KHÔNG đồng thuận. "
-                    "`debate_candidates` là hai ứng viên A và B, `debate_audit_flags` là cờ kiểm toán tất định của từng ứng viên "
-                    "(giá trị null nghĩa là không đo được, không phải bằng chứng bác bỏ). Không mặc định ứng viên nào đúng. "
+                    "Vai trò TRỌNG TÀI ĐỐI CHẤT (Blind Adjudicator): " + premise + "`debate_candidates` là hai ứng viên A và B, `debate_audit_flags` là cờ kiểm toán tất định của từng ứng viên "
+                    "(giá trị null nghĩa là không đo được, không phải bằng chứng bác bỏ; `wrong_dir=true`: nghi hàm thuộc "
+                    "chiều giao thức đối diện; `wrong_stage=true`: nghi hàm chỉ chạy ở giai đoạn muộn hơn yêu cầu). "
+                    "Không mặc định ứng viên nào đúng. "
                     "(1) BẮT BUỘC dùng `code__read` đọc CẢ HAI vị trí mã đang tranh chấp (ứng viên có `status: NO_OUTPUT` thì bỏ qua); "
                     "nếu có LCOV, dùng `coverage__hotspots` để xem vị trí nào thực sự chạy trong ca FAIL; "
                     "(2) Đối chất: kiểm `obs_in_source`, `executed_in_fail`, `errors`, và phân biệt phép kiểm tra sớm với phép kiểm tra muộn "
@@ -405,6 +414,11 @@ class LocationHandler:
             "TUYỆT ĐỐI KHÔNG chọn hàm thuộc vai trò đối diện (vd phía gửi/client khi SUT đang ở vai trò nhận/server). "
             "Đặt `call_path: [symbol]` trừ khi đã đọc trực tiếp hàm cha; kiểm tra kỹ tên `file` khớp chính xác với kết quả `code__grep`/`code__read`."
         )
+        chain_hint = (
+            " Khi nghi ngờ điều kiện kiểm tra và điểm phát phản ứng nằm ở hai hàm khác nhau, gọi ngay "
+            '`code__call_chain(symbol=..., direction="both", depth=2, filter_identifier=...)` '
+            "để truy vết chuỗi gọi và xác nhận `call_path`."
+        )
         if diag.signature == WRONG_ALERT:
             obs_pat = "|".join(re.escape(a) for a in diag.observed_alerts if a and a != "none") or re.escape(obs)
             return (
@@ -431,7 +445,7 @@ class LocationHandler:
                         f"để tìm đúng nhánh gọi trực tiếp hàm phát lỗi/phản ứng với `(?i){obs}` HOẶC trả mã lỗi nội bộ (`*_ERROR`, `*_ERR`, âm). "
                         f"(2) Nếu hàm kiểm tra chỉ trả mã lỗi nội bộ, dùng `code__grep` tìm mã lỗi đó hoặc `(?i)return\\s+.*({obs_pat})` "
                         "trong hàm `switch`/`case` ánh xạ mã lỗi nội bộ sang mã phản ứng giao thức, đọc trọn 60–80 dòng khối `switch` để chọn đúng `case`, "
-                        "rồi trả `LocationClaim@1` với `REACTION = MISMATCH` và `observed` là mã phản ứng sai."
+                        "rồi trả `LocationClaim@1` với `REACTION = MISMATCH` và `observed` là mã phản ứng sai." + chain_hint
                     ),
                 },
             )
@@ -463,6 +477,7 @@ class LocationHandler:
                     "Bắt đầu từ `locator__suggest` để tìm đúng hàm xử lý tầng giao thức tương ứng với `requirement.structured`, "
                     "đọc gọn 50–70 dòng từ điểm phân loại loại bản tin / kiểm tra ranh giới (chú ý cả nhánh `default:` và các dòng 10–20 dòng phía trên/dưới "
                     "nơi phản ứng bị thiếu hoặc trả lỗi sớm trước khi gọi hàm gửi lỗi), rồi trả `LocationClaim@1` với `REACTION = MISMATCH`."
+                    + chain_hint
                 ),
             },
         )
@@ -661,7 +676,9 @@ class LocationHandler:
             errors.append(
                 f"WRONG_RECORD_STAGE: yêu cầu ở trạng thái `initial` gửi bản ghi rõ (chưa mã hoá), "
                 f"còn `{output.symbol}` chỉ chạy cho giai đoạn đã mã hoá/sau bắt tay. "
-                "Hãy gọi `code__find_alert_sites` tìm hàm đọc bản ghi rõ ở lớp phân tách bản ghi ban đầu."
+                "Hãy gọi `code__find_alert_sites` tìm hàm đọc bản ghi rõ ở lớp phân tách bản ghi ban đầu. "
+                f'Có thể gọi `code__call_chain(symbol="{output.symbol}", direction="callers", depth=2)` '
+                "để truy ngược lên hàm vào/hàm kiểm tra thật sự."
             )
         if not errors:
             t3s = [e.payload for e in self._rt.store.for_requirement(req_id) if isinstance(e.payload, T3Payload)]
@@ -701,7 +718,9 @@ class LocationHandler:
                     errors.append(
                         f"WRONG_OBSERVED_ALERT: T3 quan sát cảnh báo sai là `{', '.join(wrong_obs)}`, "
                         "nhưng `REACTION.observed` bạn nộp không khớp. Nhánh vừa đọc KHÔNG PHẢI là nhánh thực thi khi lỗi — "
-                        f"hãy dùng `code__grep` tìm đúng dòng thực sự phát `(?i)({'|'.join(wrong_obs)})` trong tệp/hàm xử lý."
+                        f"hãy dùng `code__grep` tìm đúng dòng thực sự phát `(?i)({'|'.join(wrong_obs)})` trong tệp/hàm xử lý. "
+                        f'Có thể gọi `code__call_chain(symbol="{output.symbol}", direction="callers", depth=2)` '
+                        "để truy ngược lên hàm vào/hàm kiểm tra thật sự."
                     )
         return errors
 
@@ -757,9 +776,32 @@ class LocationHandler:
         )
 
     def _remember_location(self, inv: Investigation, claim: LocationClaim, session: ToolSession) -> None:
-        """Ghi vị trí đã qua Schema gate vào bộ nhớ xuyên yêu cầu (nếu hub có gắn); không kèm `note` hay văn xuôi."""
+        """Ghi vị trí đã qua Schema gate VÀ sạch cờ kiểm toán vào bộ nhớ xuyên yêu cầu (nếu hub có gắn); không kèm
+        `note` hay văn xuôi. Qua cổng mới chỉ chứng minh dòng dẫn là có thật: vị trí bị cờ chiều/giai đoạn hoặc không chạy
+        trong ca FAIL mà thành mốc sẽ dẫn lạc các yêu cầu sau (gen-55)."""
         mem: Any = inv.domain_state.get("_episodic_memory")
         if mem is None:
+            return
+        _, audit = self.select_branch(inv, None, [("final", claim, session)])
+        row: Mapping[str, Any] = audit["branches"][0]
+        reasons = [flag for flag in ("wrong_dir", "wrong_stage") if row.get(flag) is True]
+        if row.get("executed_in_fail") is False:
+            reasons.append("not_executed_in_fail")
+        if reasons:
+            self._rt.trace.append(
+                self._rt.run_id,
+                "episodic_memory_skipped",
+                {
+                    "recorded": False,
+                    "file": claim.file,
+                    "symbol": claim.symbol,
+                    "line_start": claim.line_start,
+                    "line_end": claim.line_end,
+                    "reasons": reasons,
+                },
+                role=session.role,
+                requirement_id=inv.requirement.requirement_id,
+            )
             return
         landmark = mem.record(
             claim.file,

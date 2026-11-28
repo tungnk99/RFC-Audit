@@ -433,3 +433,87 @@ def test_select_branch_rejected_third_claim_does_not_reorder_valid_claims() -> N
     broken = _claim(pair[before][1].symbol).model_copy(update={"check_kind": CheckKind.OTHER})
     after, _ = handler.select_branch(inv, task, [*pair, ("adjudicator", broken, sess)])
     assert after == before
+
+
+async def test_debate_does_not_early_exit_when_both_agreeing_branches_flagged_wrong_stage(
+    monkeypatch: Any, policy: PolicyStore, store: EvidenceStore, trace: TraceLog
+) -> None:
+    monkeypatch.setenv("RFCV_ORG_MODE", "debate")
+    monkeypatch.delenv("RFCV_ABLATION", raising=False)
+    inv = _make_inv(trigger_arg="record", expected_alert="unexpected_message")
+    inv.domain_state[RBS_KEY].state = "initial"
+    inv.domain_state[RBS_KEY].where = SimpleNamespace(field="record.content_type")
+    rt = SimpleNamespace(
+        store=_FakeStore([_make_t3_fail("decode_error")]), run_id="r1", providers=None, trace=trace
+    )
+    handler = _DebateHandler(rt, _FakeGate())  # type: ignore[arg-type]
+    handler.committed = []
+    late = _claim("tls13_validate_record_header", file="ssl/record/methods/tls13_meth.c")
+    early = _claim("ssl3_get_record", file="ssl/record/rec_layer_s3.c")
+    runner = _DebateRunner({"bottom_up_alert_hunter": late, "error_to_alert_mapper": late, "adjudicator": early})
+    loop = ExecutionLoop(
+        run_id="r1",
+        runner=runner,
+        policy=policy,
+        store=store,
+        trace=trace,
+        handlers={TaskType.LOCATE: handler},
+    )
+    prompts: list[dict[str, Any]] = []
+    original = runner.run
+
+    async def spy(envelope: Envelope, context: dict[str, Any], session: ToolSession) -> RoleOutcome:
+        prompts.append(dict(envelope.body))
+        return await original(envelope, context, session)
+
+    runner.run = spy  # type: ignore[method-assign]
+    task = TaskSpec(task_type=TaskType.LOCATE, target_role=TargetRole.CODE_READER)
+    await loop._dispatch(inv, task, BudgetTracker(RequirementBudget()), {})  # pyright: ignore[reportPrivateUsage]
+
+    assert len(runner.calls) == 3 and runner.calls[-1] == "adjudicator"
+    event = list(trace.events("debate"))[-1]["payload"]
+    assert (event["consensus"], event["consensus_vetoed"], event["adjudicated"]) == (False, True, True)
+    assert handler.committed == [early]
+    adj = prompts[-1]
+    assert [f["wrong_stage"] for f in adj["debate_audit_flags"]] == [True, True]
+    assert [f["wrong_dir"] for f in adj["debate_audit_flags"]] == [False, False]
+    assert "đồng thuận này KHÔNG được chấp nhận" in adj["strategy_instruction"]
+
+
+async def test_debate_consensus_veto_needs_both_branches_unexecuted(
+    monkeypatch: Any, policy: PolicyStore, store: EvidenceStore, trace: TraceLog
+) -> None:
+    monkeypatch.setenv("RFCV_ORG_MODE", "debate")
+    monkeypatch.delenv("RFCV_ABLATION", raising=False)
+    task = TaskSpec(task_type=TaskType.LOCATE, target_role=TargetRole.CODE_READER)
+    claim = _claim("fn_a")
+
+    for executed, expected_calls in (((False, False), 3), ((False, True), 2), ((True, True), 2)):
+
+        class _Handler(_DebateHandler):
+            flags = executed
+
+            def select_branch(self, inv: Any, task: Any, candidates: Any) -> tuple[int, dict[str, Any]]:
+                rows = [{"accepted": True, "executed_in_fail": flag} for flag in self.flags]
+                return 0, {"winner": candidates[0][0], "branches": rows}
+
+        rt = SimpleNamespace(
+            store=_FakeStore([_make_t3_fail("illegal_parameter")]), run_id="r1", providers=None, trace=trace
+        )
+        handler = _Handler(rt, _FakeGate())  # type: ignore[arg-type]
+        handler.committed = []
+        runner = _DebateRunner(
+            {"bottom_up_alert_hunter": claim, "error_to_alert_mapper": claim, "adjudicator": claim}
+        )
+        loop = ExecutionLoop(
+            run_id="r1",
+            runner=runner,
+            policy=policy,
+            store=store,
+            trace=trace,
+            handlers={TaskType.LOCATE: handler},
+        )
+        await loop._dispatch(  # pyright: ignore[reportPrivateUsage]
+            _make_inv(), task, BudgetTracker(RequirementBudget()), {}
+        )
+        assert len(runner.calls) == expected_calls

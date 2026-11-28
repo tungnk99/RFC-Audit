@@ -4,19 +4,25 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
+from agents.code_reader.handler import LocationHandler
+from agents.code_reader.schema import AspectClaim, CheckKind, LocationClaim
+from agents.common import RBS_KEY
 from rfcv.core.context_builder import ContextBuilder
 from rfcv.core.episodic_memory import EpisodicMemory
 from rfcv.core.execution_loop import ExecutionLoop, Investigation
 from rfcv.core.ifc import TrustLabel
 from rfcv.core.policy import PolicyStore
 from rfcv.core.trace import TraceLog
+from rfcv.domains.rfc_protocol.payloads import AspectName, AspectValue, Finding
 from rfcv.domains.rfc_protocol.schemas import TaskType
 from rfcv.evidence.store import EvidenceStore
 from rfcv.evidence.verdict_engine import SufficiencyReport, assess
+from rfcv.gates.tool_gateway import ToolSession
 from test_execution_loop import LOCATE, OUTPUTS, REQ_B, FakeRunner, Noop, inv, make_loop, plan
 
 FILE = "src/record.c"
@@ -132,3 +138,51 @@ async def test_execution_loop_exposes_memory_codebase_map_as_derived(
 
     # Lần chạy mới với cùng đường dẫn nạp lại mốc đã lưu cuối `investigate`.
     assert make().episodic_memory.snapshot() == mem.snapshot()
+
+
+async def test_handler_skips_episodic_memory_for_wrong_stage_claim(trace: TraceLog) -> None:
+    appended: list[Any] = []
+    gate: Any = SimpleNamespace(
+        check_location=lambda *_a, **_k: SimpleNamespace(accepted=True, errors=(), draft=object())
+    )
+    rt = SimpleNamespace(
+        store=SimpleNamespace(append=appended.append, for_requirement=lambda _req: list[Any]()),
+        artifacts=None,
+        providers=None,
+        run_id="r1",
+        trace=trace,
+    )
+    handler = LocationHandler(rt, gate)
+    rbs = SimpleNamespace(
+        state="initial",
+        trigger=SimpleNamespace(name="receive", args=("record",)),
+        expect=(SimpleNamespace(name="send_alert", args=("unexpected_message",)),),
+        forbid=(),
+        accept_alternatives=(),
+        where=SimpleNamespace(field="record.content_type"),
+    )
+    mem = EpisodicMemory()
+    target = Investigation(requirement=REQ_B, context={}, domain_state={RBS_KEY: rbs, "_episodic_memory": mem})
+    session = ToolSession("r1", "code_reader", REQ_B.requirement_id, max_tool_calls=1)
+
+    def claim(symbol: str) -> LocationClaim:
+        return LocationClaim(
+            file=FILE,
+            symbol=symbol,
+            line_start=10,
+            line_end=20,
+            check_kind=CheckKind.VALUE_CHECK,
+            finding=Finding.PRESENT,
+            aspects=[AspectClaim(aspect=AspectName.REACTION, value=AspectValue.MISMATCH, lines=(12, 14))],
+            call_path=[symbol],
+        )
+
+    await handler.handle(target, None, claim("tls13_validate_record_header"), session, "m1")
+    assert len(appended) == 1  # T1 vẫn được ghi; chỉ bộ nhớ xuyên yêu cầu bị chặn
+    assert mem.snapshot() == []
+    assert list(trace.events("episodic_memory_record")) == []
+    skipped = list(trace.events("episodic_memory_skipped"))[-1]["payload"]
+    assert (skipped["recorded"], skipped["reasons"]) == (False, ["wrong_stage"])
+
+    await handler.handle(target, None, claim("read_record"), session, "m2")
+    assert [m["symbol"] for m in mem.snapshot()] == ["read_record"]

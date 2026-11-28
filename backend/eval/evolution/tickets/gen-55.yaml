@@ -1,0 +1,30 @@
+generation: gen-55
+level: L5
+operator: TACTICAL_AGENT
+target: backend/src/rfcv/core/execution_loop.py (Quality-Gated Consensus), backend/agents/code_reader/handler.py (Verified-Only EpisodicMemory & call_chain hints)
+contribution_type: "Tầng chiến thuật: Đồng thuận có cổng chất lượng (consensus_vetoed), Bộ nhớ chỉ lưu mốc sạch (episodic_memory_skipped) và gợi ý code.call_chain"
+capability_rung: "bậc 5 (OU2 lật từ 0/1 lên 1/1 STRICT 60s; OU4 kích hoạt đúng consensus_vetoed=True và chặn ô nhiễm memory.json bằng mem_skipped=1)"
+summary: >
+  Thiết kế kiến trúc (Antigravity) và giao `claude.cmd` thực thi 3 nâng cấp chiến thuật cho `Code Reader`
+  (35/35 spec tests, 859/859 non-doc tests PASS, 0 lỗi pyright/ruff, 6/6 import-linter contracts KEPT):
+  (1) Quality-Gated Consensus trong `execution_loop._run_debate`: phủ quyết dừng sớm (`consensus_vetoed=True`)
+  khi nhánh đồng thuận bị gắn cờ `wrong_dir`/`wrong_stage` hoặc `executed_in_fail=False`, đẩy sang Trọng tài mù;
+  (2) Verified-Only `EpisodicMemory` trong `LocationHandler.handle`: chỉ lưu landmark sạch cờ vào `memory.codebase_map`,
+  ghi vết `episodic_memory_skipped` khi từ chối mốc nghi ngờ;
+  (3) Nối gợi ý `code__call_chain` vào `strategy_instruction` và thông báo lỗi `precheck`.
+  Xác thực sống trên Docker (OpenSSL `OU2, OU4`, bật `EpisodicMemory`):
+  - `OU2`: lật từ `0/1` (`v3.0`) → **`1/1 = 100% STRICT`** (`ssl3_read_bytes:846-857`, 60s, `leak_scan.clean=True`), lưu sạch vào `memory.json`.
+  - `OU4`: `VIOLATION (V2)`, `leak_scan.clean=True`, kích hoạt chính xác **`consensus_vetoed=True`** (gọi Trọng tài mù) và
+    **`episodic_memory_skipped=1`** (chặn không cho mốc sai `OU4` làm bẩn `memory.json`).
+motivation: >
+  Khắc phục trực tiếp 2 điểm yếu thực nghiệm phát hiện ở `v3.0` (đồng thuận cùng sai và lan truyền mốc sai trong `EpisodicMemory`).
+invariants_touched: []
+metrics_before:
+  ou2_v30_strict: false
+  ou4_polluted_episodic_memory: true
+metrics_after:
+  ou2_v31_strict: true
+  ou2_v31_seconds: 60
+  ou4_consensus_vetoed: true
+  ou4_episodic_memory_skipped: true
+  openssl_2_leak_scan_clean: 1.0

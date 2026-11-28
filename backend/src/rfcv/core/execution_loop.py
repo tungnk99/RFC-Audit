@@ -975,7 +975,8 @@ class ExecutionLoop:
         select_fn: Any,
     ) -> tuple[RoleOutcome, int]:
         """Mô hình tổ chức Tranh biện (gen-49 / L5 ADD_ORG_PATTERN): hai điều tra viên song song, không thấy nhau;
-        đồng thuận thì dừng sớm, bất đồng thì thêm một trọng tài soi cả hai. Trọng tài tất định `select_fn` chọn cuối cùng."""
+        đồng thuận sạch thì dừng sớm; bất đồng, hoặc đồng thuận bị kiểm toán gắn cờ (gen-55), thì thêm một trọng tài soi cả
+        hai. Trọng tài tất định `select_fn` chọn cuối cùng."""
         specs = cast("Sequence[Mapping[str, Any]]", debate_cfg["investigators"])
         agree_fn = cast(
             "Callable[[BaseModel | None, BaseModel | None], bool]", debate_cfg.get("claims_agree") or _same_site
@@ -999,21 +1000,36 @@ class ExecutionLoop:
         win_idx, summary = _judge(results)
         # Đồng thuận chỉ tính giữa hai đầu ra hợp lệ: hai nhánh giống nhau nhưng bị cổng bác thì vẫn cần trọng tài.
         raw_branches = summary.get("branches")
-        rejected = isinstance(raw_branches, Sequence) and any(
-            isinstance(b, Mapping) and cast("Mapping[str, Any]", b).get("accepted") is False
-            for b in cast("Sequence[Any]", raw_branches)
+        pair_rows: list[Mapping[str, Any]] = (
+            [
+                cast("Mapping[str, Any]", b)
+                for b in cast("Sequence[Any]", raw_branches)
+                if isinstance(b, Mapping)
+            ]
+            if isinstance(raw_branches, Sequence)
+            else []
         )
+        rejected = any(r.get("accepted") is False for r in pair_rows)
         first, second = results[0][1], results[1][1]
-        agreed = (
+        same_claim = (
             not rejected
             and first.output is not None
             and second.output is not None
             and agree_fn(first.output, second.output)
         )
+        # gen-55: hai nhánh cùng sai một chỗ không phải đồng thuận. Một nhánh bị cờ chiều/giai đoạn, hoặc cả hai được đo
+        # là không chạy trong ca FAIL, thì vẫn gọi trọng tài. Cờ vắng mặt nghĩa là miền không đo, không chặn.
+        vetoed = same_claim and (
+            any(r.get("wrong_dir") is True or r.get("wrong_stage") is True for r in pair_rows)
+            or (len(pair_rows) == 2 and all(r.get("executed_in_fail") is False for r in pair_rows))
+        )
+        agreed = same_claim and not vetoed
         if not agreed:
             adj_spec = cast(
                 "Mapping[str, Any]",
-                debate_cfg["build_adjudicator"](inv, task, [(n, o.output) for n, o, _, _ in results], summary),
+                debate_cfg["build_adjudicator"](
+                    inv, task, [(n, o.output) for n, o, _, _ in results], {**summary, "consensus_vetoed": vetoed}
+                ),
             )
             results.append(await _run_one(adj_spec))
             win_idx, summary = _judge(results)
@@ -1023,6 +1039,7 @@ class ExecutionLoop:
                 "role": role,
                 "task_type": body.get("task_type"),
                 "consensus": agreed,
+                "consensus_vetoed": vetoed,
                 "adjudicated": not agreed,
                 "adjudicator_won": not agreed and win_idx == 2,
                 "winner_index": win_idx,
