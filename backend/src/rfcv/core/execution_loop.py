@@ -17,9 +17,11 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import json
+import os
 import time
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Protocol, cast
 
 from pydantic import BaseModel
@@ -30,6 +32,7 @@ from rfcv.core.blackboard import HypothesisBoard
 from rfcv.core.budget import BudgetTracker, LoopDetector, RequirementBudget
 from rfcv.core.context_builder import ContextBuilder, summarize_evidence, to_jsonable
 from rfcv.core.envelope import Envelope, EnvelopeFactory, MessageKind
+from rfcv.core.episodic_memory import EpisodicMemory
 from rfcv.core.ifc import Labeled, TrustLabel
 from rfcv.core.policy import PolicyStore
 from rfcv.core.reflexion import FailureKind, ReflexionMemory
@@ -278,9 +281,16 @@ class ExecutionLoop:
         self._progress_of: Callable[[SufficiencyReport, int], Hashable] = progress_of or _evidence_count
         self._extra_shared_context = extra_shared_context
         self.reflexion = ReflexionMemory()
+        # Khác reflexion: sống qua nhiều yêu cầu của cùng lần chạy; chỉ nối qua nhiều lần chạy khi đặt biến môi trường.
+        self.episodic_memory = EpisodicMemory()
+        memory_path = os.environ.get("RFCV_EPISODIC_MEMORY_PATH")
+        self._episodic_memory_path = Path(memory_path) if memory_path else None
+        if self._episodic_memory_path is not None:
+            self.episodic_memory.load(self._episodic_memory_path)
 
     async def investigate(self, inv: Investigation) -> VerdictRecord:
         req = inv.requirement
+        inv.domain_state["_episodic_memory"] = self.episodic_memory  # handler ghi mốc mà không cần biết hub
         tracker = BudgetTracker(self._budget)
         loops = self._new_loop_detector()
         history: list[dict[str, Any]] = []
@@ -486,6 +496,16 @@ class ExecutionLoop:
         final = decide(req, self._store.for_requirement(req.requirement_id), stop, self._rules)
         self._store.record_verdict(req.requirement_id, final.to_json())
         self._log("verdict", final.to_json(), req.requirement_id, round=tracker.rounds)
+        if self._episodic_memory_path is not None:
+            try:
+                self.episodic_memory.save(self._episodic_memory_path)
+            except OSError as exc:  # bộ nhớ chỉ là gợi ý: lỗi ghi không được làm mất kết luận đã chốt
+                self._log(
+                    "episodic_memory_save_failed",
+                    {"error": type(exc).__name__},
+                    req.requirement_id,
+                    round=tracker.rounds,
+                )
         return final
 
     async def explain(self, inv: Investigation, verdict: VerdictRecord) -> Explanation | None:
@@ -671,7 +691,8 @@ class ExecutionLoop:
         evidence.summary     bằng chứng đã có, đã tóm tắt an toàn (Planner, Verifier);
         verdict.sufficiency  báo cáo độ đủ đầy đủ, kèm feasible (Planner, Verifier);
         verdict.missing      chỉ phần còn thiếu, không lộ bằng chứng hay nhãn tạm (Test);
-        warroom.blackboard   giả thuyết có cấu trúc đã làm sạch; DERIVED vì bảng không chở mã nguồn hay văn xuôi.
+        warroom.blackboard   giả thuyết có cấu trúc đã làm sạch; DERIVED vì bảng không chở mã nguồn hay văn xuôi;
+        memory.codebase_map  mốc mã đã qua cổng ở các yêu cầu trước, chỉ token định danh và số dòng (Code Reader).
         """
         # Bằng chứng được nhãn tạm hay xung đột trích dẫn giữ hàng riêng; phần còn lại có thể được gộp (BL-12).
         cited = {i for c in report.conflicts for i in c.evidence_ids}
@@ -682,6 +703,9 @@ class ExecutionLoop:
             "verdict.sufficiency": Labeled(report_json(report, inv.feasible), TrustLabel.DERIVED),
             "verdict.missing": Labeled(missing_json(report, inv.feasible), TrustLabel.DERIVED),
             "warroom.blackboard": Labeled(inv.blackboard.snapshot(), TrustLabel.DERIVED),
+            "memory.codebase_map": Labeled(
+                self.episodic_memory.snapshot(rtype=inv.requirement.rtype), TrustLabel.DERIVED
+            ),
         }
         if self._extra_shared_context is not None:
             out.update(self._extra_shared_context(report, evidence, inv))

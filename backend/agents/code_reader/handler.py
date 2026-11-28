@@ -727,6 +727,7 @@ class LocationHandler:
             return 0
         self._rt.store.append(result.draft)
         self._post_location(inv, output, session)
+        self._remember_location(inv, output, session)
         return (
             1 + link_pending(self._rt.store, self._rt.artifacts, self._rt.run_id, req_id) + self._scan(output, req_id)
         )
@@ -748,6 +749,29 @@ class LocationHandler:
             self._rt.run_id,
             "blackboard_post",
             {"entries": [entry.model_dump(mode="json", exclude_none=True)]},
+            role=session.role,
+            requirement_id=inv.requirement.requirement_id,
+        )
+
+    def _remember_location(self, inv: Investigation, claim: LocationClaim, session: ToolSession) -> None:
+        """Ghi vị trí đã qua Schema gate vào bộ nhớ xuyên yêu cầu (nếu hub có gắn); không kèm `note` hay văn xuôi."""
+        mem: Any = inv.domain_state.get("_episodic_memory")
+        if mem is None:
+            return
+        landmark = mem.record(
+            claim.file,
+            claim.symbol,
+            claim.line_start,
+            claim.line_end,
+            rtype=inv.requirement.rtype,
+            finding=claim.finding.value,
+        )
+        if landmark is None:
+            return
+        self._rt.trace.append(
+            self._rt.run_id,
+            "episodic_memory_record",
+            landmark.model_dump(mode="json"),
             role=session.role,
             requirement_id=inv.requirement.requirement_id,
         )

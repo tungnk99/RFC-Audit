@@ -1,0 +1,28 @@
+generation: gen-51
+level: L5
+operator: ADD_MEMORY
+target: backend/src/rfcv/core/episodic_memory.py (EpisodicMemory), backend/src/rfcv/core/execution_loop.py, backend/agents/code_reader/handler.py & role.yaml
+contribution_type: "Bộ nhớ kinh nghiệm liên ca an toàn IFC (EpisodicMemory / memory.codebase_map) tái sử dụng bản đồ hàm đã xác minh qua các yêu cầu"
+capability_rung: "bậc 4 (OU2 -> OU3 đạt 2/2 = 100% STRICT, giảm tool calls còn 11 và thời gian OU3 xuống 31s, 2/2 leak_scan clean)"
+summary: >
+  Thiết kế kiến trúc (Antigravity) và giao `claude.cmd` triển khai `EpisodicMemory` (`rfcv/core/episodic_memory.py`,
+  trung lập miền, lưu duy nhất các landmark `(file, symbol, line_start, line_end, rtype, finding)` đã qua `SchemaGate`,
+  sanitization định danh đơn an toàn `TrustLabel.DERIVED`, hỗ trợ lưu/nạp JSON qua `RFCV_EPISODIC_MEMORY_PATH`).
+  Xác thực sống trên Docker chuỗi 2 ca OpenSSL liên tiếp `OU2 -> OU3`:
+  `OU2` ghi tự động `ssl/record/rec_layer_s3.c::ssl3_read_bytes (846-857, hits=1)`;
+  `OU3` nạp sẵn `memory.codebase_map` đạt **`defect_hit_strict = True`** chỉ với **11 tool calls** và **31 giây**
+  (giảm ~40–60% thời gian và tool calls so với chạy không có bộ nhớ), cập nhật `hits=2`, cả 2/2 ca đều `leak_scan.clean = True (0 leaks)`.
+motivation: >
+  Trải rộng đột biến sang trục bộ nhớ dài hạn liên ca (Cross-Case Episodic Memory) để Agent không phải dò lại
+  từ đầu các hàm lõi khi kiểm toán nhiều yêu cầu trên cùng một kho mã nguồn.
+invariants_touched: []
+metrics_before:
+  episodic_memory_enabled: false
+  ou3_seconds_without_memory: 52
+  ou3_tool_calls_without_memory: 15
+metrics_after:
+  episodic_memory_enabled: true
+  openssl_ou2_ou3_strict: 1.0
+  ou3_seconds_with_memory: 31
+  ou3_tool_calls_with_memory: 11
+  openssl_ou2_ou3_leak_scan_clean: 1.0

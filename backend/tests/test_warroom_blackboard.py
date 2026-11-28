@@ -16,6 +16,7 @@ from agents.tester.handler import ScenarioHandler
 from agents.tester.schema import ScenarioProposal
 from rfcv.core.blackboard import HypothesisBoard
 from rfcv.core.context_builder import ContextBuilder
+from rfcv.core.episodic_memory import EpisodicMemory
 from rfcv.core.execution_loop import ExecutionLoop, Investigation
 from rfcv.core.ifc import TrustLabel
 from rfcv.core.policy import PolicyStore
@@ -96,7 +97,7 @@ def test_hypothesis_board_drops_free_text_in_identifier_fields() -> None:
 
 def _make_inv() -> Investigation:
     return Investigation(
-        requirement=SimpleNamespace(requirement_id=REQ),  # type: ignore[arg-type]
+        requirement=SimpleNamespace(requirement_id=REQ, rtype="T-LEN"),  # type: ignore[arg-type]
         context={},
         vocabulary_terms=frozenset({"unexpected_message", "decode_error"}),
     )
@@ -108,7 +109,7 @@ def test_investigation_blackboard_shared_context_is_ifc_derived(policy: PolicySt
     inv.blackboard.post("tester", "behavioral_signal", field="v-1", value="decode_error", status="verified")
 
     report: Any = SimpleNamespace(provisional=None, decisive=False, missing=[], conflicts=[])
-    loop: Any = SimpleNamespace(_extra_shared_context=None)
+    loop: Any = SimpleNamespace(_extra_shared_context=None, episodic_memory=EpisodicMemory())
     shared = ExecutionLoop._shared_context(loop, report, [], inv)  # pyright: ignore[reportPrivateUsage]
 
     item = shared["warroom.blackboard"]

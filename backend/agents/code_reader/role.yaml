@@ -1,6 +1,6 @@
 role: code_reader
 zone: quarantine
-context_fields: [behavior.diagnosis, code.candidates, code.coverage_hotspots, requirement.structured, rfc.sentence, rfc.context_pack, task.focus, task.recheck_location, task.prior_findings, adapter.build_flags, adapter.vocabulary, warroom.blackboard]
+context_fields: [behavior.diagnosis, code.candidates, code.coverage_hotspots, requirement.structured, rfc.sentence, rfc.context_pack, task.focus, task.recheck_location, task.prior_findings, adapter.build_flags, adapter.vocabulary, warroom.blackboard, memory.codebase_map]
 tools: [locator.suggest, coverage.hotspots, code.find_alert_sites, code.grep, code.glob, code.read, code.eval, code.call_chain]
 skills: [locate-alert-sites, coverage-guided-localization, resolve-c-macro-thresholds, check-ifdef-compiled-lines, trace-all-entry-paths, call-chain-tracing, "@adapter"]
 output_schema: LocationClaim@1
