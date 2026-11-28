@@ -260,10 +260,22 @@ def test_debate_config_activates_on_env_and_checks_consensus(monkeypatch: Any) -
     handler = LocationHandler(rt, _FakeGate())  # type: ignore[arg-type]
     task = SimpleNamespace(task_type="LOCATE")
 
+    monkeypatch.delenv("RFCV_ABLATION", raising=False)
     monkeypatch.delenv("RFCV_ORG_MODE", raising=False)
+    assert handler.debate_config(inv, task) is not None  # mặc định
+    assert handler.peer_review_config(inv, task) is None
+    monkeypatch.setenv("RFCV_ORG_MODE", "tournament")
     assert handler.debate_config(inv, task) is None
+    assert handler.peer_review_config(inv, task) is None
+    assert len(handler.branches(inv, task)) == 2  # giải đấu vẫn đủ hai nhánh
     monkeypatch.setenv("RFCV_ORG_MODE", "peer_review")
     assert handler.debate_config(inv, task) is None
+    assert handler.peer_review_config(inv, task) is not None
+    monkeypatch.delenv("RFCV_ORG_MODE")
+    for ablation in ("single_branch", "no_diagnosis"):
+        monkeypatch.setenv("RFCV_ABLATION", ablation)
+        assert handler.debate_config(inv, task) is None
+    monkeypatch.delenv("RFCV_ABLATION")
     monkeypatch.setenv("RFCV_ORG_MODE", "debate")
     assert handler.debate_config(inv, SimpleNamespace(task_type="RECHECK")) is None  # không đủ hai chuyên gia
     assert handler.peer_review_config(inv, task) is None
@@ -275,10 +287,11 @@ def test_debate_config_activates_on_env_and_checks_consensus(monkeypatch: Any) -
     agree = cfg["claims_agree"]
     base = _claim("fn_a")  # dòng 100–110
     assert agree(base, _at(_claim("fn_a"), 105, 120))  # chồng nhau
-    assert agree(base, _at(_claim("fn_b"), 115, 120))  # cách đúng 5 dòng
-    assert agree(_at(_claim("fn_b"), 115, 120), base)
-    assert agree(base, _at(_claim("fn_a"), 900, 910))  # cùng (file, symbol)
-    assert not agree(base, _at(_claim("fn_b"), 116, 120))  # cách 6 dòng, khác hàm
+    assert agree(base, _at(_claim("fn_b"), 120, 130))  # cách đúng 10 dòng
+    assert agree(_at(_claim("fn_b"), 120, 130), base)
+    assert not agree(base, _at(_claim("fn_a"), 121, 130))  # cách 11 dòng, dù cùng hàm
+    assert not agree(_at(_claim("fn_a"), 121, 130), base)
+    assert not agree(_at(_claim("fn_a"), 846, 857), _at(_claim("fn_a"), 1068, 1078))  # cùng hàm dài, cách xa
     assert not agree(base, _claim("fn_a", file="src/other.c"))
     assert not agree(base, None)
     assert not agree(None, None)

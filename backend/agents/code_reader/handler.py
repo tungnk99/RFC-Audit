@@ -52,7 +52,7 @@ from rfcv.gates.tool_gateway import ToolSession, ToolSpec
 
 
 def _threshold_of(inv: Investigation) -> int | None:
-    """Giá trị số trong `where` của RBS (ví dụ 16640 của `record.length > 16640`), nếu yêu cầu có."""
+    """Giá trị số trong `where` của RBS (ví dụ 4096 của `frame.length > 4096`), nếu yêu cầu có."""
     rbs: Any = inv.context.get("requirement.rbs")
     where: Any = rbs.value.get("where") if rbs is not None and isinstance(rbs.value, dict) else None  # type: ignore[union-attr]
     value: Any = where.get("value") if isinstance(where, dict) else None  # type: ignore[union-attr]
@@ -89,7 +89,7 @@ def _expected_alert(inv: Investigation) -> str | None:
     return None
 
 
-_CONSENSUS_LINE_SLACK = 5
+_CONSENSUS_LINE_SLACK = 10
 # Gói đối chất mang nhãn DERIVED: chuỗi do mô hình vùng cách ly nộp chỉ qua khi là một token không khoảng trắng.
 _PACKET_TOKEN = re.compile(r"[A-Za-z0-9_.:#=+\-/(),~*]{1,200}")
 
@@ -121,12 +121,12 @@ def _candidate_packet(output: BaseModel | None) -> dict[str, Any]:
 
 
 def _claims_agree(a: BaseModel | None, b: BaseModel | None) -> bool:
-    """Đồng thuận: cùng tệp, và cùng hàm hoặc hai khoảng dòng chồng/cách nhau không quá 5 dòng."""
+    """Đồng thuận: cùng tệp và hai khoảng dòng chồng/cách nhau không quá 10 dòng.
+
+    Cùng tên hàm chưa đủ: trong một hàm dài, hai nhận định ở xa nhau là hai giả thuyết khác nhau, để trọng tài phân xử."""
     if not isinstance(a, LocationClaim) or not isinstance(b, LocationClaim) or a.file != b.file:
         return False
-    return a.symbol == b.symbol or (
-        a.line_start <= b.line_end + _CONSENSUS_LINE_SLACK and b.line_start <= a.line_end + _CONSENSUS_LINE_SLACK
-    )
+    return a.line_start <= b.line_end + _CONSENSUS_LINE_SLACK and b.line_start <= a.line_end + _CONSENSUS_LINE_SLACK
 
 
 class LocationHandler:
@@ -311,12 +311,15 @@ class LocationHandler:
         return {"investigator": inv_spec, "build_reviewer": _build_reviewer}
 
     def debate_config(self, inv: Investigation, task: Any) -> dict[str, Any] | None:
-        """Kích hoạt mô hình tổ chức Tranh biện (gen-49 / L5 ADD_ORG_PATTERN) khi `RFCV_ORG_MODE=debate`.
+        """Mô hình tổ chức Tranh biện (gen-49), mặc định từ gen-52: bật khi `RFCV_ORG_MODE` để trống hoặc bằng `debate`.
+
+        Giá trị khác tắt Tranh biện (`tournament`, `peer_review` dùng để đối chứng). Khi `branches` không đưa ra đủ hai
+        chuyên gia (kể cả do `RFCV_ABLATION`), trả None.
 
         Hai chuyên gia của `branches` điều tra độc lập (không neo vào nhau). Chỉ khi bất đồng mới gọi trọng tài; trọng tài
         thấy hai ứng viên ở dạng cấu trúc (không có `note` hay văn xuôi tự do) và phải tự đọc lại cả hai vị trí mã.
         """
-        if os.environ.get("RFCV_ORG_MODE", "").strip().lower() != "debate":
+        if os.environ.get("RFCV_ORG_MODE", "").strip().lower() not in ("", "debate"):
             return None
         specs = list(self.branches(inv, task))
         if len(specs) < 2:

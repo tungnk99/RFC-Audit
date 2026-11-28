@@ -1,0 +1,33 @@
+generation: gen-52
+level: L5
+operator: SYNTHESIZE_BEST
+target: backend/agents/code_reader/handler.py (default debate + ±10-line consensus), backend/agents/code_reader/prompt.md (protocol-neutral v3.0 tool/memory guidance), backend/tests/test_agent_tournament.py
+contribution_type: "Tổng hợp bản tốt nhất v3.0: mặc định Debate+Adjudicator (±10 dòng), EpisodicMemory, War-Room, SBFL Ochiai/UNEXECUTED_SITE, code.call_chain và leak_scan sạch"
+capability_rung: "bậc 5 (đánh giá đồng bộ 8 ca sống Docker trên cùng phiên bản v3.0: 8/8 = 100% Verdict, 8/8 = 100% leak_scan.clean=True, 5/6 = 83.3% OpenSSL STRICT & 1/1 = 100% QUIC Q1 STRICT)"
+summary: >
+  Hợp nhất các đột biến thắng cuộc từ `gen-45` -> `gen-51` thành cấu hình mặc định `v3.0`:
+  (1) đặt `Debate + Blind Adjudicator` làm mặc định (`RFCV_ORG_MODE` trống hoặc `debate`, giữ tùy chọn `tournament`
+  và `peer_review` cho tái lập/ablation) và siết tiêu chí đồng thuận `_claims_agree` trong phạm vi ±10 dòng cùng tệp;
+  (2) trung lập hóa hoàn toàn `agents/code_reader/prompt.md` và bổ sung hướng dẫn chủ động sử dụng `memory.codebase_map`,
+  `warroom.blackboard`, `coverage__hotspots` và `code__call_chain` (69/69 spec tests, 845/845 non-doc tests PASS,
+  0 lỗi pyright/ruff, 6/6 import-linter contracts KEPT).
+  Đánh giá đồng bộ sống trên Docker trên cùng 1 phiên bản `v3.0`:
+  - 7 ca OpenSSL khó (`OU2, OU3, OU4, OG1, OG2, OG4, OR1`, bật `EpisodicMemory`): `7/7 = 100%` Verdict, `7/7 = 100%` `leak_scan.clean=True`,
+    `5/6 = 83.3% STRICT` trên tập 6 ca đối chứng (`+66.6 pp` vs Single Agent `16.7%`, `+16.6 pp` vs Peer Review `66.7%`),
+    `5/7 = 71.4% STRICT` tính cả `OU4`; `5/7` ca dừng sớm theo đồng thuận và `OG1` được Trọng tài mù cứu lên `STRICT` (`adjudicator_won=True`).
+  - QUIC `Q1` (`rfcv/sut-ngtcp2:cov-Q1`): `1/1 = 100%` Verdict, `1/1 = 100% STRICT` (`ngtcp2_accept:10230-10232`, `executed_in_fail=True`),
+    `leak_scan.clean=True (0 leaks)`.
+motivation: >
+  Tổng hợp có chọn lọc các đột biến hiệu quả nhất từ đợt trải rộng `gen-45..gen-51` thành bản chuẩn `v3.0-synthesized-best`
+  và đo kiểm đồng bộ trên cùng một phiên bản mã nguồn sạch `leak_scan`.
+invariants_touched: []
+metrics_before:
+  default_org_mode: tournament
+  v2_leak_scan_clean_on_q1: false
+metrics_after:
+  default_org_mode: debate
+  v30_live_docker_verdict: 1.0
+  v30_live_docker_leak_scan_clean: 1.0
+  v30_openssl_6_strict: 0.833
+  v30_openssl_7_strict: 0.714
+  v30_quic_q1_strict: 1.0
